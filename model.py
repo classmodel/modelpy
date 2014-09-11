@@ -395,7 +395,7 @@ class model:
     # compute ra
     ueff       = numpy.sqrt(self.u ** 2. + self.v ** 2.)
     if(self.sw_sl):
-      self.ra    = (self.Cm * ueff) ** (-1.)
+      self.ra    = (self.Cs * ueff) ** (-1.)
     else:
       self.ra    = ueff / self.ustar ** 2.
 
