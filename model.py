@@ -40,12 +40,11 @@ class model:
   
         # time integrate model 
         for self.t in range(self.tsteps):
+            # store output for current time step
+            self.store()
           
             # time integrate components
             self.timestep()
-            
-            # store output for current time step
-            self.store()
   
         # delete unnecessary variables from memory
         self.exitmodel()
@@ -255,8 +254,8 @@ class model:
     def run_mixed_layer(self):
         if(not self.sw_sl):
             # decompose ustar along the wind components
-            self.uw       = - (self.ustar ** 4. / (self.v ** 2. / self.u ** 2. + 1.)) ** (0.5)
-            self.vw       = - (self.ustar ** 4. / (self.u ** 2. / self.v ** 2. + 1.)) ** (0.5)
+            self.uw       = - np.sign(self.u) * (self.ustar ** 4. / (self.v ** 2. / self.u ** 2. + 1.)) ** (0.5)
+            self.vw       = - np.sign(self.v) * (self.ustar ** 4. / (self.u ** 2. / self.v ** 2. + 1.)) ** (0.5)
         
         # compute mixed-layer tendencies
         # first compute necessary virtual temperature units
