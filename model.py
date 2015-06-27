@@ -66,6 +66,7 @@ class model:
   
         # initialize mixed-layer
         self.sw_ml      =  self.input.sw_ml      # mixed-layer model switch
+        self.sw_shearwe =  self.input.sw_shearwe # Include ABL growth due to shear
         self.h          =  self.input.h          # initial ABL height [m]
         self.Ps         =  self.input.Ps         # surface pressure [Pa]
         self.ws         =  self.input.ws         # large scale vertical velocity [m s-1]
@@ -264,8 +265,10 @@ class model:
         self.dthetav  = (self.theta + self.dtheta) * (1. + 0.61 * (self.q + self.dq)) - self.theta * (1. + 0.61 * self.q)
         
         # compute tendencies
-        #self.we    = (self.beta * self.wthetav) / self.dthetav
-        self.we     = (self.beta * self.wthetav + 5. * self.ustar ** 3. * self.thetav / (self.g * self.h)) / self.dthetav
+        if(self.sw_shearwe):
+            self.we    = (self.beta * self.wthetav + 5. * self.ustar ** 3. * self.thetav / (self.g * self.h)) / self.dthetav
+        else:
+            self.we    = (self.beta * self.wthetav) / self.dthetav
   
         self.htend       = self.we + self.ws
         
@@ -713,6 +716,7 @@ class model:
         del(self.sw_rad)
         del(self.sw_sl)
         del(self.sw_wind)
+        del(self.sw_shearwe)
 
 
 # class for storing mixed-layer model output data
@@ -802,6 +806,7 @@ class model_input:
 
         # mixed-layer variables
         self.sw_ml      = True # mixed-layer model switch
+        self.sw_shearwe = False # Shear growth ABL switch
         self.h          = -1. # initial ABL height [m]
         self.Ps         = -1. # surface pressure [Pa]
         self.ws         = -1. # large scale vertical velocity [m s-1]
@@ -881,5 +886,3 @@ class model_input:
         self.Wl         = -1. # equivalent water layer depth for wet vegetation [m]
         
         self.Lambda     = -1. # thermal diffusivity skin layer [-]
-
-
