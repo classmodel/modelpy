@@ -66,10 +66,16 @@ class model:
         self.bolz       = 5.67e-8               # Bolzman constant [-]
         self.rhow       = 1000.                 # density of water [kg m-3]
         self.S0         = 1368.                 # solar constant [W m-2]
-  
-        # initialize mixed-layer
+ 
+        # Read switched
         self.sw_ml      = self.input.sw_ml      # mixed-layer model switch
         self.sw_shearwe = self.input.sw_shearwe # Include ABL growth due to shear
+        self.sw_wind    = self.input.sw_wind    # prognostic wind switch
+        self.sw_sl      = self.input.sw_sl      # surface layer switch
+        self.sw_rad     = self.input.sw_rad     # radiation switch
+        self.sw_ls      = self.input.sw_ls      # land surface switch
+  
+        # initialize mixed-layer
         self.h          = self.input.h          # initial ABL height [m]
         self.Ps         = self.input.Ps         # surface pressure [Pa]
         self.ws         = self.input.ws         # large scale vertical velocity [m s-1]
@@ -85,19 +91,19 @@ class model:
  
         self.wstar      = 0.                    # convective velocity scale [m s-1]
   
-        self.T2m        = -1.                   # 2m temperature [K]
-        self.q2m        = -1.                   # 2m specific humidity [kg kg-1]
-        self.e2m        = -1.                   # 2m vapor pressure [Pa]
-        self.esat2m     = -1.                   # 2m saturated vapor pressure [Pa]
-        self.u2m        = -1.                   # 2m u-wind [m s-1]
-        self.v2m        = -1.                   # 2m v-wind [m s-1]
+        self.T2m        = None                  # 2m temperature [K]
+        self.q2m        = None                  # 2m specific humidity [kg kg-1]
+        self.e2m        = None                  # 2m vapor pressure [Pa]
+        self.esat2m     = None                  # 2m saturated vapor pressure [Pa]
+        self.u2m        = None                  # 2m u-wind [m s-1]
+        self.v2m        = None                  # 2m v-wind [m s-1]
   
         self.thetasurf  = self.input.theta      # surface potential temperature [K]
-        self.thetav     = -1.                   # initial mixed-layer potential temperature [K]
-        self.dthetav    = -1.                   # initial virtual temperature jump at h [K]
-        self.thetavsurf = -1.                   # surface virtual potential temperature [K]
-        self.qsurf      = -1.                   # surface specific humidity [g kg-1]
-        self.wthetav    = -1.                   # surface kinematic virtual heat flux [K m s-1]
+        self.thetav     = None                  # initial mixed-layer potential temperature [K]
+        self.dthetav    = None                  # initial virtual temperature jump at h [K]
+        self.thetavsurf = None                  # surface virtual potential temperature [K]
+        self.qsurf      = None                  # surface specific humidity [g kg-1]
+        self.wthetav    = None                  # surface kinematic virtual heat flux [K m s-1]
         
         self.q          = self.input.q          # initial mixed-layer specific humidity [kg kg-1]
         self.dq         = self.input.dq         # initial specific humidity jump at h [kg kg-1]
@@ -105,13 +111,12 @@ class model:
         self.advq       = self.input.advq       # advection of moisture [kg kg-1 s-1]
         self.wq         = self.input.wq         # surface kinematic moisture flux [kg kg-1 m s-1]
   
-        self.qsat       = -1.                   # mixed-layer saturated specific humidity [kg kg-1]
-        self.esat       = -1.                   # mixed-layer saturated vapor pressure [Pa]
-        self.e          = -1.                   # mixed-layer vapor pressure [Pa]
-        self.qsatsurf   = -1.                   # surface saturated specific humidity [g kg-1]
-        self.dqsatdT    = -1.                   # slope saturated specific humidity curve [g kg-1 K-1]
+        self.qsat       = None                  # mixed-layer saturated specific humidity [kg kg-1]
+        self.esat       = None                  # mixed-layer saturated vapor pressure [Pa]
+        self.e          = None                  # mixed-layer vapor pressure [Pa]
+        self.qsatsurf   = None                  # surface saturated specific humidity [g kg-1]
+        self.dqsatdT    = None                  # slope saturated specific humidity curve [g kg-1 K-1]
         
-        self.sw_wind    = self.input.sw_wind    # prognostic wind switch
         self.u          = self.input.u          # initial mixed-layer u-wind speed [m s-1]
         self.du         = self.input.du         # initial u-wind jump at h [m s-1]
         self.gammau     = self.input.gammau     # free atmosphere u-wind speed lapse rate [s-1]
@@ -122,44 +127,41 @@ class model:
         self.gammav     = self.input.gammav     # free atmosphere v-wind speed lapse rate [s-1]
         self.advv       = self.input.advv       # advection of v-wind [m s-2]
   
-        self.htend      = -1.                   # tendency of CBL [m s-1]
-        self.thetatend  = -1.                   # tendency of mixed-layer potential temperature [K s-1]
-        self.dthetatend = -1.                   # tendency of potential temperature jump at h [K s-1]
-        self.qtend      = -1.                   # tendency of mixed-layer specific humidity [kg kg-1 s-1]
-        self.dqtend     = -1.                   # tendency of specific humidity jump at h [kg kg-1 s-1]
-        self.utend      = -1.                   # tendency of u-wind [m s-1 s-1]
-        self.dutend     = -1.                   # tendency of u-wind jump at h [m s-1 s-1]
-        self.vtend      = -1.                   # tendency of v-wind [m s-1 s-1]
-        self.dvtend     = -1.                   # tendency of v-wind jump at h [m s-1 s-1]
+        self.htend      = None                  # tendency of CBL [m s-1]
+        self.thetatend  = None                  # tendency of mixed-layer potential temperature [K s-1]
+        self.dthetatend = None                  # tendency of potential temperature jump at h [K s-1]
+        self.qtend      = None                  # tendency of mixed-layer specific humidity [kg kg-1 s-1]
+        self.dqtend     = None                  # tendency of specific humidity jump at h [kg kg-1 s-1]
+        self.utend      = None                  # tendency of u-wind [m s-1 s-1]
+        self.dutend     = None                  # tendency of u-wind jump at h [m s-1 s-1]
+        self.vtend      = None                  # tendency of v-wind [m s-1 s-1]
+        self.dvtend     = None                  # tendency of v-wind jump at h [m s-1 s-1]
   
         # initialize surface layer
-        self.sw_sl      = self.input.sw_sl      # surface layer switch
         self.ustar      = self.input.ustar      # surface friction velocity [m s-1]
-        self.uw         = -1.                   # surface momentum flux in u-direction [m2 s-2]
-        self.vw         = -1.                   # surface momentum flux in v-direction [m2 s-2]
+        self.uw         = None                  # surface momentum flux in u-direction [m2 s-2]
+        self.vw         = None                  # surface momentum flux in v-direction [m2 s-2]
         self.z0m        = self.input.z0m        # roughness length for momentum [m]
         self.z0h        = self.input.z0h        # roughness length for scalars [m]
-        self.Cm         = -1.                   # drag coefficient for momentum [-]
-        self.Cs         = -1.                   # drag coefficient for scalars [-]
-        self.L          = -1.                   # Obukhov length [m]
-        self.Rib        = -1.                   # bulk Richardson number [-]
-        self.ra         = -1.                   # aerodynamic resistance [s m-1]
+        self.Cm         = 1e12                  # drag coefficient for momentum [-]
+        self.Cs         = 1e12                  # drag coefficient for scalars [-]
+        self.L          = None                  # Obukhov length [m]
+        self.Rib        = None                  # bulk Richardson number [-]
+        self.ra         = None                  # aerodynamic resistance [s m-1]
   
         # initialize radiation
-        self.sw_rad     = self.input.sw_rad     # radiation switch
         self.lat        = self.input.lat        # latitude [deg]
         self.lon        = self.input.lon        # longitude [deg]
         self.doy        = self.input.doy        # day of the year [-]
         self.tstart     = self.input.tstart     # time of the day [-]
         self.cc         = self.input.cc         # cloud cover fraction [-]
-        self.Swin       = -1.                   # incoming short wave radiation [W m-2]
-        self.Swout      = -1.                   # outgoing short wave radiation [W m-2]
-        self.Lwin       = -1.                   # incoming long wave radiation [W m-2]
-        self.Lwout      = -1.                   # outgoing long wave radiation [W m-2]
+        self.Swin       = None                  # incoming short wave radiation [W m-2]
+        self.Swout      = None                  # outgoing short wave radiation [W m-2]
+        self.Lwin       = None                  # incoming long wave radiation [W m-2]
+        self.Lwout      = None                  # outgoing long wave radiation [W m-2]
         self.Q          = self.input.Q          # net radiation [W m-2]
   
         # initialize land surface
-        self.sw_ls      = self.input.sw_ls      # land surface switch
         self.wg         = self.input.wg         # volumetric water content top soil layer [m3 m-3]
         self.w2         = self.input.w2         # volumetric water content deeper soil layer [m3 m-3]
         self.Tsoil      = self.input.Tsoil      # temperature top soil layer [K]
@@ -191,22 +193,22 @@ class model:
         self.cveg       = self.input.cveg       # vegetation fraction [-]
         self.Wmax       = self.input.Wmax       # thickness of water layer on wet vegetation [m]
         self.Wl         = self.input.Wl         # equivalent water layer depth for wet vegetation [m]
-        self.cliq       = -1.                   # wet fraction [-]
+        self.cliq       = None                  # wet fraction [-]
                           
         self.Lambda     = self.input.Lambda     # thermal diffusivity skin layer [-]
   
-        self.Tsoiltend  = -1.                   # soil temperature tendency [K s-1]
-        self.wgtend     = -1.                   # soil moisture tendency [m3 m-3 s-1]
-        self.Wltend     = -1.                   # equivalent liquid water tendency [m s-1]
+        self.Tsoiltend  = None                  # soil temperature tendency [K s-1]
+        self.wgtend     = None                  # soil moisture tendency [m3 m-3 s-1]
+        self.Wltend     = None                  # equivalent liquid water tendency [m s-1]
   
-        self.H          = -1.                   # sensible heat flux [W m-2]
-        self.LE         = -1.                   # evapotranspiration [W m-2]
-        self.LEliq      = -1.                   # open water evaporation [W m-2]
-        self.LEveg      = -1.                   # transpiration [W m-2]
-        self.LEsoil     = -1.                   # soil evaporation [W m-2]
-        self.LEpot      = -1.                   # potential evaporation [W m-2]
-        self.LEref      = -1.                   # reference evaporation using rs = rsmin / LAI [W m-2]
-        self.G          = -1.                   # ground heat flux [W m-2]
+        self.H          = None                  # sensible heat flux [W m-2]
+        self.LE         = None                  # evapotranspiration [W m-2]
+        self.LEliq      = None                  # open water evaporation [W m-2]
+        self.LEveg      = None                  # transpiration [W m-2]
+        self.LEsoil     = None                  # soil evaporation [W m-2]
+        self.LEpot      = None                  # potential evaporation [W m-2]
+        self.LEref      = None                  # reference evaporation using rs = rsmin / LAI [W m-2]
+        self.G          = None                  # ground heat flux [W m-2]
   
         # initialize time variables
         self.tsteps = int(np.floor(self.input.runtime / self.input.dt))
@@ -328,7 +330,7 @@ class model:
             self.du       = du0     + self.dt * self.dutend
             self.v        = v0      + self.dt * self.vtend
             self.dv       = dv0     + self.dt * self.dvtend
-  
+ 
     def run_radiation(self):
         sda    = 0.409 * np.cos(2. * np.pi * (self.doy - 173.) / 365.)
         sinlea = np.sin(2. * np.pi * self.lat / 360.) * np.sin(sda) - np.cos(2. * np.pi * self.lat / 360.) * np.cos(sda) * np.cos(2. * np.pi * (self.t * self.dt + self.tstart * 3600.) / 86400. - 2. * np.pi * self.lon / 360.)
@@ -904,7 +906,6 @@ class model_input:
         self.Wl         = -1. # equivalent water layer depth for wet vegetation [m]
         
         self.Lambda     = -1. # thermal diffusivity skin layer [-]
-
 
 if(__name__ == "__main__"):
     
