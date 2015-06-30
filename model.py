@@ -67,13 +67,14 @@ class model:
         self.rhow       = 1000.                 # density of water [kg m-3]
         self.S0         = 1368.                 # solar constant [W m-2]
  
-        # Read switched
+        # Read switches
         self.sw_ml      = self.input.sw_ml      # mixed-layer model switch
-        self.sw_shearwe = self.input.sw_shearwe # Include ABL growth due to shear
+        self.sw_shearwe = self.input.sw_shearwe # shear growth ABL switch
         self.sw_wind    = self.input.sw_wind    # prognostic wind switch
         self.sw_sl      = self.input.sw_sl      # surface layer switch
         self.sw_rad     = self.input.sw_rad     # radiation switch
         self.sw_ls      = self.input.sw_ls      # land surface switch
+        self.sw_cu      = self.input.sw_cu      # cumulus parameterization switch
   
         # initialize mixed-layer
         self.h          = self.input.h          # initial ABL height [m]
@@ -81,7 +82,8 @@ class model:
         self.ws         = self.input.ws         # large scale vertical velocity [m s-1]
         self.fc         = self.input.fc         # coriolis parameter [s-1]
         self.we         = -1.                   # entrainment velocity [m s-1]
-        
+       
+         # Temperature 
         self.theta      = self.input.theta      # initial mixed-layer potential temperature [K]
         self.dtheta     = self.input.dtheta     # initial temperature jump at h [K]
         self.gammatheta = self.input.gammatheta # free atmosphere potential temperature lapse rate [K m-1]
@@ -90,21 +92,33 @@ class model:
         self.wtheta     = self.input.wtheta     # surface kinematic heat flux [K m s-1]
  
         self.wstar      = 0.                    # convective velocity scale [m s-1]
-  
+ 
+        # 2m diagnostic variables 
         self.T2m        = None                  # 2m temperature [K]
         self.q2m        = None                  # 2m specific humidity [kg kg-1]
         self.e2m        = None                  # 2m vapor pressure [Pa]
         self.esat2m     = None                  # 2m saturated vapor pressure [Pa]
         self.u2m        = None                  # 2m u-wind [m s-1]
         self.v2m        = None                  # 2m v-wind [m s-1]
-  
+ 
+        # Surface variables 
         self.thetasurf  = self.input.theta      # surface potential temperature [K]
-        self.thetav     = None                  # initial mixed-layer potential temperature [K]
-        self.dthetav    = None                  # initial virtual temperature jump at h [K]
         self.thetavsurf = None                  # surface virtual potential temperature [K]
         self.qsurf      = None                  # surface specific humidity [g kg-1]
+
+        # Mixed-layer top variables
+        self.P_h        = None                  # Mixed-layer top pressure [pa]
+        self.T_h        = None                  # Mixed-layer top absolute temperature [K]
+        self.q2_h       = None                  # Mixed-layer top specific humidity variance [kg2 kg-2]
+        self.RH_h       = None                  # Mixed-layer top relavtive humidity [-]
+        self.dz_h       = None                  # Transition layer thickness [-]
+
+        # Virtual temperatures and fluxes
+        self.thetav     = None                  # initial mixed-layer potential temperature [K]
+        self.dthetav    = None                  # initial virtual temperature jump at h [K]
         self.wthetav    = None                  # surface kinematic virtual heat flux [K m s-1]
-        
+       
+        # Moisture 
         self.q          = self.input.q          # initial mixed-layer specific humidity [kg kg-1]
         self.dq         = self.input.dq         # initial specific humidity jump at h [kg kg-1]
         self.gammaq     = self.input.gammaq     # free atmosphere specific humidity lapse rate [kg kg-1 m-1]
@@ -116,7 +130,8 @@ class model:
         self.e          = None                  # mixed-layer vapor pressure [Pa]
         self.qsatsurf   = None                  # surface saturated specific humidity [g kg-1]
         self.dqsatdT    = None                  # slope saturated specific humidity curve [g kg-1 K-1]
-        
+       
+        # Wind 
         self.u          = self.input.u          # initial mixed-layer u-wind speed [m s-1]
         self.du         = self.input.du         # initial u-wind jump at h [m s-1]
         self.gammau     = self.input.gammau     # free atmosphere u-wind speed lapse rate [s-1]
@@ -126,7 +141,8 @@ class model:
         self.dv         = self.input.dv         # initial u-wind jump at h [m s-1]
         self.gammav     = self.input.gammav     # free atmosphere v-wind speed lapse rate [s-1]
         self.advv       = self.input.advv       # advection of v-wind [m s-2]
-  
+ 
+        # Tendencies 
         self.htend      = None                  # tendency of CBL [m s-1]
         self.thetatend  = None                  # tendency of mixed-layer potential temperature [K s-1]
         self.dthetatend = None                  # tendency of potential temperature jump at h [K s-1]
@@ -209,6 +225,13 @@ class model:
         self.LEpot      = None                  # potential evaporation [W m-2]
         self.LEref      = None                  # reference evaporation using rs = rsmin / LAI [W m-2]
         self.G          = None                  # ground heat flux [W m-2]
+ 
+        # initialize cumulus parameterization
+        self.sw_cu      = self.input.sw_cu      # Cumulus parameterization switch
+        self.dz_h       = self.input.dz_h       # Transition layer thickness [m]
+        self.ac         = 0.                    # Cloud core fraction [-]
+        self.M          = 0.                    # Cloud core mass flux [m s-1] 
+        self.wqM        = 0.                    # Cloud core moisture flux [kg kg-1 m s-1] 
   
         # initialize time variables
         self.tsteps = int(np.floor(self.input.runtime / self.input.dt))
@@ -217,6 +240,8 @@ class model:
   
         # initialize output
         self.out = model_output(self.tsteps)
+ 
+        self.statistics()
   
         # calculate initial diagnostic variables
         if(self.sw_rad):
@@ -228,11 +253,17 @@ class model:
   
         if(self.sw_ls):
             self.run_land_surface()
+       
+        if(self.sw_cu):
+            self.run_mixed_layer()
+            self.run_cumulus()
         
         if(self.sw_ml):
             self.run_mixed_layer()
 
     def timestep(self):
+        self.statistics()
+
         # run radiation model
         if(self.sw_rad):
             self.run_radiation()
@@ -244,7 +275,11 @@ class model:
         # run land surface model
         if(self.sw_ls):
             self.run_land_surface()
-  
+ 
+        # run cumulus parameterization
+        if(self.sw_cu):
+            self.run_cumulus()
+   
         # run mixed-layer model
         if(self.sw_ml):
             self.run_mixed_layer()
@@ -259,17 +294,37 @@ class model:
         # time integrate mixed-layer model
         if(self.sw_ml):
             self.integrate_mixed_layer()
-   
+  
+    def statistics(self):
+        # Calculate virtual temperatures 
+        self.thetav   = self.theta  + 0.61 * self.theta * self.q
+        self.wthetav  = self.wtheta + 0.61 * self.theta * self.wq
+        self.dthetav  = (self.theta + self.dtheta) * (1. + 0.61 * (self.q + self.dq)) - self.theta * (1. + 0.61 * self.q)
+
+        # Mixed-layer top properties
+        self.P_h    = self.Ps - self.rho * self.g * self.h
+        self.T_h    = self.theta - self.g/self.cp * self.h
+
+        self.P_h    = self.Ps / np.exp((self.g * self.h)/(self.Rd * self.theta))
+        self.T_h    = self.theta / (self.Ps / self.P_h)**(self.Rd/self.cp)
+
+        self.RH_h   = self.q / qsat(self.T_h, self.P_h)
+
+    def run_cumulus(self):
+        # Calculate mixed-layer top relative humidity variance (Neggers et. al 2006/7)
+        wqe         = -self.we * self.dq
+        self.q2_h   = -(wqe+self.wqM) * self.dq * self.h / (self.dz_h * self.wstar)
+
+        # calculate cloud core fraction (ac), mass flux (M) and moisture flux (wqM)
+        self.ac     = max(0., 0.5 + (0.36 * np.arctan(1.55 * ((self.q - qsat(self.T_h, self.P_h)) / self.q2_h**0.5))))
+        self.M      = self.ac * self.wstar
+        self.wqM    = self.M * self.q2_h**0.5
+
     def run_mixed_layer(self):
         if(not self.sw_sl):
             # decompose ustar along the wind components
             self.uw       = - np.sign(self.u) * (self.ustar ** 4. / (self.v ** 2. / self.u ** 2. + 1.)) ** (0.5)
             self.vw       = - np.sign(self.v) * (self.ustar ** 4. / (self.u ** 2. / self.v ** 2. + 1.)) ** (0.5)
-      
-        # Calculate virtual temperatures 
-        self.thetav   = self.theta  + 0.61 * self.theta * self.q
-        self.wthetav  = self.wtheta + 0.61 * self.theta * self.wq
-        self.dthetav  = (self.theta + self.dtheta) * (1. + 0.61 * (self.q + self.dq)) - self.theta * (1. + 0.61 * self.q)
        
         # calculate convective velocity scale w* 
         if(self.wthetav > 0.):
@@ -287,21 +342,21 @@ class model:
         if(self.we < 0):
             self.we = 0.
   
-        self.htend       = self.we + self.ws
+        self.htend       = self.we + self.ws - self.M
+       
+        self.thetatend   = (self.wtheta + self.we * self.dtheta       ) / self.h + self.advtheta 
+        self.qtend       = (self.wq     + self.we * self.dq - self.wqM) / self.h + self.advq
         
-        self.thetatend   = (self.wtheta + self.we * self.dtheta) / self.h + self.advtheta 
-        self.qtend       = (self.wq     + self.we * self.dq)     / self.h + self.advq
-        
-        self.dthetatend  = self.gammatheta * self.we - self.thetatend
-        self.dqtend      = self.gammaq     * self.we - self.qtend
+        self.dthetatend  = self.gammatheta * (self.we - self.M) - self.thetatend
+        self.dqtend      = self.gammaq     * (self.we - self.M) - self.qtend
      
         # assume u + du = ug, so ug - u = du
         if(self.sw_wind):
             self.utend       = -self.fc * self.dv + (self.uw + self.we * self.du)  / self.h + self.advu
             self.vtend       =  self.fc * self.du + (self.vw + self.we * self.dv)  / self.h + self.advv
   
-            self.dutend      = self.gammau * self.we - self.utend
-            self.dvtend      = self.gammav * self.we - self.vtend
+            self.dutend      = self.gammau * (self.we - self.M) - self.utend
+            self.dvtend      = self.gammav * (self.we - self.M) - self.vtend
    
     def integrate_mixed_layer(self):
         # set values previous time step
@@ -355,8 +410,6 @@ class model:
         self.qsurf     = (1. - cq) * self.q + cq * qsatsurf
 
         self.thetavsurf = self.thetasurf * (1. + 0.61 * self.qsurf)
-        self.thetav     = self.theta  + 0.61 * self.theta * self.q
-        self.wthetav    = self.wtheta + 0.61 * self.theta * self.wq
   
         zsl       = 0.1 * self.h
         self.Rib  = self.g / self.thetav * zsl * (self.thetav - self.thetavsurf) / ueff**2.
@@ -586,6 +639,10 @@ class model:
         self.out.LEpot[t]      = self.LEpot
         self.out.LEref[t]      = self.LEref
         self.out.G[t]          = self.G
+
+        self.out.ac[t]         = self.ac
+        self.out.M[t]          = self.M
+        self.out.wqM[t]        = self.wqM
   
     # delete class variables to facilitate analysis in ipython
     def exitmodel(self):
@@ -817,6 +874,11 @@ class model_output:
         self.LEref      = np.zeros(tsteps)    # reference evaporation at rs = rsmin / LAI [W m-2]
         self.G          = np.zeros(tsteps)    # ground heat flux [W m-2]
 
+        # cumulus variables
+        self.ac         = np.zeros(tsteps)    # cloud core fraction [-]
+        self.M          = np.zeros(tsteps)    # cloud core mass flux [m s-1]
+        self.wqM        = np.zeros(tsteps)    # cloud core moisture flux [kg kg-1 m s-1]
+
 # class for storing mixed-layer model input data
 class model_input:
     def __init__(self):
@@ -907,6 +969,10 @@ class model_input:
         
         self.Lambda     = -1. # thermal diffusivity skin layer [-]
 
+        # Cumulus parameters
+        self.sw_cu      = False # Cumulus parameterization switch
+        self.dz_h       = -1. # Transition layer thickness [m]
+
 if(__name__ == "__main__"):
     
     r1in = model_input()
@@ -947,13 +1013,13 @@ if(__name__ == "__main__"):
     r1in.advv       = 0.        # advection of v-wind [m s-2]
     
     # surface layer input
-    r1in.sw_sl      = True      # surface layer switch
+    r1in.sw_sl      = False      # surface layer switch
     r1in.ustar      = 0.3       # surface friction velocity [m s-1]
     r1in.z0m        = 0.02      # roughness length for momentum [m]
     r1in.z0h        = 0.002     # roughness length for scalars [m]
     
     # radiation parameters
-    r1in.sw_rad     = True     # radiation switch
+    r1in.sw_rad     = False     # radiation switch
     r1in.lat        = 51.97     # latitude [deg]
     r1in.lon        = -4.93     # longitude [deg]
     r1in.doy        = 268.      # day of the year [-]
@@ -962,7 +1028,7 @@ if(__name__ == "__main__"):
     r1in.Q          = 400.      # net radiation [W m-2] 
     
     # land surface parameters
-    r1in.sw_ls      = True     # land surface switch
+    r1in.sw_ls      = False     # land surface switch
     r1in.wg         = 0.21      # volumetric water content top soil layer [m3 m-3]
     r1in.w2         = 0.21      # volumetric water content deeper soil layer [m3 m-3]
     r1in.cveg       = 0.85      # vegetation fraction [-]
@@ -992,6 +1058,9 @@ if(__name__ == "__main__"):
     r1in.Wl         = 0.0000    # equivalent water layer depth for wet vegetation [m]
     
     r1in.Lambda     = 5.9       # thermal diffusivity skin layer [-]
+
+    r1in.sw_cu      = True      # Cumulus parameterization switch
+    r1in.dz_h       = 150.      # Transition layer thickness [m]
     
     r1 = model(r1in)
     r1.run()
@@ -1043,4 +1112,14 @@ if(__name__ == "__main__"):
     plot(r1.out.t, r1.out.LE, 'b-', label='LE python')
     plot(rr.timeUTC, rr.LE, 'g-', label='CLASS')
     legend(frameon=False)
-    savefig('comp.pdf')
+
+    subplot(338)
+    plot(r1.out.t, r1.out.ac, 'b-', label='ac python')
+    plot(rr.timeUTC, rr.ac, 'g-', label='CLASS')
+    legend(frameon=False)
+
+    subplot(339)
+    plot(r1.out.t, r1.out.M, 'b-', label='M python')
+    plot(rr.timeUTC, rr.M, 'g-', label='CLASS')
+    legend(frameon=False)
+
