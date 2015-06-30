@@ -29,6 +29,12 @@ import copy as cp
 import numpy as np
 #import ribtol
 
+def esat(T):
+    return 0.611e3 * np.exp(17.2694 * (T - 273.16) / (T - 35.86))
+
+def qsat(T,p):
+    return 0.622 * esat(T) / p
+
 class model:
     def __init__(self, model_input):
         # initialize the different components of the model
@@ -40,8 +46,6 @@ class model:
   
         # time integrate model 
         for self.t in range(self.tsteps):
-            # store output for current time step
-            self.store()
           
             # time integrate components
             self.timestep()
@@ -79,7 +83,7 @@ class model:
         self.beta       = self.input.beta       # entrainment ratio for virtual heat [-]
         self.wtheta     = self.input.wtheta     # surface kinematic heat flux [K m s-1]
  
-        self.wstar      = -1.                    # convective velocity scale [m s-1]
+        self.wstar      = 0.                    # convective velocity scale [m s-1]
   
         self.T2m        = -1.                   # 2m temperature [K]
         self.q2m        = -1.                   # 2m specific humidity [kg kg-1]
@@ -213,28 +217,20 @@ class model:
         self.out = model_output(self.tsteps)
   
         # calculate initial diagnostic variables
-        # Radiation doesn't require spinup
         if(self.sw_rad):
             self.run_radiation()
  
-        for i in range(10): 
-            self.statistics()
-
-            if(self.sw_sl):
+        if(self.sw_sl):
+            for i in range(10): 
                 self.run_surface_layer()
   
-            if(self.sw_ls):
-                self.run_land_surface()
-            
-            if(self.sw_ml):
-                self.run_mixed_layer()
+        if(self.sw_ls):
+            self.run_land_surface()
+        
+        if(self.sw_ml):
+            self.run_mixed_layer()
 
-        print('Finished init...')
-  
     def timestep(self):
-        # calculate additional statistics 
-        self.statistics()
-
         # run radiation model
         if(self.sw_rad):
             self.run_radiation()
@@ -250,6 +246,9 @@ class model:
         # run mixed-layer model
         if(self.sw_ml):
             self.run_mixed_layer()
+ 
+        # store output before time integration
+        self.store()
   
         # time integrate land surface model
         if(self.sw_ls):
@@ -259,8 +258,13 @@ class model:
         if(self.sw_ml):
             self.integrate_mixed_layer()
    
-    def statistics(self):
-        # compute virtual temperature units
+    def run_mixed_layer(self):
+        if(not self.sw_sl):
+            # decompose ustar along the wind components
+            self.uw       = - np.sign(self.u) * (self.ustar ** 4. / (self.v ** 2. / self.u ** 2. + 1.)) ** (0.5)
+            self.vw       = - np.sign(self.v) * (self.ustar ** 4. / (self.u ** 2. / self.v ** 2. + 1.)) ** (0.5)
+      
+        # Calculate virtual temperatures 
         self.thetav   = self.theta  + 0.61 * self.theta * self.q
         self.wthetav  = self.wtheta + 0.61 * self.theta * self.wq
         self.dthetav  = (self.theta + self.dtheta) * (1. + 0.61 * (self.q + self.dq)) - self.theta * (1. + 0.61 * self.q)
@@ -270,18 +274,16 @@ class model:
           self.wstar = ((self.g * self.h * self.wthetav) / self.thetav)**(1./3.)
         else:
           self.wstar  = 1e-6;
-    
-    def run_mixed_layer(self):
-        if(not self.sw_sl):
-            # decompose ustar along the wind components
-            self.uw       = - np.sign(self.u) * (self.ustar ** 4. / (self.v ** 2. / self.u ** 2. + 1.)) ** (0.5)
-            self.vw       = - np.sign(self.v) * (self.ustar ** 4. / (self.u ** 2. / self.v ** 2. + 1.)) ** (0.5)
         
         # compute mixed-layer tendencies
         if(self.sw_shearwe):
             self.we    = (self.beta * self.wthetav + 5. * self.ustar ** 3. * self.thetav / (self.g * self.h)) / self.dthetav
         else:
             self.we    = (self.beta * self.wthetav) / self.dthetav
+
+        # Don't allow boundary layer shrinking if wtheta < 0 
+        if(self.we < 0):
+            self.we = 0.
   
         self.htend       = self.we + self.ws
         
@@ -346,12 +348,13 @@ class model:
     def run_surface_layer(self):
         ueff           = max(0.01, np.sqrt(self.u**2. + self.v**2. + self.wstar**2.))
         self.thetasurf = self.theta + self.wtheta / (self.Cs * ueff)
-        esatsurf       = 0.611e3 * np.exp(17.2694 * (self.thetasurf - 273.16) / (self.thetasurf - 35.86))
-        qsatsurf       = 0.622 * esatsurf / self.Ps
+        qsatsurf       = qsat(self.thetasurf, self.Ps)
         cq             = (1. + self.Cs * ueff * self.rs) ** -1.
         self.qsurf     = (1. - cq) * self.q + cq * qsatsurf
 
         self.thetavsurf = self.thetasurf * (1. + 0.61 * self.qsurf)
+        self.thetav     = self.theta  + 0.61 * self.theta * self.q
+        self.wthetav    = self.wtheta + 0.61 * self.theta * self.wq
   
         zsl       = 0.1 * self.h
         self.Rib  = self.g / self.thetav * zsl * (self.thetav - self.thetavsurf) / ueff**2.
@@ -421,59 +424,60 @@ class model:
   
     def run_land_surface(self):
         # compute ra
-        ueff       = np.sqrt(self.u ** 2. + self.v ** 2.)
+        ueff = np.sqrt(self.u ** 2. + self.v ** 2. + self.wstar**2.)
+
         if(self.sw_sl):
-          self.ra    = (self.Cs * ueff) ** (-1.)
+          self.ra = (self.Cs * ueff)**-1.
         else:
-          self.ra    = ueff / self.ustar ** 2.
-  
+          self.ra = ueff / max(1.e-3, self.ustar)**2.
+
         # first calculate essential thermodynamic variables
-        self.esat    = 0.611e3 * np.exp(17.2694 * (self.theta - 273.16) / (self.theta - 35.86))
-        self.qsat    = 0.622 * self.esat / self.Ps
+        self.esat    = esat(self.theta)
+        self.qsat    = qsat(self.theta, self.Ps)
         desatdT      = self.esat * (17.2694 / (self.theta - 35.86) - 17.2694 * (self.theta - 273.16) / (self.theta - 35.86)**2.)
         self.dqsatdT = 0.622 * desatdT / self.Ps
-
-        self.e = self.q * self.Ps / 0.622
+        self.e       = self.q * self.Ps / 0.622
   
         # calculate surface resistances using Jarvis-Stewart model
         if(self.sw_rad):
-          f1          = 1. / ((0.004 * self.Swin + 0.05) / (0.81 * (0.004 * self.Swin + 1.)))
+            f1 = 1. / min(1.,((0.004 * self.Swin + 0.05) / (0.81 * (0.004 * self.Swin + 1.))))
         else:
-          f1          = 1.
+            f1 = 1.
   
-        #fpar        = 0.55 * self.Swin / 100. * 2. / self.LAI
-        #f1new       = (1. + fpar) / (fpar + self.rsmin / 10000.)
         if(self.w2 > self.wwilt):# and self.w2 <= self.wfc):
-          f2          = (self.wfc - self.wwilt) / (self.w2 - self.wwilt)
+            f2 = (self.wfc - self.wwilt) / (self.w2 - self.wwilt)
         else:
-          f2        = 1.e8
+            f2 = 1.e8
+ 
+        # Limit f2 in case w2 > wfc, where f2 < 1
+        f2 = max(f2, 1.);
+ 
+        f3 = 1. / np.exp(- self.gD * (self.esat - self.e) / 100.)
+        f4 = 1./ (1. - 0.0016 * (298.0-self.theta)**2.)
   
-        f3          = 1. / np.exp(- self.gD * (self.esat2m - self.e2m) / 100.)
-  
-        f4          = 1./ (1. - 0.0016 * (298.0 - self.T2m) ** 2.)
-  
-        self.rs     = self.rsmin / self.LAI * f1 * f2 * f3
-  
+        self.rs = self.rsmin / self.LAI * f1 * f2 * f3 * f4
+ 
         # recompute f2 using wg instead of w2
         if(self.wg > self.wwilt):# and self.w2 <= self.wfc):
           f2          = (self.wfc - self.wwilt) / (self.wg - self.wwilt)
         else:
           f2        = 1.e8
         self.rssoil = self.rssoilmin * f2 
-  
+ 
         Wlmx = self.LAI * self.Wmax
         self.cliq = min(1., self.Wl / Wlmx) 
      
         # calculate skin temperature implictly
         self.Ts   = (self.Q  + self.rho * self.cp / self.ra * self.theta \
-            + self.cveg * (1. - self.cliq) * self.rho * self.Lv / (self.ra + self.rs) * (self.dqsatdT * self.theta - self.qsat + self.q) \
-            + (1. - self.cveg) * self.rho * self.Lv / (self.ra + self.rssoil) * (self.dqsatdT * self.theta - self.qsat + self.q) \
-            + self.cveg * self.cliq * self.rho * self.Lv / self.ra * (self.dqsatdT * self.theta - self.qsat + self.q) + self.Lambda * self.Tsoil) \
-          * (self.rho * self.cp / self.ra + self.cveg * (1. - self.cliq) * self.rho * self.Lv / (self.ra + self.rs) * self.dqsatdT + (1. - self.cveg) * self.rho * self.Lv / (self.ra + self.rssoil) * self.dqsatdT + self.cveg * self.cliq * self.rho * self.Lv / self.ra * self.dqsatdT + self.Lambda) ** (-1.)
-  
-        esatsurf  = 0.611e3 * np.exp(17.2694 * (self.Ts - 273.16) / (self.Ts - 35.86))
-        self.qsatsurf  = 0.622 * esatsurf / self.Ps
-        
+            + self.cveg * (1. - self.cliq) * self.rho * self.Lv / (self.ra + self.rs    ) * (self.dqsatdT * self.theta - self.qsat + self.q) \
+            + (1. - self.cveg)             * self.rho * self.Lv / (self.ra + self.rssoil) * (self.dqsatdT * self.theta - self.qsat + self.q) \
+            + self.cveg * self.cliq        * self.rho * self.Lv /  self.ra                * (self.dqsatdT * self.theta - self.qsat + self.q) + self.Lambda * self.Tsoil) \
+            / (self.rho * self.cp / self.ra + self.cveg * (1. - self.cliq) * self.rho * self.Lv / (self.ra + self.rs) * self.dqsatdT \
+            + (1. - self.cveg) * self.rho * self.Lv / (self.ra + self.rssoil) * self.dqsatdT + self.cveg * self.cliq * self.rho * self.Lv / self.ra * self.dqsatdT + self.Lambda)
+
+        esatsurf      = esat(self.Ts)
+        self.qsatsurf = qsat(self.Ts, self.Ps)
+
         self.LEveg  = (1. - self.cliq) * self.cveg * self.rho * self.Lv / (self.ra + self.rs) * (self.dqsatdT * (self.Ts - self.theta) + self.qsat - self.q)
         self.LEliq  = self.cliq * self.cveg * self.rho * self.Lv / self.ra * (self.dqsatdT * (self.Ts - self.theta) + self.qsat - self.q)
         self.LEsoil = (1. - self.cveg) * self.rho * self.Lv / (self.ra + self.rssoil) * (self.dqsatdT * (self.Ts - self.theta) + self.qsat - self.q)
@@ -486,7 +490,7 @@ class model:
         self.LEpot  = (self.dqsatdT * (self.Q - self.G) + self.rho * self.cp / self.ra * (self.qsat - self.q)) / (self.dqsatdT + self.cp / self.Lv)
         self.LEref  = (self.dqsatdT * (self.Q - self.G) + self.rho * self.cp / self.ra * (self.qsat - self.q)) / (self.dqsatdT + self.cp / self.Lv * (1. + self.rsmin / self.LAI / self.ra))
         
-        CG          = self.CGsat * (self.wsat / self.w2) ** (self.b / (2. * np.log(10.)))
+        CG          = self.CGsat * (self.wsat / self.w2)**(self.b / (2. * np.log(10.)))
   
         self.Tsoiltend   = CG * self.G - 2. * np.pi / 86400. * (self.Tsoil - self.T2)
    
@@ -948,7 +952,7 @@ if(__name__ == "__main__"):
     r1in.z0h        = 0.002     # roughness length for scalars [m]
     
     # radiation parameters
-    r1in.sw_rad     = False     # radiation switch
+    r1in.sw_rad     = True     # radiation switch
     r1in.lat        = 51.97     # latitude [deg]
     r1in.lon        = -4.93     # longitude [deg]
     r1in.doy        = 268.      # day of the year [-]
@@ -957,10 +961,10 @@ if(__name__ == "__main__"):
     r1in.Q          = 400.      # net radiation [W m-2] 
     
     # land surface parameters
-    r1in.sw_ls      = False     # land surface switch
+    r1in.sw_ls      = True     # land surface switch
     r1in.wg         = 0.21      # volumetric water content top soil layer [m3 m-3]
     r1in.w2         = 0.21      # volumetric water content deeper soil layer [m3 m-3]
-    r1in.cveg       = 0.9       # vegetation fraction [-]
+    r1in.cveg       = 0.85      # vegetation fraction [-]
     r1in.Tsoil      = 285.      # temperature top soil layer [K]
     r1in.T2         = 286.      # temperature deeper soil layer [K]
     r1in.a          = 0.219     # Clapp and Hornberger retention curve parameter a
@@ -977,11 +981,11 @@ if(__name__ == "__main__"):
     
     r1in.LAI        = 2.        # leaf area index [-]
     r1in.gD         = 0.0       # correction factor transpiration for VPD [-]
-    r1in.rsmin      = 40.       # minimum resistance transpiration [s m-1]
+    r1in.rsmin      = 110.      # minimum resistance transpiration [s m-1]
     r1in.rssoilmin  = 50.       # minimun resistance soil evaporation [s m-1]
     r1in.alpha      = 0.25      # surface albedo [-]
     
-    r1in.Ts         = 280.      # initial surface temperature [K]
+    r1in.Ts         = 290.      # initial surface temperature [K]
     
     r1in.Wmax       = 0.0002    # thickness of water layer on wet vegetation [m]
     r1in.Wl         = 0.0000    # equivalent water layer depth for wet vegetation [m]
@@ -1001,38 +1005,41 @@ if(__name__ == "__main__"):
 
     figure()
     subplot(331)
-    plot(r1.out.t, r1.out.h, '-o', label='python')
-    plot(rr.timeUTC, rr.h, '-x', label='CLASS')
+    plot(r1.out.t, r1.out.h, 'b-', label='h python')
+    plot(rr.timeUTC, rr.h, 'g-', label='CLASS')
     legend(frameon=False)
 
     subplot(332)
-    plot(r1.out.t, r1.out.theta, '-o', label='python')
-    plot(rr.timeUTC, rr.th, '-x', label='CLASS')
+    plot(r1.out.t, r1.out.theta, 'b-', label='theta python')
+    plot(rr.timeUTC, rr.th, 'g-', label='CLASS')
     legend(frameon=False)
 
     subplot(333)
-    plot(r1.out.t, r1.out.q*1000, '-o', label='python')
-    plot(rr.timeUTC, rr.q*1000, '-x', label='CLASS')
+    plot(r1.out.t, r1.out.q*1000, 'b-', label='q python')
+    plot(rr.timeUTC, rr.q*1000, 'g-', label='CLASS')
     legend(frameon=False)
 
     subplot(334)
-    plot(r1.out.t, r1.out.u, '-o', label='u, python')
-    plot(rr.timeUTC, rr.u, '-x', label='u, CLASS')
+    plot(r1.out.t, r1.out.Swin, 'b-', label='swin python')
+    plot(rr.timeUTC, rr.Swin, 'g-', label='CLASS')
+    plot(r1.out.t, r1.out.Swout, 'b--', label='swout python')
+    plot(rr.timeUTC, rr.Swout, 'g--', label='CLASS')
     legend(frameon=False)
 
     subplot(335)
-    plot(r1.out.t, r1.out.v, '-o', label='v, python')
-    plot(rr.timeUTC, rr.v, '-x', label='v, CLASS')
+    plot(r1.out.t, r1.out.Lwin, 'b-', label='lwin python')
+    plot(rr.timeUTC, rr.Lwin, 'g-', label='CLASS')
+    plot(r1.out.t, r1.out.Lwout, 'b--', label='lwout python')
+    plot(rr.timeUTC, rr.Lwout, 'g--', label='CLASS')
     legend(frameon=False)
 
     subplot(336)
-    plot(r1.out.t, r1.out.uw, '-o', label='python')
-    plot(rr.timeUTC, rr.uws, '-x', label='CLASS')
+    plot(r1.out.t, r1.out.H, 'b-', label='H python')
+    plot(rr.timeUTC, rr.H, 'g-', label='CLASS')
     legend(frameon=False)
 
     subplot(337)
-    plot(r1.out.t, r1.out.vw, '-o', label='python')
-    plot(rr.timeUTC, rr.vws, '-x', label='CLASS')
+    plot(r1.out.t, r1.out.LE, 'b-', label='LE python')
+    plot(rr.timeUTC, rr.LE, 'g-', label='CLASS')
     legend(frameon=False)
-
     savefig('comp.pdf')
