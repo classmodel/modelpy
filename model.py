@@ -27,6 +27,7 @@
 
 import copy as cp
 import numpy as np
+import sys
 #import ribtol
 
 def esat(T):
@@ -66,7 +67,35 @@ class model:
         self.bolz       = 5.67e-8               # Bolzman constant [-]
         self.rhow       = 1000.                 # density of water [kg m-3]
         self.S0         = 1368.                 # solar constant [W m-2]
- 
+
+        # A-Gs constants and settings
+        # Plant type:  -C3-     -C4-
+        self.CO2comp298 =  [68.5,    4.3    ]   # CO2 compensation concentration [mg m-3]
+        self.Q10CO2     =  [1.5,     1.5    ]   # function parameter to calculate CO2 compensation concentration [-]
+        self.gm298      =  [7.0,     17.5   ]   # mesophyill conductance at 298 K [mm s-1]
+        self.Ammax298   =  [2.2,     1.7    ]   # CO2 maximal primary productivity [mg m-2 s-1]
+        self.Q10gm      =  [2.0,     2.0    ]   # function parameter to calculate mesophyll conductance [-]
+        self.T1gm       =  [278.,    286.   ]   # reference temperature to calculate mesophyll conductance gm [K]
+        self.T2gm       =  [301.,    309.   ]   # reference temperature to calculate mesophyll conductance gm [K]
+        self.Q10Am      =  [2.0,     2.0    ]   # function parameter to calculate maximal primary profuctivity Ammax
+        self.T1Am       =  [281.,    286.   ]   # reference temperature to calculate maximal primary profuctivity Ammax [K]
+        self.T2Am       =  [311.,    311.   ]   # reference temperature to calculate maximal primary profuctivity Ammax [K]
+        self.f0         =  [0.89,    0.85   ]   # maximum value Cfrac [-]
+        self.ad         =  [0.07,    0.15   ]   # regression coefficient to calculate Cfrac [kPa-1]
+        self.alpha0     =  [0.017,   0.014  ]   # initial low light conditions [mg J-1]
+        self.Kx         =  [0.7,     0.7    ]   # extinction coefficient PAR [-]
+        self.gmin       =  [0.25e-3, 0.25e-3]   # cuticular (minimum) conductance [mm s-1]
+
+        self.mco2       =  44.;                 # molecular weight CO2 [g mol -1]
+        self.mair       =  28.9;                # molecular weight air [g mol -1]
+        self.nuco2q     =  1.6;                 # ratio molecular viscosity water to carbon dioxide
+
+        self.Cw         =  0.0016;              # constant water stress correction (eq. 13 Jacobs et al. 2007) [-]
+        self.wmax       =  0.55;                # upper reference value soil water [-]
+        self.wmin       =  0.005;               # lower reference value soil water [-]
+        self.R10        =  0.23;                # respiration at 10 C [mg CO2 m-2 s-1]
+        self.E0         =  53.3e3;              # activation energy [53.3 kJ kmol-1]
+
         # Read switches
         self.sw_ml      = self.input.sw_ml      # mixed-layer model switch
         self.sw_shearwe = self.input.sw_shearwe # shear growth ABL switch
@@ -74,6 +103,7 @@ class model:
         self.sw_sl      = self.input.sw_sl      # surface layer switch
         self.sw_rad     = self.input.sw_rad     # radiation switch
         self.sw_ls      = self.input.sw_ls      # land surface switch
+        self.ls_type    = self.input.ls_type    # land surface paramaterization (js or ags)
         self.sw_cu      = self.input.sw_cu      # cumulus parameterization switch
   
         # initialize mixed-layer
@@ -90,6 +120,7 @@ class model:
         self.advtheta   = self.input.advtheta   # advection of heat [K s-1]
         self.beta       = self.input.beta       # entrainment ratio for virtual heat [-]
         self.wtheta     = self.input.wtheta     # surface kinematic heat flux [K m s-1]
+        self.wthetae    = None                  # entrainment kinematic heat flux [K m s-1]
  
         self.wstar      = 0.                    # convective velocity scale [m s-1]
  
@@ -117,6 +148,7 @@ class model:
         self.thetav     = None                  # initial mixed-layer potential temperature [K]
         self.dthetav    = None                  # initial virtual temperature jump at h [K]
         self.wthetav    = None                  # surface kinematic virtual heat flux [K m s-1]
+        self.wthetave   = None                  # entrainment kinematic virtual heat flux [K m s-1]
        
         # Moisture 
         self.q          = self.input.q          # initial mixed-layer specific humidity [kg kg-1]
@@ -124,12 +156,26 @@ class model:
         self.gammaq     = self.input.gammaq     # free atmosphere specific humidity lapse rate [kg kg-1 m-1]
         self.advq       = self.input.advq       # advection of moisture [kg kg-1 s-1]
         self.wq         = self.input.wq         # surface kinematic moisture flux [kg kg-1 m s-1]
+        self.wqe        = None                  # entrainment moisture flux [kg kg-1 m s-1]
+        self.wqM        = None                  # moisture cumulus mass flux [kg kg-1 m s-1]
   
         self.qsat       = None                  # mixed-layer saturated specific humidity [kg kg-1]
         self.esat       = None                  # mixed-layer saturated vapor pressure [Pa]
         self.e          = None                  # mixed-layer vapor pressure [Pa]
         self.qsatsurf   = None                  # surface saturated specific humidity [g kg-1]
         self.dqsatdT    = None                  # slope saturated specific humidity curve [g kg-1 K-1]
+      
+        # CO2
+        fac = self.mair / (self.rho*self.mco2)  # Conversion factor mgC m-2 s-1 to ppm m s-1
+        self.CO2        = self.input.CO2        # initial mixed-layer CO2 [ppm]
+        self.dCO2       = self.input.dCO2       # initial CO2 jump at h [ppm]
+        self.gammaCO2   = self.input.gammaCO2   # free atmosphere CO2 lapse rate [ppm m-1]
+        self.advCO2     = self.input.advCO2     # advection of CO2 [ppm s-1]
+        self.wCO2       = self.input.wCO2 * fac # surface kinematic CO2 flux [ppm m s-1]
+        self.wCO2A      = 0                     # surface assimulation CO2 flux [ppm m s-1]
+        self.wCO2R      = 0                     # surface respiration CO2 flux [ppm m s-1]
+        self.wCO2e      = None                  # entrainment CO2 flux [ppm m s-1]
+        self.wCO2M      = 0                     # CO2 mass flux [ppm m s-1]
        
         # Wind 
         self.u          = self.input.u          # initial mixed-layer u-wind speed [m s-1]
@@ -148,6 +194,8 @@ class model:
         self.dthetatend = None                  # tendency of potential temperature jump at h [K s-1]
         self.qtend      = None                  # tendency of mixed-layer specific humidity [kg kg-1 s-1]
         self.dqtend     = None                  # tendency of specific humidity jump at h [kg kg-1 s-1]
+        self.CO2tend    = None                  # tendency of CO2 humidity [ppm]
+        self.dCO2tend   = None                  # tendency of CO2 jump at h [ppm s-1]
         self.utend      = None                  # tendency of u-wind [m s-1 s-1]
         self.dutend     = None                  # tendency of u-wind jump at h [m s-1 s-1]
         self.vtend      = None                  # tendency of v-wind [m s-1 s-1]
@@ -225,6 +273,9 @@ class model:
         self.LEpot      = None                  # potential evaporation [W m-2]
         self.LEref      = None                  # reference evaporation using rs = rsmin / LAI [W m-2]
         self.G          = None                  # ground heat flux [W m-2]
+
+        # initialize A-Gs surface scheme
+        self.c3c4       = self.input.c3c4       # plant type ('c3' or 'c4')
  
         # initialize cumulus parameterization
         self.sw_cu      = self.input.sw_cu      # Cumulus parameterization switch
@@ -323,32 +374,42 @@ class model:
     def run_mixed_layer(self):
         if(not self.sw_sl):
             # decompose ustar along the wind components
-            self.uw       = - np.sign(self.u) * (self.ustar ** 4. / (self.v ** 2. / self.u ** 2. + 1.)) ** (0.5)
-            self.vw       = - np.sign(self.v) * (self.ustar ** 4. / (self.u ** 2. / self.v ** 2. + 1.)) ** (0.5)
+            self.uw = - np.sign(self.u) * (self.ustar ** 4. / (self.v ** 2. / self.u ** 2. + 1.)) ** (0.5)
+            self.vw = - np.sign(self.v) * (self.ustar ** 4. / (self.u ** 2. / self.v ** 2. + 1.)) ** (0.5)
        
         # calculate convective velocity scale w* 
         if(self.wthetav > 0.):
           self.wstar = ((self.g * self.h * self.wthetav) / self.thetav)**(1./3.)
         else:
           self.wstar  = 1e-6;
+      
+        # Virtual heat entrainment flux 
+        self.wthetave    = -self.beta * self.wthetav 
         
         # compute mixed-layer tendencies
         if(self.sw_shearwe):
-            self.we    = (self.beta * self.wthetav + 5. * self.ustar ** 3. * self.thetav / (self.g * self.h)) / self.dthetav
+            self.we    = (-self.wthetave + 5. * self.ustar ** 3. * self.thetav / (self.g * self.h)) / self.dthetav
         else:
-            self.we    = (self.beta * self.wthetav) / self.dthetav
+            self.we    = -self.wthetave / self.dthetav
 
         # Don't allow boundary layer shrinking if wtheta < 0 
         if(self.we < 0):
             self.we = 0.
+ 
+        # Calculate entrainment fluxes
+        self.wthetae     = -self.we * self.dtheta
+        self.wqe         = -self.we * self.dq
+        self.wCO2e       = -self.we * self.dCO2
   
         self.htend       = self.we + self.ws - self.M
        
-        self.thetatend   = (self.wtheta + self.we * self.dtheta       ) / self.h + self.advtheta 
-        self.qtend       = (self.wq     + self.we * self.dq - self.wqM) / self.h + self.advq
+        self.thetatend   = (self.wtheta - self.wthetae           ) / self.h + self.advtheta 
+        self.qtend       = (self.wq     - self.wqe     - self.wqM) / self.h + self.advq
+        self.CO2tend     = (self.wCO2   - self.wCO2e             ) / self.h + self.advCO2
         
         self.dthetatend  = self.gammatheta * (self.we - self.M) - self.thetatend
         self.dqtend      = self.gammaq     * (self.we - self.M) - self.qtend
+        self.dCO2tend    = self.gammaCO2   * (self.we - self.M) - self.CO2tend
      
         # assume u + du = ug, so ug - u = du
         if(self.sw_wind):
@@ -366,6 +427,8 @@ class model:
         dtheta0 = self.dtheta
         q0      = self.q
         dq0     = self.dq
+        CO20    = self.CO2
+        dCO20   = self.dCO2
         
         u0      = self.u
         du0     = self.du
@@ -379,6 +442,8 @@ class model:
         self.dtheta   = dtheta0 + self.dt * self.dthetatend
         self.q        = q0      + self.dt * self.qtend
         self.dq       = dq0     + self.dt * self.dqtend
+        self.CO2      = CO20    + self.dt * self.CO2tend
+        self.dCO2     = dCO20   + self.dt * self.dCO2tend
   
         if(self.sw_wind):
             self.u        = u0      + self.dt * self.utend
@@ -476,23 +541,8 @@ class model:
         else:
             psih  = -2./3. * (zeta - 5./0.35) * np.exp(-0.35 * zeta) - (1. + (2./3.) * zeta) ** (1.5) - (10./3.) / 0.35 + 1.
         return psih
-  
-    def run_land_surface(self):
-        # compute ra
-        ueff = np.sqrt(self.u ** 2. + self.v ** 2. + self.wstar**2.)
-
-        if(self.sw_sl):
-          self.ra = (self.Cs * ueff)**-1.
-        else:
-          self.ra = ueff / max(1.e-3, self.ustar)**2.
-
-        # first calculate essential thermodynamic variables
-        self.esat    = esat(self.theta)
-        self.qsat    = qsat(self.theta, self.Ps)
-        desatdT      = self.esat * (17.2694 / (self.theta - 35.86) - 17.2694 * (self.theta - 273.16) / (self.theta - 35.86)**2.)
-        self.dqsatdT = 0.622 * desatdT / self.Ps
-        self.e       = self.q * self.Ps / 0.622
-  
+ 
+    def jarvis_stewart(self):
         # calculate surface resistances using Jarvis-Stewart model
         if(self.sw_rad):
             f1 = 1. / min(1.,((0.004 * self.Swin + 0.05) / (0.81 * (0.004 * self.Swin + 1.))))
@@ -511,7 +561,116 @@ class model:
         f4 = 1./ (1. - 0.0016 * (298.0-self.theta)**2.)
   
         self.rs = self.rsmin / self.LAI * f1 * f2 * f3 * f4
+
+    def factorial(self,k):
+        factorial = 1
+        for n in range(2,k+1):
+            factorial = factorial * float(n)
+        return factorial;
+
+    def E1(self,x):
+        E1sum = 0
+        for k in range(1,100):
+            E1sum += pow((-1.),(k + 0.0)) * pow(x,(k + 0.0)) / ((k + 0.0) * self.factorial(k))
+        return -0.57721566490153286060 - np.log(x) - E1sum
  
+    def ags(self):
+        # Select index for plant type
+        if(self.c3c4 == 'c3'):
+            c = 0
+        elif(self.c3c4 == 'c4'):
+            c = 1
+        else:
+            sys.exit('option \"%s\" for \"c3c4\" invalid'%self.c3c4)
+
+        # calculate CO2 compensation concentration
+        CO2comp       = self.CO2comp298[c] * self.rho * pow(self.Q10CO2[c],(0.1 * (self.thetasurf - 298.)))  
+
+        # calculate mesophyll conductance
+        gm            = self.gm298[c] *  pow(self.Q10gm[c],(0.1 * (self.thetasurf-298.))) \
+                          / ( (1. + np.exp(0.3 * (self.T1gm[c] - self.thetasurf))) * (1. + np.exp(0.3 * (self.thetasurf - self.T2gm[c]))))
+        gm            = gm / 1000. # conversion from mm s-1 to m s-1
+  
+        # calculate CO2 concentration inside the leaf (ci)
+        fmin0         = self.gmin[c] / self.nuco2q - 1. / 9. * gm
+        fmin          = -fmin0 + pow((pow(fmin0,2.) + 4 * self.gmin[c]/self.nuco2q * gm),0.5) / (2. * gm)
+  
+        Ds            = (esat(self.Ts) - self.e) / 1000. # kPa
+        D0            = (self.f0[c] - fmin) / self.ad[c]
+  
+        cfrac         = self.f0[c] * (1. - (Ds / D0)) + fmin * (Ds / D0)
+        co2abs        = self.CO2 * (self.mco2 / self.mair) * self.rho # conversion mumol mol-1 (ppm) to mgCO2 m3
+        ci            = cfrac * (co2abs - CO2comp) + CO2comp
+  
+        # calculate maximal gross primary production in high light conditions (Ag)
+        Ammax         = self.Ammax298[c] *  pow(self.Q10Am[c],(0.1 * (self.thetasurf - 298.))) / ( (1. + np.exp(0.3 * (self.T1Am[c] - self.thetasurf))) * (1. + np.exp(0.3 * (self.thetasurf - self.T2Am[c]))))
+  
+        # calculate effect of soil moisture stress on gross assimilation rate
+        betaw         = max(1e-3, min(1.,(self.wg - self.wwilt)/(self.wfc - self.wwilt)))
+  
+        # calculate stress function
+        fstr          = betaw;
+  
+        # calculate gross assimilation rate (Am)
+        Am           = Ammax * (1. - np.exp(-(gm * (ci - CO2comp) / Ammax)))
+        Rdark        = (1. / 9.) * Am
+        PAR          = 0.5 * max(1e-1,self.Swin * self.cveg)
+  
+        # calculate  light use efficiency
+        alphac       = self.alpha0[c] * (co2abs - CO2comp) / (co2abs + 2. * CO2comp)
+  
+        # calculate gross primary productivity
+        Ag           = (Am + Rdark) * (1 - np.exp(alphac * PAR / (Am + Rdark)))
+  
+        # 1.- calculate upscaling from leaf to canopy: net flow CO2 into the plant (An)
+        y            =  alphac * self.Kx[c] * PAR / (Am + Rdark)
+        An           = (Am + Rdark) * (1. - 1. / (self.Kx[c] * self.LAI) * (self.E1(y * np.exp(-self.Kx[c] * self.LAI)) - self.E1(y)))
+  
+        # 2.- calculate upscaling from leaf to canopy: CO2 conductance at canopy level
+        a1           = 1. / (1. - self.f0[c])
+        Dstar        = D0 / (a1 * (self.f0[c] - fmin))
+  
+        gcco2        = self.LAI * (self.gmin[c] / self.nuco2q + a1 * fstr * An / ((co2abs - CO2comp) * (1. + Ds / Dstar)))
+  
+        # calculate surface resistance for moisture and carbon dioxide
+        self.rs      = 1. / (1.6 * gcco2)
+        rsCO2        = 1. / gcco2
+  
+        # calculate net flux of CO2 into the plant (An)
+        An           = -(co2abs - ci) / (self.ra + rsCO2)
+  
+        # CO2 soil surface flux
+        fw           = self.Cw * self.wmax / (self.wg + self.wmin)
+        Resp         = self.R10 * (1. - fw) * np.exp(self.E0 / (283.15 * 8.314) * (1. - 283.15 / (self.Tsoil)))
+  
+        # CO2 flux
+        self.wCO2A   = An   * (self.mair / (self.rho * self.mco2))
+        self.wCO2R   = Resp * (self.mair / (self.rho * self.mco2))
+        self.wCO2    = self.wCO2A + self.wCO2R
+ 
+    def run_land_surface(self):
+        # compute ra
+        ueff = np.sqrt(self.u ** 2. + self.v ** 2. + self.wstar**2.)
+
+        if(self.sw_sl):
+          self.ra = (self.Cs * ueff)**-1.
+        else:
+          self.ra = ueff / max(1.e-3, self.ustar)**2.
+
+        # first calculate essential thermodynamic variables
+        self.esat    = esat(self.theta)
+        self.qsat    = qsat(self.theta, self.Ps)
+        desatdT      = self.esat * (17.2694 / (self.theta - 35.86) - 17.2694 * (self.theta - 273.16) / (self.theta - 35.86)**2.)
+        self.dqsatdT = 0.622 * desatdT / self.Ps
+        self.e       = self.q * self.Ps / 0.622
+
+        if(self.ls_type == 'js'): 
+            self.jarvis_stewart() 
+        elif(self.ls_type == 'ags'):
+            self.ags()
+        else:
+            sys.exit('option \"%s\" for \"ls_type\" invalid'%self.ls_type)
+
         # recompute f2 using wg instead of w2
         if(self.wg > self.wwilt):# and self.w2 <= self.wfc):
           f2          = (self.wfc - self.wwilt) / (self.wg - self.wwilt)
@@ -574,37 +733,40 @@ class model:
         t                      = self.t
         self.out.t[t]          = t * self.dt / 3600. + self.tstart
         self.out.h[t]          = self.h
-        self.out.ws[t]         = self.ws
         
         self.out.theta[t]      = self.theta
         self.out.thetav[t]     = self.thetav
         self.out.dtheta[t]     = self.dtheta
         self.out.dthetav[t]    = self.dthetav
-        self.out.gammatheta[t] = self.gammatheta
-        self.out.advtheta[t]   = self.advtheta
-        self.out.beta[t]       = self.beta
         self.out.wtheta[t]     = self.wtheta
         self.out.wthetav[t]    = self.wthetav
+        self.out.wthetae[t]    = self.wthetae
+        self.out.wthetave[t]   = self.wthetave
         
         self.out.q[t]          = self.q
+        self.out.dq[t]         = self.dq
+        self.out.wq[t]         = self.wq
+        self.out.wqe[t]        = self.wqe
+        self.out.wqM[t]        = self.wqM
+      
         self.out.qsat[t]       = self.qsat
         self.out.e[t]          = self.e
         self.out.esat[t]       = self.esat
-        self.out.dq[t]         = self.dq
-        self.out.gammaq[t]     = self.gammaq
-        self.out.advq[t]       = self.advq
-        self.out.wq[t]         = self.wq
-        
+      
+        fac = (self.rho*self.mco2)/self.mair
+        self.out.CO2[t]        = self.CO2
+        self.out.dCO2[t]       = self.dCO2
+        self.out.wCO2[t]       = self.wCO2  * fac
+        self.out.wCO2e[t]      = self.wCO2e * fac
+        self.out.wCO2R[t]      = self.wCO2R * fac
+        self.out.wCO2A[t]      = self.wCO2A * fac
+
         self.out.u[t]          = self.u
         self.out.du[t]         = self.du
-        self.out.gammau[t]     = self.gammau
-        self.out.advu[t]       = self.advu
         self.out.uw[t]         = self.uw
         
         self.out.v[t]          = self.v
         self.out.dv[t]         = self.dv
-        self.out.gammav[t]     = self.gammav
-        self.out.advv[t]       = self.advv
         self.out.vw[t]         = self.vw
         
         self.out.T2m[t]        = self.T2m
@@ -642,7 +804,6 @@ class model:
 
         self.out.ac[t]         = self.ac
         self.out.M[t]          = self.M
-        self.out.wqM[t]        = self.wqM
   
     # delete class variables to facilitate analysis in ipython
     def exitmodel(self):
@@ -800,39 +961,41 @@ class model_output:
         self.t          = np.zeros(tsteps)    # time [s]
 
         # mixed-layer variables
-        self.h          = np.zeros(tsteps)    # initial ABL height [m]
-        self.Ps         = np.zeros(tsteps)    # surface pressure [Pa]
-        self.ws         = np.zeros(tsteps)    # large scale vertical velocity [m s-1]
+        self.h          = np.zeros(tsteps)    # ABL height [m]
         
         self.theta      = np.zeros(tsteps)    # initial mixed-layer potential temperature [K]
         self.thetav     = np.zeros(tsteps)    # initial mixed-layer virtual potential temperature [K]
         self.dtheta     = np.zeros(tsteps)    # initial potential temperature jump at h [K]
         self.dthetav    = np.zeros(tsteps)    # initial virtual potential temperature jump at h [K]
-        self.gammatheta = np.zeros(tsteps)    # free atmosphere potential temperature lapse rate [K m-1]
-        self.advtheta   = np.zeros(tsteps)    # advection of heat [K s-1]
-        self.beta       = np.zeros(tsteps)    # entrainment ratio for virtual heat [-]
         self.wtheta     = np.zeros(tsteps)    # surface kinematic heat flux [K m s-1]
         self.wthetav    = np.zeros(tsteps)    # surface kinematic virtual heat flux [K m s-1]
+        self.wthetae    = np.zeros(tsteps)    # entrainment kinematic heat flux [K m s-1]
+        self.wthetave   = np.zeros(tsteps)    # entrainment kinematic virtual heat flux [K m s-1]
         
         self.q          = np.zeros(tsteps)    # mixed-layer specific humidity [kg kg-1]
+        self.dq         = np.zeros(tsteps)    # initial specific humidity jump at h [kg kg-1]
+        self.wq         = np.zeros(tsteps)    # surface kinematic moisture flux [kg kg-1 m s-1]
+        self.wqe        = np.zeros(tsteps)    # entrainment kinematic moisture flux [kg kg-1 m s-1]
+        self.wqM        = np.zeros(tsteps)    # cumulus mass-flux kinematic moisture flux [kg kg-1 m s-1]
+
         self.qsat       = np.zeros(tsteps)    # mixed-layer saturated specific humidity [kg kg-1]
         self.e          = np.zeros(tsteps)    # mixed-layer vapor pressure [Pa]
         self.esat       = np.zeros(tsteps)    # mixed-layer saturated vapor pressure [Pa]
-        self.dq         = np.zeros(tsteps)    # initial specific humidity jump at h [kg kg-1]
-        self.gammaq     = np.zeros(tsteps)    # free atmosphere specific humidity lapse rate [kg kg-1 m-1]
-        self.advq       = np.zeros(tsteps)    # advection of moisture [kg kg-1 s-1]
-        self.wq         = np.zeros(tsteps)    # surface kinematic moisture flux [kg kg-1 m s-1]
+
+        self.CO2        = np.zeros(tsteps)    # mixed-layer CO2 [ppm]
+        self.dCO2       = np.zeros(tsteps)    # initial CO2 jump at h [ppm]
+        self.wCO2       = np.zeros(tsteps)    # surface total CO2 flux [mgC m-2 s-1]
+        self.wCO2A      = np.zeros(tsteps)    # surface assimilation CO2 flux [mgC m-2 s-1]
+        self.wCO2R      = np.zeros(tsteps)    # surface respiration CO2 flux [mgC m-2 s-1]
+        self.wCO2e      = np.zeros(tsteps)    # entrainment CO2 flux [mgC m-2 s-1]
+        self.wCO2M      = np.zeros(tsteps)    # CO2 mass flux [mgC m-2 s-1]
         
         self.u          = np.zeros(tsteps)    # initial mixed-layer u-wind speed [m s-1]
         self.du         = np.zeros(tsteps)    # initial u-wind jump at h [m s-1]
-        self.gammau     = np.zeros(tsteps)    # free atmosphere u-wind speed lapse rate [s-1]
-        self.advu       = np.zeros(tsteps)    # advection of u-wind [m s-2]
         self.uw         = np.zeros(tsteps)    # surface momentum flux u [m2 s-2]
         
         self.v          = np.zeros(tsteps)    # initial mixed-layer u-wind speed [m s-1]
         self.dv         = np.zeros(tsteps)    # initial u-wind jump at h [m s-1]
-        self.gammav     = np.zeros(tsteps)    # free atmosphere v-wind speed lapse rate [s-1]
-        self.advv       = np.zeros(tsteps)    # advection of v-wind [m s-2]
         self.vw         = np.zeros(tsteps)    # surface momentum flux v [m2 s-2]
 
         # diagnostic meteorological variables
@@ -877,7 +1040,6 @@ class model_output:
         # cumulus variables
         self.ac         = np.zeros(tsteps)    # cloud core fraction [-]
         self.M          = np.zeros(tsteps)    # cloud core mass flux [m s-1]
-        self.wqM        = np.zeros(tsteps)    # cloud core moisture flux [kg kg-1 m s-1]
 
 # class for storing mixed-layer model input data
 class model_input:
@@ -906,6 +1068,12 @@ class model_input:
         self.gammaq     = -1. # free atmosphere specific humidity lapse rate [kg kg-1 m-1]
         self.advq       = -1. # advection of moisture [kg kg-1 s-1]
         self.wq         = -1. # surface kinematic moisture flux [kg kg-1 m s-1]
+
+        self.CO2        = -1. # initial mixed-layer potential temperature [K]
+        self.dCO2       = -1. # initial temperature jump at h [K]
+        self.gammaCO2   = -1. # free atmosphere potential temperature lapse rate [K m-1]
+        self.advCO2     = -1. # advection of heat [K s-1]
+        self.wCO2       = -1. # surface kinematic heat flux [K m s-1]
         
         self.sw_wind    = False # prognostic wind switch
         self.u          = -1. # initial mixed-layer u-wind speed [m s-1]
@@ -938,6 +1106,7 @@ class model_input:
 
         # land surface parameters
         self.sw_ls      = False # land surface switch
+        self.ls_type    = 'js' # land-surface parameterization ('js' for Jarvis-Stewart or 'ags' for A-Gs)
         self.wg         = -1. # volumetric water content top soil layer [m3 m-3]
         self.w2         = -1. # volumetric water content deeper soil layer [m3 m-3]
         self.Tsoil      = -1. # temperature top soil layer [K]
@@ -968,6 +1137,9 @@ class model_input:
         self.Wl         = -1. # equivalent water layer depth for wet vegetation [m]
         
         self.Lambda     = -1. # thermal diffusivity skin layer [-]
+
+        # A-Gs parameters
+        self.c3c4       = 'c3' # Plant type ('c3' or 'c4')
 
         # Cumulus parameters
         self.sw_cu      = False # Cumulus parameterization switch
@@ -1000,6 +1172,12 @@ if(__name__ == "__main__"):
     r1in.gammaq     = 0.        # free atmosphere specific humidity lapse rate [kg kg-1 m-1]
     r1in.advq       = 0.        # advection of moisture [kg kg-1 s-1]
     r1in.wq         = 0.1e-3    # surface kinematic moisture flux [kg kg-1 m s-1]
+   
+    r1in.CO2        = 422.      # initial mixed-layer CO2 [ppm]
+    r1in.dCO2       = -44.      # initial CO2 jump at h [ppm]
+    r1in.gammaCO2   = 0.        # free atmosphere CO2 lapse rate [ppm m-1]
+    r1in.advCO2     = 0.        # advection of CO2 [ppm s-1]
+    r1in.wCO2       = 10.       # surface kinematic CO2 flux [ppm m s-1]
     
     r1in.sw_wind    = False      # prognostic wind switch
     r1in.u          = 6.        # initial mixed-layer u-wind speed [m s-1]
@@ -1019,7 +1197,7 @@ if(__name__ == "__main__"):
     r1in.z0h        = 0.002     # roughness length for scalars [m]
     
     # radiation parameters
-    r1in.sw_rad     = False     # radiation switch
+    r1in.sw_rad     = True      # radiation switch
     r1in.lat        = 51.97     # latitude [deg]
     r1in.lon        = -4.93     # longitude [deg]
     r1in.doy        = 268.      # day of the year [-]
@@ -1028,7 +1206,8 @@ if(__name__ == "__main__"):
     r1in.Q          = 400.      # net radiation [W m-2] 
     
     # land surface parameters
-    r1in.sw_ls      = False     # land surface switch
+    r1in.sw_ls      = True      # land surface switch
+    r1in.ls_type    = 'ags'     # land-surface parameterization ('js' for Jarvis-Stewart or 'ags' for A-Gs)
     r1in.wg         = 0.21      # volumetric water content top soil layer [m3 m-3]
     r1in.w2         = 0.21      # volumetric water content deeper soil layer [m3 m-3]
     r1in.cveg       = 0.85      # vegetation fraction [-]
@@ -1059,7 +1238,11 @@ if(__name__ == "__main__"):
     
     r1in.Lambda     = 5.9       # thermal diffusivity skin layer [-]
 
-    r1in.sw_cu      = True      # Cumulus parameterization switch
+    # A-Gs parameters
+    r1in.c3c4       = 'c3'      # Plant type ('c3' or 'c4')
+
+    # Cloud parameters
+    r1in.sw_cu      = False      # Cumulus parameterization switch
     r1in.dz_h       = 150.      # Transition layer thickness [m]
     
     r1 = model(r1in)
@@ -1073,53 +1256,81 @@ if(__name__ == "__main__"):
     from pylab import *
     close('all')
 
-    figure()
-    subplot(331)
-    plot(r1.out.t, r1.out.h, 'b-', label='h python')
-    plot(rr.timeUTC, rr.h, 'g-', label='CLASS')
-    legend(frameon=False)
+    if(False):
+        figure()
+        subplot(331)
+        plot(r1.out.t, r1.out.h, 'b-', label='h python')
+        plot(rr.timeUTC, rr.h, 'g-', label='CLASS')
+        legend(frameon=False)
 
-    subplot(332)
-    plot(r1.out.t, r1.out.theta, 'b-', label='theta python')
-    plot(rr.timeUTC, rr.th, 'g-', label='CLASS')
-    legend(frameon=False)
+        subplot(332)
+        plot(r1.out.t, r1.out.theta, 'b-', label='theta python')
+        plot(rr.timeUTC, rr.th, 'g-', label='CLASS')
+        legend(frameon=False)
 
-    subplot(333)
-    plot(r1.out.t, r1.out.q*1000, 'b-', label='q python')
-    plot(rr.timeUTC, rr.q*1000, 'g-', label='CLASS')
-    legend(frameon=False)
+        subplot(333)
+        plot(r1.out.t, r1.out.q*1000, 'b-', label='q python')
+        plot(rr.timeUTC, rr.q*1000, 'g-', label='CLASS')
+        legend(frameon=False)
 
-    subplot(334)
-    plot(r1.out.t, r1.out.Swin, 'b-', label='swin python')
-    plot(rr.timeUTC, rr.Swin, 'g-', label='CLASS')
-    plot(r1.out.t, r1.out.Swout, 'b--', label='swout python')
-    plot(rr.timeUTC, rr.Swout, 'g--', label='CLASS')
-    legend(frameon=False)
+        subplot(334)
+        plot(r1.out.t, r1.out.Swin, 'b-', label='swin python')
+        plot(rr.timeUTC, rr.Swin, 'g-', label='CLASS')
+        plot(r1.out.t, r1.out.Swout, 'b--', label='swout python')
+        plot(rr.timeUTC, rr.Swout, 'g--', label='CLASS')
+        legend(frameon=False)
 
-    subplot(335)
-    plot(r1.out.t, r1.out.Lwin, 'b-', label='lwin python')
-    plot(rr.timeUTC, rr.Lwin, 'g-', label='CLASS')
-    plot(r1.out.t, r1.out.Lwout, 'b--', label='lwout python')
-    plot(rr.timeUTC, rr.Lwout, 'g--', label='CLASS')
-    legend(frameon=False)
+        #subplot(335)
+        #plot(r1.out.t, r1.out.CO2, 'b-', label='CO2 python')
+        #plot(rr.timeUTC, rr.CO2-1., 'g-', label='CLASS')
+        #legend(frameon=False)
 
-    subplot(336)
-    plot(r1.out.t, r1.out.H, 'b-', label='H python')
-    plot(rr.timeUTC, rr.H, 'g-', label='CLASS')
-    legend(frameon=False)
+        #subplot(336)
+        #plot(r1.out.t, r1.out.wCO2, 'b-', label='wCO2 python')
+        #plot(rr.timeUTC, rr.wCO2s, 'g-', label='CLASS')
+        #legend(frameon=False)
 
-    subplot(337)
-    plot(r1.out.t, r1.out.LE, 'b-', label='LE python')
-    plot(rr.timeUTC, rr.LE, 'g-', label='CLASS')
-    legend(frameon=False)
+        #subplot(337)
+        #plot(r1.out.t, r1.out.wCO2A, 'b-', label='Assym python')
+        #plot(rr.timeUTC, rr.wCO2A, 'g-', label='CLASS')
+        #legend(frameon=False)
 
-    subplot(338)
-    plot(r1.out.t, r1.out.ac, 'b-', label='ac python')
-    plot(rr.timeUTC, rr.ac, 'g-', label='CLASS')
-    legend(frameon=False)
+        #subplot(338)
+        #plot(r1.out.t, r1.out.wCO2R, 'b-', label='Reso python')
+        #plot(rr.timeUTC, rr.wCO2R, 'g-', label='CLASS')
+        #legend(frameon=False)
 
-    subplot(339)
-    plot(r1.out.t, r1.out.M, 'b-', label='M python')
-    plot(rr.timeUTC, rr.M, 'g-', label='CLASS')
-    legend(frameon=False)
+        #subplot(339)
+        #plot(r1.out.t, r1.out.wCO2e, 'b-', label='wCO2e python')
+        #plot(rr.timeUTC, rr.wCO2e, 'g-', label='CLASS')
+        #legend(frameon=False)
 
+    if(True):
+        figure()
+        subplot(321)
+        plot(r1.out.t,   r1.out.CO2, 'g-', label='python')
+        plot(rr.timeUTC, rr.CO2, 'k-', label='CLASS')
+        ylabel('CO2')
+        legend(frameon=False)
+
+        subplot(322)
+        plot(r1.out.t,   r1.out.dCO2, 'g-', label='python')
+        plot(rr.timeUTC, rr.dCO2, 'k-', label='CLASS')
+        ylabel('dCO2')
+
+        subplot(323)
+        plot(r1.out.t,   r1.out.wCO2, 'g-', label='python')
+        plot(rr.timeUTC, rr.wCO2s, 'k-', label='CLASS')
+        ylabel('wCO2s')
+
+        subplot(324)
+        plot(r1.out.t,   r1.out.wCO2e, 'g-', label='python')
+        plot(rr.timeUTC, rr.wCO2e, 'k-', label='CLASS')
+        ylabel('wCO2e')
+
+        subplot(325)
+        plot(r1.out.t,   r1.out.wCO2A, 'g-', label='assym python')
+        plot(rr.timeUTC, rr.wCO2A, 'k-', label='CLASS')
+        plot(r1.out.t,   r1.out.wCO2R, 'g--', label='assym python')
+        plot(rr.timeUTC, rr.wCO2R, 'k--', label='CLASS')
+        ylabel('wCO2A/R')
