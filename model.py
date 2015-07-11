@@ -414,7 +414,7 @@ class model:
         # calculate large-scale vertical velocity (subsidence)
         self.ws = -self.divU * self.h
       
-        # calculate compensation velocity to fix the free troposphere in case of subsidence 
+        # calculate compensation to fix the free troposphere in case of subsidence 
         if(self.sw_fixft):
             w_th_ft  = self.gammatheta * self.ws
             w_q_ft   = self.gammaq     * self.ws
@@ -429,9 +429,9 @@ class model:
        
         # calculate convective velocity scale w* 
         if(self.wthetav > 0.):
-          self.wstar = ((self.g * self.h * self.wthetav) / self.thetav)**(1./3.)
+            self.wstar = ((self.g * self.h * self.wthetav) / self.thetav)**(1./3.)
         else:
-          self.wstar  = 1e-6;
+            self.wstar  = 1e-6;
       
         # Virtual heat entrainment flux 
         self.wthetave    = -self.beta * self.wthetav 
