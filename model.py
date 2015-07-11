@@ -112,6 +112,7 @@ class model:
         self.Ps         = self.input.Ps         # surface pressure [Pa]
         self.divU       = self.input.divU       # horizontal large-scale divergence of wind [s-1]
         self.ws         = None                  # large-scale vertical velocity [m s-1]
+        self.wf         = None                  # mixed-layer growth due to radiative divergence [m s-1]
         self.fc         = self.input.fc         # coriolis parameter [s-1]
         self.we         = -1.                   # entrainment velocity [m s-1]
        
@@ -226,6 +227,7 @@ class model:
         self.Lwin       = None                  # incoming long wave radiation [W m-2]
         self.Lwout      = None                  # outgoing long wave radiation [W m-2]
         self.Q          = self.input.Q          # net radiation [W m-2]
+        self.dFz        = self.input.dFz        # cloud top radiative divergence [W m-2] 
   
         # initialize land surface
         self.wg         = self.input.wg         # volumetric water content top soil layer [m3 m-3]
@@ -391,6 +393,9 @@ class model:
             w_th_ft  = 0.
             w_q_ft   = 0.
             w_CO2_ft = 0. 
+      
+        # calculate mixed-layer growth due to cloud top radiative divergence
+        self.wf = self.dFz / (self.rho * self.cp * self.dtheta)
        
         # calculate convective velocity scale w* 
         if(self.wthetav > 0.):
@@ -416,23 +421,23 @@ class model:
         self.wqe         = -self.we * self.dq
         self.wCO2e       = -self.we * self.dCO2
   
-        self.htend       = self.we + self.ws - self.M
+        self.htend       = self.we + self.ws + self.wf - self.M
        
         self.thetatend   = (self.wtheta - self.wthetae           ) / self.h + self.advtheta 
         self.qtend       = (self.wq     - self.wqe     - self.wqM) / self.h + self.advq
         self.CO2tend     = (self.wCO2   - self.wCO2e             ) / self.h + self.advCO2
         
-        self.dthetatend  = self.gammatheta * (self.we - self.M) - self.thetatend + w_th_ft
-        self.dqtend      = self.gammaq     * (self.we - self.M) - self.qtend     + w_q_ft
-        self.dCO2tend    = self.gammaCO2   * (self.we - self.M) - self.CO2tend   + w_CO2_ft
+        self.dthetatend  = self.gammatheta * (self.we + self.wf - self.M) - self.thetatend + w_th_ft
+        self.dqtend      = self.gammaq     * (self.we + self.wf - self.M) - self.qtend     + w_q_ft
+        self.dCO2tend    = self.gammaCO2   * (self.we + self.wf - self.M) - self.CO2tend   + w_CO2_ft
      
         # assume u + du = ug, so ug - u = du
         if(self.sw_wind):
             self.utend       = -self.fc * self.dv + (self.uw + self.we * self.du)  / self.h + self.advu
             self.vtend       =  self.fc * self.du + (self.vw + self.we * self.dv)  / self.h + self.advv
   
-            self.dutend      = self.gammau * (self.we - self.M) - self.utend
-            self.dvtend      = self.gammav * (self.we - self.M) - self.vtend
+            self.dutend      = self.gammau * (self.we + self.wf - self.M) - self.utend
+            self.dvtend      = self.gammav * (self.we + self.wf - self.M) - self.vtend
    
     def integrate_mixed_layer(self):
         # set values previous time step
@@ -1119,6 +1124,8 @@ class model_input:
         self.doy        = None  # day of the year [-]
         self.tstart     = None  # time of the day [h UTC]
         self.cc         = None  # cloud cover fraction [-]
+        self.Q          = None  # net radiation [W m-2] 
+        self.dFz        = None  # cloud top radiative divergence [W m-2] 
 
         # land surface parameters
         self.sw_ls      = None  # land surface switch
@@ -1171,10 +1178,10 @@ if(__name__ == "__main__"):
     # mixed-layer input
     r1in.sw_ml      = True      # mixed-layer model switch
     r1in.sw_shearwe = False     # shear growth mixed-layer switch
-    r1in.sw_fixft   = True      # Fix the free-troposphere switch
+    r1in.sw_fixft   = False     # Fix the free-troposphere switch
     r1in.h          = 200.      # initial ABL height [m]
     r1in.Ps         = 101300.   # surface pressure [Pa]
-    r1in.divU       = 2e-5      # horizontal large-scale divergence of wind [s-1]
+    r1in.divU       = 0.        # horizontal large-scale divergence of wind [s-1]
     r1in.fc         = 1.e-4     # Coriolis parameter [m s-1]
     
     r1in.theta      = 288.      # initial mixed-layer potential temperature [K]
@@ -1182,13 +1189,13 @@ if(__name__ == "__main__"):
     r1in.gammatheta = 0.006     # free atmosphere potential temperature lapse rate [K m-1]
     r1in.advtheta   = 0.        # advection of heat [K s-1]
     r1in.beta       = 0.2       # entrainment ratio for virtual heat [-]
-    r1in.wtheta     = 0.1       # surface kinematic heat flux [K m s-1]
+    r1in.wtheta     = 0.0       # surface kinematic heat flux [K m s-1]
     
     r1in.q          = 0.008     # initial mixed-layer specific humidity [kg kg-1]
     r1in.dq         = -0.001    # initial specific humidity jump at h [kg kg-1]
     r1in.gammaq     = 0.        # free atmosphere specific humidity lapse rate [kg kg-1 m-1]
     r1in.advq       = 0.        # advection of moisture [kg kg-1 s-1]
-    r1in.wq         = 0.1e-3    # surface kinematic moisture flux [kg kg-1 m s-1]
+    r1in.wq         = 0.0e-3    # surface kinematic moisture flux [kg kg-1 m s-1]
    
     r1in.CO2        = 422.      # initial mixed-layer CO2 [ppm]
     r1in.dCO2       = -44.      # initial CO2 jump at h [ppm]
@@ -1221,6 +1228,7 @@ if(__name__ == "__main__"):
     r1in.tstart     = 6.8       # time of the day [h UTC]
     r1in.cc         = 0.0       # cloud cover fraction [-]
     r1in.Q          = 400.      # net radiation [W m-2] 
+    r1in.dFz        = 100.      # cloud top radiative divergence [W m-2] 
     
     # land surface parameters
     r1in.sw_ls      = False     # land surface switch
