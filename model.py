@@ -57,7 +57,7 @@ class model:
     def init(self):
         # assign variables from input data
         # initialize constants
-        self.Lv         = 2.45e6                # heat of vaporization [J kg-1]
+        self.Lv         = 2.5e6                 # heat of vaporization [J kg-1]
         self.cp         = 1005.                 # specific heat of dry air [J kg-1 K-1]
         self.rho        = 1.2                   # density of air [kg m-3]
         self.k          = 0.4                   # Von Karman constant [-]
@@ -308,7 +308,7 @@ class model:
   
         if(self.sw_ls):
             self.run_land_surface()
-       
+
         if(self.sw_cu):
             self.run_mixed_layer()
             self.run_cumulus()
@@ -737,7 +737,7 @@ class model:
         # calculate kinematic heat fluxes
         self.wtheta   = self.H  / (self.rho * self.cp)
         self.wq       = self.LE / (self.rho * self.Lv)
-  
+ 
     def integrate_land_surface(self):
         # integrate soil equations
         Tsoil0        = self.Tsoil
@@ -1177,11 +1177,11 @@ if(__name__ == "__main__"):
     
     # mixed-layer input
     r1in.sw_ml      = True      # mixed-layer model switch
-    r1in.sw_shearwe = False     # shear growth mixed-layer switch
+    r1in.sw_shearwe = True     # shear growth mixed-layer switch
     r1in.sw_fixft   = False     # Fix the free-troposphere switch
     r1in.h          = 200.      # initial ABL height [m]
     r1in.Ps         = 101300.   # surface pressure [Pa]
-    r1in.divU       = 0.        # horizontal large-scale divergence of wind [s-1]
+    r1in.divU       = 2e-5        # horizontal large-scale divergence of wind [s-1]
     r1in.fc         = 1.e-4     # Coriolis parameter [m s-1]
     
     r1in.theta      = 288.      # initial mixed-layer potential temperature [K]
@@ -1189,21 +1189,21 @@ if(__name__ == "__main__"):
     r1in.gammatheta = 0.006     # free atmosphere potential temperature lapse rate [K m-1]
     r1in.advtheta   = 0.        # advection of heat [K s-1]
     r1in.beta       = 0.2       # entrainment ratio for virtual heat [-]
-    r1in.wtheta     = 0.0       # surface kinematic heat flux [K m s-1]
+    r1in.wtheta     = 0.1       # surface kinematic heat flux [K m s-1]
     
     r1in.q          = 0.008     # initial mixed-layer specific humidity [kg kg-1]
     r1in.dq         = -0.001    # initial specific humidity jump at h [kg kg-1]
     r1in.gammaq     = 0.        # free atmosphere specific humidity lapse rate [kg kg-1 m-1]
     r1in.advq       = 0.        # advection of moisture [kg kg-1 s-1]
-    r1in.wq         = 0.0e-3    # surface kinematic moisture flux [kg kg-1 m s-1]
+    r1in.wq         = 0.1e-3    # surface kinematic moisture flux [kg kg-1 m s-1]
    
     r1in.CO2        = 422.      # initial mixed-layer CO2 [ppm]
     r1in.dCO2       = -44.      # initial CO2 jump at h [ppm]
     r1in.gammaCO2   = 0.        # free atmosphere CO2 lapse rate [ppm m-1]
     r1in.advCO2     = 0.        # advection of CO2 [ppm s-1]
-    r1in.wCO2       = 10.       # surface kinematic CO2 flux [ppm m s-1]
+    r1in.wCO2       = 0.        # surface kinematic CO2 flux [ppm m s-1]
     
-    r1in.sw_wind    = False     # prognostic wind switch
+    r1in.sw_wind    = True     # prognostic wind switch
     r1in.u          = 6.        # initial mixed-layer u-wind speed [m s-1]
     r1in.du         = 4.        # initial u-wind jump at h [m s-1]
     r1in.gammau     = 0.        # free atmosphere u-wind speed lapse rate [s-1]
@@ -1215,24 +1215,24 @@ if(__name__ == "__main__"):
     r1in.advv       = 0.        # advection of v-wind [m s-2]
     
     # surface layer input
-    r1in.sw_sl      = False     # surface layer switch
+    r1in.sw_sl      = True     # surface layer switch
     r1in.ustar      = 0.3       # surface friction velocity [m s-1]
     r1in.z0m        = 0.02      # roughness length for momentum [m]
     r1in.z0h        = 0.002     # roughness length for scalars [m]
     
     # radiation parameters
-    r1in.sw_rad     = False     # radiation switch
+    r1in.sw_rad     = True      # radiation switch
     r1in.lat        = 51.97     # latitude [deg]
     r1in.lon        = -4.93     # longitude [deg]
     r1in.doy        = 268.      # day of the year [-]
     r1in.tstart     = 6.8       # time of the day [h UTC]
     r1in.cc         = 0.0       # cloud cover fraction [-]
     r1in.Q          = 400.      # net radiation [W m-2] 
-    r1in.dFz        = 100.      # cloud top radiative divergence [W m-2] 
+    r1in.dFz        = 0.        # cloud top radiative divergence [W m-2] 
     
     # land surface parameters
-    r1in.sw_ls      = False     # land surface switch
-    r1in.ls_type    = 'ags'     # land-surface parameterization ('js' for Jarvis-Stewart or 'ags' for A-Gs)
+    r1in.sw_ls      = True      # land surface switch
+    r1in.ls_type    = 'ags'      # land-surface parameterization ('js' for Jarvis-Stewart or 'ags' for A-Gs)
     r1in.wg         = 0.21      # volumetric water content top soil layer [m3 m-3]
     r1in.w2         = 0.21      # volumetric water content deeper soil layer [m3 m-3]
     r1in.cveg       = 0.85      # vegetation fraction [-]
@@ -1284,51 +1284,61 @@ if(__name__ == "__main__"):
     if(True):
         figure()
         subplot(331)
-        plot(r1.out.t, r1.out.h, 'b-', label='h python')
-        plot(rr.timeUTC, rr.h, 'g-', label='CLASS')
+        plot(r1.out.t, r1.out.h, 'b-', label='python')
+        plot(rr.timeUTC, rr.h,   'g-', label='CLASS')
         legend(frameon=False)
+        ylabel('h [m]')
 
         subplot(332)
-        plot(r1.out.t, r1.out.theta, 'b-', label='theta python')
-        plot(rr.timeUTC, rr.th, 'g-', label='CLASS')
+        plot(r1.out.t, r1.out.theta, 'b-', label='python')
+        plot(rr.timeUTC, rr.th,      'g-', label='CLASS')
         legend(frameon=False)
+        ylabel('theta [K]')
 
         subplot(333)
-        plot(r1.out.t, r1.out.q*1000, 'b-', label='q python')
-        plot(rr.timeUTC, rr.q*1000, 'g-', label='CLASS')
+        plot(r1.out.t, r1.out.q*1000, 'b-', label='python')
+        plot(rr.timeUTC, rr.q*1000,   'g-', label='CLASS')
         legend(frameon=False)
+        ylabel('q [g kg-1]')
 
-        #subplot(334)
-        #plot(r1.out.t, r1.out.Swin, 'b-', label='swin python')
-        #plot(rr.timeUTC, rr.Swin, 'g-', label='CLASS')
-        #plot(r1.out.t, r1.out.Swout, 'b--', label='swout python')
-        #plot(rr.timeUTC, rr.Swout, 'g--', label='CLASS')
-        #legend(frameon=False)
+        subplot(334)
+        plot(r1.out.t, r1.out.Swin,  'b-', label='in python')
+        plot(rr.timeUTC, rr.Swin,    'g-', label='CLASS')
+        plot(r1.out.t, r1.out.Swout, 'b--', label='out python')
+        plot(rr.timeUTC, rr.Swout,   'g--', label='CLASS')
+        legend(frameon=False)
+        ylabel('SW [W m-2]')
 
-        #subplot(335)
-        #plot(r1.out.t, r1.out.CO2, 'b-', label='CO2 python')
-        #plot(rr.timeUTC, rr.CO2-1., 'g-', label='CLASS')
-        #legend(frameon=False)
+        subplot(335)
+        plot(r1.out.t, r1.out.H,  'b-', label='python')
+        plot(rr.timeUTC, rr.H, 'g-', label='CLASS')
+        legend(frameon=False)
+        ylabel('H [W m-2]')
 
-        #subplot(336)
-        #plot(r1.out.t, r1.out.wCO2, 'b-', label='wCO2 python')
-        #plot(rr.timeUTC, rr.wCO2s, 'g-', label='CLASS')
-        #legend(frameon=False)
+        subplot(336)
+        plot(r1.out.t, r1.out.LE, 'b-', label='python')
+        plot(rr.timeUTC, rr.LE,   'g-', label='CLASS')
+        legend(frameon=False)
+        ylabel('LE [W m-2]')
 
-        #subplot(337)
-        #plot(r1.out.t, r1.out.wCO2A, 'b-', label='Assym python')
-        #plot(rr.timeUTC, rr.wCO2A, 'g-', label='CLASS')
-        #legend(frameon=False)
+        subplot(337)
+        plot(r1.out.t, r1.out.CO2, 'b-', label='python')
+        plot(rr.timeUTC, rr.CO2,   'g-', label='CLASS')
+        legend(frameon=False)
+        ylabel('CO2 [ppm]')
 
-        #subplot(338)
-        #plot(r1.out.t, r1.out.wCO2R, 'b-', label='Reso python')
-        #plot(rr.timeUTC, rr.wCO2R, 'g-', label='CLASS')
-        #legend(frameon=False)
+        subplot(338)
+        plot(r1.out.t, r1.out.ustar, 'b-', label='python')
+        plot(rr.timeUTC, rr.ustar,   'g-', label='CLASS')
+        legend(frameon=False)
+        ylabel('ustar [m s-1]')
 
-        #subplot(339)
-        #plot(r1.out.t, r1.out.wCO2e, 'b-', label='wCO2e python')
-        #plot(rr.timeUTC, rr.wCO2e, 'g-', label='CLASS')
-        #legend(frameon=False)
+        subplot(339)
+        plot(r1.out.t, r1.out.wCO2A, 'b-', label='Assym. python')
+        plot(rr.timeUTC, rr.wCO2A,   'g-', label='Assym. CLASS')
+        plot(r1.out.t, r1.out.wCO2R, 'b--', label='Resp. python')
+        plot(rr.timeUTC, rr.wCO2R,   'g--', label='Resp. CLASS')
+        legend(frameon=False)
 
     # A-Gs comparison
     if(False):
