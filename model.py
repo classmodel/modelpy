@@ -69,7 +69,7 @@ class model:
         self.S0         = 1368.                 # solar constant [W m-2]
 
         # A-Gs constants and settings
-        # Plant type:  -C3-     -C4-
+        # Plant type:       -C3-     -C4-
         self.CO2comp298 =  [68.5,    4.3    ]   # CO2 compensation concentration [mg m-3]
         self.Q10CO2     =  [1.5,     1.5    ]   # function parameter to calculate CO2 compensation concentration [-]
         self.gm298      =  [7.0,     17.5   ]   # mesophyill conductance at 298 K [mm s-1]
@@ -1045,105 +1045,109 @@ class model_output:
 class model_input:
     def __init__(self):
         # general model variables
-        self.runtime    = -1. # duration of model run [s]
-        self.dt         = -1. # time step [s]
+        self.runtime    = None  # duration of model run [s]
+        self.dt         = None  # time step [s]
 
         # mixed-layer variables
-        self.sw_ml      = True # mixed-layer model switch
-        self.sw_shearwe = False # Shear growth ABL switch
-        self.h          = -1. # initial ABL height [m]
-        self.Ps         = -1. # surface pressure [Pa]
-        self.ws         = -1. # large scale vertical velocity [m s-1]
-        self.fc         = -1. # Coriolis parameter [s-1]
+        self.sw_ml      = None  # mixed-layer model switch
+        self.sw_shearwe = None  # Shear growth ABL switch
+        self.h          = None  # initial ABL height [m]
+        self.Ps         = None  # surface pressure [Pa]
+        self.ws         = None  # large scale vertical velocity [m s-1]
+        self.fc         = None  # Coriolis parameter [s-1]
         
-        self.theta      = -1. # initial mixed-layer potential temperature [K]
-        self.dtheta     = -1. # initial temperature jump at h [K]
-        self.gammatheta = -1. # free atmosphere potential temperature lapse rate [K m-1]
-        self.advtheta   = -1. # advection of heat [K s-1]
-        self.beta       = -1. # entrainment ratio for virtual heat [-]
-        self.wtheta     = -1. # surface kinematic heat flux [K m s-1]
+        self.theta      = None  # initial mixed-layer potential temperature [K]
+        self.dtheta     = None  # initial temperature jump at h [K]
+        self.gammatheta = None  # free atmosphere potential temperature lapse rate [K m-1]
+        self.advtheta   = None  # advection of heat [K s-1]
+        self.beta       = None  # entrainment ratio for virtual heat [-]
+        self.wtheta     = None  # surface kinematic heat flux [K m s-1]
         
-        self.q          = -1. # initial mixed-layer specific humidity [kg kg-1]
-        self.dq         = -1. # initial specific humidity jump at h [kg kg-1]
-        self.gammaq     = -1. # free atmosphere specific humidity lapse rate [kg kg-1 m-1]
-        self.advq       = -1. # advection of moisture [kg kg-1 s-1]
-        self.wq         = -1. # surface kinematic moisture flux [kg kg-1 m s-1]
+        self.q          = None  # initial mixed-layer specific humidity [kg kg-1]
+        self.dq         = None  # initial specific humidity jump at h [kg kg-1]
+        self.gammaq     = None  # free atmosphere specific humidity lapse rate [kg kg-1 m-1]
+        self.advq       = None  # advection of moisture [kg kg-1 s-1]
+        self.wq         = None  # surface kinematic moisture flux [kg kg-1 m s-1]
 
-        self.CO2        = -1. # initial mixed-layer potential temperature [K]
-        self.dCO2       = -1. # initial temperature jump at h [K]
-        self.gammaCO2   = -1. # free atmosphere potential temperature lapse rate [K m-1]
-        self.advCO2     = -1. # advection of heat [K s-1]
-        self.wCO2       = -1. # surface kinematic heat flux [K m s-1]
+        self.CO2        = None  # initial mixed-layer potential temperature [K]
+        self.dCO2       = None  # initial temperature jump at h [K]
+        self.gammaCO2   = None  # free atmosphere potential temperature lapse rate [K m-1]
+        self.advCO2     = None  # advection of heat [K s-1]
+        self.wCO2       = None  # surface kinematic heat flux [K m s-1]
         
-        self.sw_wind    = False # prognostic wind switch
-        self.u          = -1. # initial mixed-layer u-wind speed [m s-1]
-        self.du         = -1. # initial u-wind jump at h [m s-1]
-        self.gammau     = -1. # free atmosphere u-wind speed lapse rate [s-1]
-        self.advu       = -1. # advection of u-wind [m s-2]
+        self.sw_wind    = None  # prognostic wind switch
+        self.u          = None  # initial mixed-layer u-wind speed [m s-1]
+        self.du         = None  # initial u-wind jump at h [m s-1]
+        self.gammau     = None  # free atmosphere u-wind speed lapse rate [s-1]
+        self.advu       = None  # advection of u-wind [m s-2]
 
-        self.v          = -1. # initial mixed-layer u-wind speed [m s-1]
-        self.dv         = -1. # initial u-wind jump at h [m s-1]
-        self.gammav     = -1. # free atmosphere v-wind speed lapse rate [s-1]
-        self.advv       = -1. # advection of v-wind [m s-2]
+        self.v          = None  # initial mixed-layer u-wind speed [m s-1]
+        self.dv         = None  # initial u-wind jump at h [m s-1]
+        self.gammav     = None  # free atmosphere v-wind speed lapse rate [s-1]
+        self.advv       = None  # advection of v-wind [m s-2]
 
         # surface layer variables
-        self.sw_sl      = False # surface layer switch
-        self.ustar      = -1. # surface friction velocity [m s-1]
-        self.z0m        = -1. # roughness length for momentum [m]
-        self.z0h        = -1. # roughness length for scalars [m]
-        self.Cm         = -1. # drag coefficient for momentum [-]
-        self.Cs         = -1. # drag coefficient for scalars [-]
-        self.L          = -1. # Obukhov length [-]
-        self.Rib        = -1. # bulk Richardson number [-]
+        self.sw_sl      = None  # surface layer switch
+        self.ustar      = None  # surface friction velocity [m s-1]
+        self.z0m        = None  # roughness length for momentum [m]
+        self.z0h        = None  # roughness length for scalars [m]
+        self.Cm         = None  # drag coefficient for momentum [-]
+        self.Cs         = None  # drag coefficient for scalars [-]
+        self.L          = None  # Obukhov length [-]
+        self.Rib        = None  # bulk Richardson number [-]
 
         # radiation parameters
-        self.sw_rad     = False # radiation switch
-        self.lat        = -1. # latitude [deg]
-        self.lon        = -1. # longitude [deg]
-        self.doy        = -1. # day of the year [-]
-        self.tstart     = -1  # time of the day [h UTC]
-        self.cc         = -1  # cloud cover fraction [-]
+        self.sw_rad     = None  # radiation switch
+        self.lat        = None  # latitude [deg]
+        self.lon        = None  # longitude [deg]
+        self.doy        = None  # day of the year [-]
+        self.tstart     = None  # time of the day [h UTC]
+        self.cc         = None  # cloud cover fraction [-]
 
         # land surface parameters
-        self.sw_ls      = False # land surface switch
-        self.ls_type    = 'js' # land-surface parameterization ('js' for Jarvis-Stewart or 'ags' for A-Gs)
-        self.wg         = -1. # volumetric water content top soil layer [m3 m-3]
-        self.w2         = -1. # volumetric water content deeper soil layer [m3 m-3]
-        self.Tsoil      = -1. # temperature top soil layer [K]
-        self.T2         = -1. # temperature deeper soil layer [K]
+        self.sw_ls      = None  # land surface switch
+        self.ls_type    = None  # land-surface parameterization ('js' for Jarvis-Stewart or 'ags' for A-Gs)
+        self.wg         = None  # volumetric water content top soil layer [m3 m-3]
+        self.w2         = None  # volumetric water content deeper soil layer [m3 m-3]
+        self.Tsoil      = None  # temperature top soil layer [K]
+        self.T2         = None  # temperature deeper soil layer [K]
         
-        self.a          = -1. # Clapp and Hornberger retention curve parameter a
-        self.b          = -1. # Clapp and Hornberger retention curve parameter b
-        self.p          = -1. # Clapp and Hornberger retention curve parameter p 
-        self.CGsat      = -1. # saturated soil conductivity for heat
+        self.a          = None  # Clapp and Hornberger retention curve parameter a
+        self.b          = None  # Clapp and Hornberger retention curve parameter b
+        self.p          = None  # Clapp and Hornberger retention curve parameter p 
+        self.CGsat      = None  # saturated soil conductivity for heat
         
-        self.wsat       = -1. # saturated volumetric water content ECMWF config [-]
-        self.wfc        = -1. # volumetric water content field capacity [-]
-        self.wwilt      = -1. # volumetric water content wilting point [-]
+        self.wsat       = None  # saturated volumetric water content ECMWF config [-]
+        self.wfc        = None  # volumetric water content field capacity [-]
+        self.wwilt      = None  # volumetric water content wilting point [-]
         
-        self.C1sat      = -1. 
-        self.C2ref      = -1.
+        self.C1sat      = None 
+        self.C2ref      = None
         
-        self.LAI        = -1. # leaf area index [-]
-        self.gD         = -1. # correction factor transpiration for VPD [-]
-        self.rsmin      = -1. # minimum resistance transpiration [s m-1]
-        self.rssoilmin  = -1. # minimum resistance soil evaporation [s m-1]
-        self.alpha      = -1. # surface albedo [-]
+        self.LAI        = None  # leaf area index [-]
+        self.gD         = None  # correction factor transpiration for VPD [-]
+        self.rsmin      = None  # minimum resistance transpiration [s m-1]
+        self.rssoilmin  = None  # minimum resistance soil evaporation [s m-1]
+        self.alpha      = None  # surface albedo [-]
         
-        self.Ts         = -1. # initial surface temperature [K]
+        self.Ts         = None  # initial surface temperature [K]
         
-        self.cveg       = -1. # vegetation fraction [-]
-        self.Wmax       = -1. # thickness of water layer on wet vegetation [m]
-        self.Wl         = -1. # equivalent water layer depth for wet vegetation [m]
+        self.cveg       = None  # vegetation fraction [-]
+        self.Wmax       = None  # thickness of water layer on wet vegetation [m]
+        self.Wl         = None  # equivalent water layer depth for wet vegetation [m]
         
-        self.Lambda     = -1. # thermal diffusivity skin layer [-]
+        self.Lambda     = None  # thermal diffusivity skin layer [-]
 
         # A-Gs parameters
-        self.c3c4       = 'c3' # Plant type ('c3' or 'c4')
+        self.c3c4       = None  # Plant type ('c3' or 'c4')
 
         # Cumulus parameters
-        self.sw_cu      = False # Cumulus parameterization switch
-        self.dz_h       = -1. # Transition layer thickness [m]
+        self.sw_cu      = None  # Cumulus parameterization switch
+        self.dz_h       = None  # Transition layer thickness [m]
+
+class empty:
+    def __init__(self):
+        pass
 
 if(__name__ == "__main__"):
     
@@ -1305,6 +1309,7 @@ if(__name__ == "__main__"):
         #plot(rr.timeUTC, rr.wCO2e, 'g-', label='CLASS')
         #legend(frameon=False)
 
+    # A-Gs comparison
     if(True):
         figure()
         subplot(321)
