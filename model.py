@@ -99,6 +99,7 @@ class model:
         # Read switches
         self.sw_ml      = self.input.sw_ml      # mixed-layer model switch
         self.sw_shearwe = self.input.sw_shearwe # shear growth ABL switch
+        self.sw_fixft   = self.input.sw_fixft   # Fix the free-troposphere switch
         self.sw_wind    = self.input.sw_wind    # prognostic wind switch
         self.sw_sl      = self.input.sw_sl      # surface layer switch
         self.sw_rad     = self.input.sw_rad     # radiation switch
@@ -109,7 +110,8 @@ class model:
         # initialize mixed-layer
         self.h          = self.input.h          # initial ABL height [m]
         self.Ps         = self.input.Ps         # surface pressure [Pa]
-        self.ws         = self.input.ws         # large scale vertical velocity [m s-1]
+        self.divU       = self.input.divU       # horizontal large-scale divergence of wind [s-1]
+        self.ws         = None                  # large-scale vertical velocity [m s-1]
         self.fc         = self.input.fc         # coriolis parameter [s-1]
         self.we         = -1.                   # entrainment velocity [m s-1]
        
@@ -376,6 +378,19 @@ class model:
             # decompose ustar along the wind components
             self.uw = - np.sign(self.u) * (self.ustar ** 4. / (self.v ** 2. / self.u ** 2. + 1.)) ** (0.5)
             self.vw = - np.sign(self.v) * (self.ustar ** 4. / (self.u ** 2. / self.v ** 2. + 1.)) ** (0.5)
+      
+        # calculate large-scale vertical velocity (subsidence)
+        self.ws = -self.divU * self.h
+      
+        # calculate compensation velocity to fix the free troposphere in case of subsidence 
+        if(self.sw_fixft):
+            w_th_ft  = self.gammatheta * self.ws
+            w_q_ft   = self.gammaq     * self.ws
+            w_CO2_ft = self.gammaCO2   * self.ws 
+        else:
+            w_th_ft  = 0.
+            w_q_ft   = 0.
+            w_CO2_ft = 0. 
        
         # calculate convective velocity scale w* 
         if(self.wthetav > 0.):
@@ -407,9 +422,9 @@ class model:
         self.qtend       = (self.wq     - self.wqe     - self.wqM) / self.h + self.advq
         self.CO2tend     = (self.wCO2   - self.wCO2e             ) / self.h + self.advCO2
         
-        self.dthetatend  = self.gammatheta * (self.we - self.M) - self.thetatend
-        self.dqtend      = self.gammaq     * (self.we - self.M) - self.qtend
-        self.dCO2tend    = self.gammaCO2   * (self.we - self.M) - self.CO2tend
+        self.dthetatend  = self.gammatheta * (self.we - self.M) - self.thetatend + w_th_ft
+        self.dqtend      = self.gammaq     * (self.we - self.M) - self.qtend     + w_q_ft
+        self.dCO2tend    = self.gammaCO2   * (self.we - self.M) - self.CO2tend   + w_CO2_ft
      
         # assume u + du = ug, so ug - u = du
         if(self.sw_wind):
@@ -1051,9 +1066,10 @@ class model_input:
         # mixed-layer variables
         self.sw_ml      = None  # mixed-layer model switch
         self.sw_shearwe = None  # Shear growth ABL switch
+        self.sw_fixft   = None  # Fix the free-troposphere switch
         self.h          = None  # initial ABL height [m]
         self.Ps         = None  # surface pressure [Pa]
-        self.ws         = None  # large scale vertical velocity [m s-1]
+        self.divU       = None  # horizontal large-scale divergence of wind [s-1]
         self.fc         = None  # Coriolis parameter [s-1]
         
         self.theta      = None  # initial mixed-layer potential temperature [K]
@@ -1145,10 +1161,6 @@ class model_input:
         self.sw_cu      = None  # Cumulus parameterization switch
         self.dz_h       = None  # Transition layer thickness [m]
 
-class empty:
-    def __init__(self):
-        pass
-
 if(__name__ == "__main__"):
     
     r1in = model_input()
@@ -1159,9 +1171,10 @@ if(__name__ == "__main__"):
     # mixed-layer input
     r1in.sw_ml      = True      # mixed-layer model switch
     r1in.sw_shearwe = False     # shear growth mixed-layer switch
+    r1in.sw_fixft   = True      # Fix the free-troposphere switch
     r1in.h          = 200.      # initial ABL height [m]
     r1in.Ps         = 101300.   # surface pressure [Pa]
-    r1in.ws         = 0.        # large scale vertical velocity [m s-1]
+    r1in.divU       = 2e-5      # horizontal large-scale divergence of wind [s-1]
     r1in.fc         = 1.e-4     # Coriolis parameter [m s-1]
     
     r1in.theta      = 288.      # initial mixed-layer potential temperature [K]
@@ -1183,7 +1196,7 @@ if(__name__ == "__main__"):
     r1in.advCO2     = 0.        # advection of CO2 [ppm s-1]
     r1in.wCO2       = 10.       # surface kinematic CO2 flux [ppm m s-1]
     
-    r1in.sw_wind    = False      # prognostic wind switch
+    r1in.sw_wind    = False     # prognostic wind switch
     r1in.u          = 6.        # initial mixed-layer u-wind speed [m s-1]
     r1in.du         = 4.        # initial u-wind jump at h [m s-1]
     r1in.gammau     = 0.        # free atmosphere u-wind speed lapse rate [s-1]
@@ -1195,13 +1208,13 @@ if(__name__ == "__main__"):
     r1in.advv       = 0.        # advection of v-wind [m s-2]
     
     # surface layer input
-    r1in.sw_sl      = False      # surface layer switch
+    r1in.sw_sl      = False     # surface layer switch
     r1in.ustar      = 0.3       # surface friction velocity [m s-1]
     r1in.z0m        = 0.02      # roughness length for momentum [m]
     r1in.z0h        = 0.002     # roughness length for scalars [m]
     
     # radiation parameters
-    r1in.sw_rad     = True      # radiation switch
+    r1in.sw_rad     = False     # radiation switch
     r1in.lat        = 51.97     # latitude [deg]
     r1in.lon        = -4.93     # longitude [deg]
     r1in.doy        = 268.      # day of the year [-]
@@ -1210,7 +1223,7 @@ if(__name__ == "__main__"):
     r1in.Q          = 400.      # net radiation [W m-2] 
     
     # land surface parameters
-    r1in.sw_ls      = True      # land surface switch
+    r1in.sw_ls      = False     # land surface switch
     r1in.ls_type    = 'ags'     # land-surface parameterization ('js' for Jarvis-Stewart or 'ags' for A-Gs)
     r1in.wg         = 0.21      # volumetric water content top soil layer [m3 m-3]
     r1in.w2         = 0.21      # volumetric water content deeper soil layer [m3 m-3]
@@ -1260,7 +1273,7 @@ if(__name__ == "__main__"):
     from pylab import *
     close('all')
 
-    if(False):
+    if(True):
         figure()
         subplot(331)
         plot(r1.out.t, r1.out.h, 'b-', label='h python')
@@ -1277,12 +1290,12 @@ if(__name__ == "__main__"):
         plot(rr.timeUTC, rr.q*1000, 'g-', label='CLASS')
         legend(frameon=False)
 
-        subplot(334)
-        plot(r1.out.t, r1.out.Swin, 'b-', label='swin python')
-        plot(rr.timeUTC, rr.Swin, 'g-', label='CLASS')
-        plot(r1.out.t, r1.out.Swout, 'b--', label='swout python')
-        plot(rr.timeUTC, rr.Swout, 'g--', label='CLASS')
-        legend(frameon=False)
+        #subplot(334)
+        #plot(r1.out.t, r1.out.Swin, 'b-', label='swin python')
+        #plot(rr.timeUTC, rr.Swin, 'g-', label='CLASS')
+        #plot(r1.out.t, r1.out.Swout, 'b--', label='swout python')
+        #plot(rr.timeUTC, rr.Swout, 'g--', label='CLASS')
+        #legend(frameon=False)
 
         #subplot(335)
         #plot(r1.out.t, r1.out.CO2, 'b-', label='CO2 python')
@@ -1310,7 +1323,7 @@ if(__name__ == "__main__"):
         #legend(frameon=False)
 
     # A-Gs comparison
-    if(True):
+    if(False):
         figure()
         subplot(321)
         plot(r1.out.t,   r1.out.CO2, 'g-', label='python')
