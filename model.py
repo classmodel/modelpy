@@ -144,8 +144,10 @@ class model:
         self.P_h        = None                  # Mixed-layer top pressure [pa]
         self.T_h        = None                  # Mixed-layer top absolute temperature [K]
         self.q2_h       = None                  # Mixed-layer top specific humidity variance [kg2 kg-2]
+        self.CO22_h     = None                  # Mixed-layer top CO2 variance [ppm2]
         self.RH_h       = None                  # Mixed-layer top relavtive humidity [-]
         self.dz_h       = None                  # Transition layer thickness [-]
+        self.lcl        = None                  # Lifting condensation level [m]
 
         # Virtual temperatures and fluxes
         self.thetav     = None                  # initial mixed-layer potential temperature [K]
@@ -203,6 +205,7 @@ class model:
         self.dutend     = None                  # tendency of u-wind jump at h [m s-1 s-1]
         self.vtend      = None                  # tendency of v-wind [m s-1 s-1]
         self.dvtend     = None                  # tendency of v-wind jump at h [m s-1 s-1]
+        self.dztend     = None                  # tendency of transition layer thickness [m s-1]
   
         # initialize surface layer
         self.ustar      = self.input.ustar      # surface friction velocity [m s-1]
@@ -360,20 +363,46 @@ class model:
         self.P_h    = self.Ps - self.rho * self.g * self.h
         self.T_h    = self.theta - self.g/self.cp * self.h
 
-        self.P_h    = self.Ps / np.exp((self.g * self.h)/(self.Rd * self.theta))
-        self.T_h    = self.theta / (self.Ps / self.P_h)**(self.Rd/self.cp)
+        #self.P_h    = self.Ps / np.exp((self.g * self.h)/(self.Rd * self.theta))
+        #self.T_h    = self.theta / (self.Ps / self.P_h)**(self.Rd/self.cp)
 
         self.RH_h   = self.q / qsat(self.T_h, self.P_h)
 
+        # Find lifting condensation level iteratively
+        if(self.t == 0):
+            self.lcl = self.h
+            RHlcl = 0.5
+        else:
+            RHlcl = 0.9998 
+
+        itmax = 30
+        it = 0
+        while(((RHlcl <= 0.9999) or (RHlcl >= 1.0001)) and it<itmax):
+            self.lcl    += (1.-RHlcl)*1000.
+            p_lcl        = self.Ps - self.rho * self.g * self.lcl
+            T_lcl        = self.theta - self.g/self.cp * self.lcl
+            RHlcl        = self.q / qsat(T_lcl, p_lcl)
+            it          += 1
+
+        if(it == itmax):
+            print("LCL calculation not converged!!")
+            print("RHlcl = %f, zlcl=%f"%(RHlcl, self.lcl))
+
     def run_cumulus(self):
         # Calculate mixed-layer top relative humidity variance (Neggers et. al 2006/7)
-        wqe         = -self.we * self.dq
-        self.q2_h   = -(wqe+self.wqM) * self.dq * self.h / (self.dz_h * self.wstar)
+        self.q2_h   = -(self.wqe  + self.wqM  ) * self.dq   * self.h / (self.dz_h * self.wstar)
+        self.CO22_h = -(self.wCO2e+ self.wCO2M) * self.dCO2 * self.h / (self.dz_h * self.wstar)
 
         # calculate cloud core fraction (ac), mass flux (M) and moisture flux (wqM)
         self.ac     = max(0., 0.5 + (0.36 * np.arctan(1.55 * ((self.q - qsat(self.T_h, self.P_h)) / self.q2_h**0.5))))
         self.M      = self.ac * self.wstar
         self.wqM    = self.M * self.q2_h**0.5
+
+        # Only calculate CO2 mass-flux if mixed-layer top jump is negative
+        if(self.dCO2 < 0):
+            self.wCO2M  = self.M * self.CO22_h**0.5
+        else:
+            self.wCO2M  = 0.
 
     def run_mixed_layer(self):
         if(not self.sw_sl):
@@ -415,7 +444,7 @@ class model:
         # Don't allow boundary layer shrinking if wtheta < 0 
         if(self.we < 0):
             self.we = 0.
- 
+
         # Calculate entrainment fluxes
         self.wthetae     = -self.we * self.dtheta
         self.wqe         = -self.we * self.dq
@@ -423,9 +452,9 @@ class model:
   
         self.htend       = self.we + self.ws + self.wf - self.M
        
-        self.thetatend   = (self.wtheta - self.wthetae           ) / self.h + self.advtheta 
-        self.qtend       = (self.wq     - self.wqe     - self.wqM) / self.h + self.advq
-        self.CO2tend     = (self.wCO2   - self.wCO2e             ) / self.h + self.advCO2
+        self.thetatend   = (self.wtheta - self.wthetae             ) / self.h + self.advtheta 
+        self.qtend       = (self.wq     - self.wqe     - self.wqM  ) / self.h + self.advq
+        self.CO2tend     = (self.wCO2   - self.wCO2e   - self.wCO2M) / self.h + self.advCO2
         
         self.dthetatend  = self.gammatheta * (self.we + self.wf - self.M) - self.thetatend + w_th_ft
         self.dqtend      = self.gammaq     * (self.we + self.wf - self.M) - self.qtend     + w_q_ft
@@ -438,6 +467,12 @@ class model:
   
             self.dutend      = self.gammau * (self.we + self.wf - self.M) - self.utend
             self.dvtend      = self.gammav * (self.we + self.wf - self.M) - self.vtend
+        
+        # tendency of the transition layer thickness
+        if(self.ac > 0 or self.lcl - self.h < 300):
+            self.dztend = ((self.lcl - self.h)-self.dz_h) / 7200.
+        else:
+            self.dztend = 0.
    
     def integrate_mixed_layer(self):
         # set values previous time step
@@ -454,16 +489,23 @@ class model:
         du0     = self.du
         v0      = self.v
         dv0     = self.dv
+
+        dz0     = self.dz_h
   
         # integrate mixed-layer equations
         self.h        = h0      + self.dt * self.htend
-  
         self.theta    = theta0  + self.dt * self.thetatend
         self.dtheta   = dtheta0 + self.dt * self.dthetatend
         self.q        = q0      + self.dt * self.qtend
         self.dq       = dq0     + self.dt * self.dqtend
         self.CO2      = CO20    + self.dt * self.CO2tend
         self.dCO2     = dCO20   + self.dt * self.dCO2tend
+        self.dz_h     = dz0     + self.dt * self.dztend
+
+        # Limit dz to minimal value
+        dz0 = 50
+        if(self.dz_h < dz0):
+            self.dz_h = dz0 
   
         if(self.sw_wind):
             self.u        = u0      + self.dt * self.utend
@@ -822,8 +864,12 @@ class model:
         self.out.LEref[t]      = self.LEref
         self.out.G[t]          = self.G
 
+        self.out.zlcl[t]       = self.lcl
+        self.out.RH_h[t]       = self.RH_h
+
         self.out.ac[t]         = self.ac
         self.out.M[t]          = self.M
+        self.out.dz[t]         = self.dz_h
   
     # delete class variables to facilitate analysis in ipython
     def exitmodel(self):
@@ -1057,9 +1103,14 @@ class model_output:
         self.LEref      = np.zeros(tsteps)    # reference evaporation at rs = rsmin / LAI [W m-2]
         self.G          = np.zeros(tsteps)    # ground heat flux [W m-2]
 
+        # Mixed-layer top variables
+        self.zlcl       = np.zeros(tsteps)    # lifting condensation level [m]
+        self.RH_h       = np.zeros(tsteps)    # mixed-layer top relative humidity [-]
+
         # cumulus variables
         self.ac         = np.zeros(tsteps)    # cloud core fraction [-]
         self.M          = np.zeros(tsteps)    # cloud core mass flux [m s-1]
+        self.dz         = np.zeros(tsteps)    # transition layer thickness [m]
 
 # class for storing mixed-layer model input data
 class model_input:
@@ -1177,11 +1228,11 @@ if(__name__ == "__main__"):
     
     # mixed-layer input
     r1in.sw_ml      = True      # mixed-layer model switch
-    r1in.sw_shearwe = True     # shear growth mixed-layer switch
+    r1in.sw_shearwe = False     # shear growth mixed-layer switch
     r1in.sw_fixft   = False     # Fix the free-troposphere switch
     r1in.h          = 200.      # initial ABL height [m]
     r1in.Ps         = 101300.   # surface pressure [Pa]
-    r1in.divU       = 2e-5        # horizontal large-scale divergence of wind [s-1]
+    r1in.divU       = 0         # horizontal large-scale divergence of wind [s-1]
     r1in.fc         = 1.e-4     # Coriolis parameter [m s-1]
     
     r1in.theta      = 288.      # initial mixed-layer potential temperature [K]
@@ -1203,7 +1254,7 @@ if(__name__ == "__main__"):
     r1in.advCO2     = 0.        # advection of CO2 [ppm s-1]
     r1in.wCO2       = 0.        # surface kinematic CO2 flux [ppm m s-1]
     
-    r1in.sw_wind    = True     # prognostic wind switch
+    r1in.sw_wind    = False     # prognostic wind switch
     r1in.u          = 6.        # initial mixed-layer u-wind speed [m s-1]
     r1in.du         = 4.        # initial u-wind jump at h [m s-1]
     r1in.gammau     = 0.        # free atmosphere u-wind speed lapse rate [s-1]
@@ -1215,13 +1266,13 @@ if(__name__ == "__main__"):
     r1in.advv       = 0.        # advection of v-wind [m s-2]
     
     # surface layer input
-    r1in.sw_sl      = True     # surface layer switch
+    r1in.sw_sl      = False     # surface layer switch
     r1in.ustar      = 0.3       # surface friction velocity [m s-1]
     r1in.z0m        = 0.02      # roughness length for momentum [m]
     r1in.z0h        = 0.002     # roughness length for scalars [m]
     
     # radiation parameters
-    r1in.sw_rad     = True      # radiation switch
+    r1in.sw_rad     = False      # radiation switch
     r1in.lat        = 51.97     # latitude [deg]
     r1in.lon        = -4.93     # longitude [deg]
     r1in.doy        = 268.      # day of the year [-]
@@ -1231,7 +1282,7 @@ if(__name__ == "__main__"):
     r1in.dFz        = 0.        # cloud top radiative divergence [W m-2] 
     
     # land surface parameters
-    r1in.sw_ls      = True      # land surface switch
+    r1in.sw_ls      = False      # land surface switch
     r1in.ls_type    = 'ags'      # land-surface parameterization ('js' for Jarvis-Stewart or 'ags' for A-Gs)
     r1in.wg         = 0.21      # volumetric water content top soil layer [m3 m-3]
     r1in.w2         = 0.21      # volumetric water content deeper soil layer [m3 m-3]
@@ -1267,7 +1318,7 @@ if(__name__ == "__main__"):
     r1in.c3c4       = 'c3'      # Plant type ('c3' or 'c4')
 
     # Cloud parameters
-    r1in.sw_cu      = False      # Cumulus parameterization switch
+    r1in.sw_cu      = True      # Cumulus parameterization switch
     r1in.dz_h       = 150.      # Transition layer thickness [m]
     
     r1 = model(r1in)
@@ -1339,6 +1390,23 @@ if(__name__ == "__main__"):
         plot(r1.out.t, r1.out.wCO2R, 'b--', label='Resp. python')
         plot(rr.timeUTC, rr.wCO2R,   'g--', label='Resp. CLASS')
         legend(frameon=False)
+
+    if(True):
+        figure()
+        subplot(131)
+        plot(r1.out.t,   r1.out.h, 'b-', label='h Python')
+        plot(r1.out.t,   r1.out.zlcl, 'g-', label='lcl Python')
+        plot(rr.timeUTC, rr.h, 'b--', label='h CLASS')
+        #plot(rr.timeUTC, rr.lcl, 'g--', label='lcl CLASS')
+        legend()
+        subplot(132)
+        plot(r1.out.t, r1.out.RH_h, label='python')
+        plot(rr.timeUTC, rr.RHh, label='CLASS')
+        legend()
+        subplot(133)
+        plot(r1.out.t, r1.out.ac, label='python')
+        plot(rr.timeUTC, rr.ac, label='CLASS')
+        legend()
 
     # A-Gs comparison
     if(False):
