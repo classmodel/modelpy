@@ -246,6 +246,8 @@ class model:
                            
         self.C1sat      = self.input.C1sat      
         self.C2ref      = self.input.C2ref      
+
+        self.c_beta     = self.input.c_beta     # Curvature plant water-stress factor (0..1) [-]
         
         self.LAI        = self.input.LAI        # leaf area index [-]
         self.gD         = self.input.gD         # correction factor transpiration for VPD [-]
@@ -292,7 +294,12 @@ class model:
         self.tsteps = int(np.floor(self.input.runtime / self.input.dt))
         self.dt     = self.input.dt
         self.t      = 0
-  
+ 
+        # Some sanity checks for valid input
+        if (self.c_beta is None): 
+            self.c_beta = 0                     # Zero curvature; linear response
+        assert(self.c_beta >= 0 or self.c_beta <= 1)
+
         # initialize output
         self.out = model_output(self.tsteps)
  
@@ -672,7 +679,17 @@ class model:
         betaw         = max(1e-3, min(1.,(self.wg - self.wwilt)/(self.wfc - self.wwilt)))
   
         # calculate stress function
-        fstr          = betaw;
+        if (self.c_beta == 0):
+            fstr = betaw;
+        else:
+            # Following Combe et al (2016)
+            if (self.c_beta < 0.25):
+                P = 6.4 * self.c_beta
+            elif (self.c_beta < 0.50):
+                P = 7.6 * self.c_beta - 0.3
+            else:
+                P = 2**(3.66 * self.c_beta + 0.34) - 1
+            fstr = (1. - np.exp(-P * betaw)) / (1 - np.exp(-P))
   
         # calculate gross assimilation rate (Am)
         Am           = Ammax * (1. - np.exp(-(gm * (ci - CO2comp) / Ammax)))
@@ -1198,6 +1215,8 @@ class model_input:
         
         self.C1sat      = None 
         self.C2ref      = None
+
+        self.c_beta     = None  # Curvatur plant water-stress factor (0..1) [-]
         
         self.LAI        = None  # leaf area index [-]
         self.gD         = None  # correction factor transpiration for VPD [-]
