@@ -676,7 +676,7 @@ class model:
         Ammax         = self.Ammax298[c] *  pow(self.Q10Am[c],(0.1 * (self.thetasurf - 298.))) / ( (1. + np.exp(0.3 * (self.T1Am[c] - self.thetasurf))) * (1. + np.exp(0.3 * (self.thetasurf - self.T2Am[c]))))
   
         # calculate effect of soil moisture stress on gross assimilation rate
-        betaw         = max(1e-3, min(1.,(self.wg - self.wwilt)/(self.wfc - self.wwilt)))
+        betaw         = max(1e-3, min(1.,(self.w2 - self.wwilt)/(self.wfc - self.wwilt)))
   
         # calculate stress function
         if (self.c_beta == 0):
