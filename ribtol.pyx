@@ -1,11 +1,7 @@
 #cython: boundscheck=False
 #cython: wraparound=False
 
-#import numpy as np
-#cimport numpy as np
 from libc.math cimport atan, log, exp, fabs
-#DTYPE = np.double
-#ctypedef np.double_t DTYPE_t
 
 cdef double psim(double zeta):
     cdef double x, psim
