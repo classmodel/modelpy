@@ -9,6 +9,9 @@ import os
 import calendar
 import Pysolar
 import Pysolar.util
+
+
+
 #from urllib import request
 def blh(HAGL,THTV,WSPD,RiBc = 0.5,RiBce = 0.25):
     
@@ -122,7 +125,7 @@ class wyoming(object):
             self.DT = dt.datetime(int(self.current.text[-4:]),self.MONTHS.index(self.current.text[-8:-5])+1,int(self.current.text[-11:-9]),int(self.current.text[-15:-13]))
         
         if self.found and get_atm:
-            self.get_values_one_column_atm()
+            self.get_values_air_input()
         
     
     def find(self,DT,get_atm=False):
@@ -145,7 +148,7 @@ class wyoming(object):
                 self.found = True
                 keepsearching = False
                 if get_atm:
-                    self.get_values_one_column_atm()
+                    self.get_values_air_input()
                     self.DT = dt.datetime(int(self.current.text[-4:]),self.MONTHS.index(self.current.text[-8:-5])+1,int(self.current.text[-11:-9]),int(self.current.text[-15:-13]))
             elif DTcurrent > DT:
                 keepsearching = False
@@ -177,11 +180,11 @@ class wyoming(object):
         if self.found:        
             self.DT = dt.datetime(int(self.current.text[-4:]),self.MONTHS.index(self.current.text[-8:-5])+1,int(self.current.text[-11:-9]),int(self.current.text[-15:-13]))
         if self.found and get_atm:
-            self.get_values_one_column_atm()
+            self.get_values_air_input()
        
 
 
-    def get_values_one_column_atm(self):
+    def get_values_air_input(self):
 
         # for iDT,DT in enumerate(DTS):
         
@@ -370,24 +373,4 @@ class wyoming(object):
             self.ONE_COLUMN=ONE_COLUMNd
         else:
             self.ONE_COLUMN = ONE_COLUMN
-
-class one_column(object):
-    def __init__(self):
-        self.status = 'init'
-        
-        
-    def set_one_column_atm(self,INPUT):
-        PARAMS,ONE_COLUMN = INPUT.PARAMS,INPUT.ONE_COLUMN
-
-        self.PARAMS = PARAMS
-        self.ONE_COLUMN = ONE_COLUMN
-        self.__dict__.update(PARAMS.to_dict()['value'])
-        self.__dict__.update(ONE_COLUMN.to_dict('list'))
-        self.status = 'filled'
-        
-        #convert all list to arrays for CLASS
-        for key in self.__dict__.keys():
-            if type(self.__dict__[key]).__name__ == 'list':
-                self.__dict__[key] = np.array(self.__dict__[key])
-
 
