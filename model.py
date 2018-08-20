@@ -1,4 +1,4 @@
-#_ 
+# 
 # CLASS
 # Copyright (c) 2010-2015 Meteorology and Air Quality section, Wageningen University and Research centre
 # Copyright (c) 2011-2015 Jordi Vila-Guerau de Arellano
@@ -25,18 +25,154 @@
 import copy as cp
 import numpy as np
 import sys
+import warnings
+import pandas as pd
+from ribtol_hw import zeta_hs2 , funcsche
+import logging
+#from SkewT.thermodynamics import Density
 #import ribtol
 
+grav = 9.81
 def esat(T):
     return 0.611e3 * np.exp(17.2694 * (T - 273.16) / (T - 35.86))
 
 def qsat(T,p):
     return 0.622 * esat(T) / p
 
+
+def ribtol(Rib, zsl, z0m, z0h): 
+    Rib = np.float64(Rib)
+    zsl = np.float64(zsl)
+    z0m = np.float64(z0m)
+    z0h = np.float64(z0h)
+    #print(Rib,zsl,z0m,z0h)
+    if(Rib > 0.):
+        L    = 1.
+        L0   = 2.
+    else:
+        L  = -1.
+        L0 = -2.
+    #print(Rib,zsl,z0m,z0h)
+    while (abs(L - L0) > 0.001):
+        L0      = L
+        fx      = Rib - zsl / L * (np.log(zsl / z0h) - psih(zsl / L) + psih(z0h / L)) / (np.log(zsl / z0m) - psim(zsl / L) + psim(z0m / L))**2.
+        Lstart  = L - 0.001*L
+        Lend    = L + 0.001*L
+        fxdif   = ( (- zsl / Lstart * (np.log(zsl / z0h) - psih(zsl / Lstart) + psih(z0h / Lstart)) / \
+                                      (np.log(zsl / z0m) - psim(zsl / Lstart) + psim(z0m / Lstart))**2.) \
+                  - (-zsl /  Lend   * (np.log(zsl / z0h) - psih(zsl / Lend  ) + psih(z0h / Lend  )) / \
+                                      (np.log(zsl / z0m) - psim(zsl / Lend  ) + psim(z0m / Lend  ))**2.) ) / (Lstart - Lend)
+        L       = L - fx / fxdif
+        #print(L,fx/fxdif)
+        if(abs(L) > 1e12):
+            break
+
+    return L
+  
+def psim(zeta):
+    if(zeta <= 0):
+        x     = (1. - 16. * zeta)**(0.25)
+        psim  = 3.14159265 / 2. - 2. * np.arctan(x) + np.log((1. + x)**2. * (1. + x**2.) / 8.)
+        #x     = (1. + 3.6 * abs(zeta) ** (2./3.)) ** (-0.5)
+        #psim = 3. * np.log( (1. + 1. / x) / 2.)
+    else:
+        psim  = -2./3. * (zeta - 5./0.35) * np.exp(-0.35 * zeta) - zeta - (10./3.) / 0.35
+    return psim
+  
+def psih(zeta):
+    if(zeta <= 0):
+        x     = (1. - 16. * zeta)**(0.25)
+        psih  = 2. * np.log( (1. + x*x) / 2.)
+        #x     = (1. + 7.9 * abs(zeta) ** (2./3.)) ** (-0.5)
+        #psih  = 3. * np.log( (1. + 1. / x) / 2.)
+    else:
+        psih  = -2./3. * (zeta - 5./0.35) * np.exp(-0.35 * zeta) - (1. + (2./3.) * zeta) ** (1.5) - (10./3.) / 0.35 + 1.
+    return psih
+ 
 class model:
-    def __init__(self, model_input):
-        # initialize the different components of the model
-        self.input = cp.deepcopy(model_input)
+    def __init__(self, model_input = None,debug_level=None):
+
+        """ set up logger (see: https://docs.python.org/2/howto/logging.html)
+        """
+
+        self.logger = logging.getLogger('model')
+        if debug_level is not None:
+            self.logger.setLevel(debug_level)
+
+        """ initialize the different components of the model """ 
+
+        if model_input is not None:
+            # class4gl style input
+            if 'pars' in model_input.__dict__.keys():
+
+                # we make a reference to the full input first, so we can dump it
+                # afterwards
+                self.input_c4gl = model_input
+
+                # we copy the regular parameters first. We keep the classical input
+                # format as self.input so that we don't have to change the entire
+                # model code.
+                self.input = cp.deepcopy(model_input.pars)
+
+                # we copy other sections we are interested in, such as profile
+                # data, and store it also under input
+
+                # I know we mess up a bit the structure of the class4gl_input, but
+                # we will make it clean again at the time of dumping data
+
+                # So here, we copy the profile data into self.input
+                # 1. Air circulation data 
+                if 'sw_ac' in self.input.__dict__.keys() \
+                   and self.input.__dict__['sw_ac']:
+                    self.input.__dict__['air_ac'] = model_input.__dict__['air_ac']
+                    #self.input.__dict__['air_ach'] = model_input.__dict__['air_ach']
+
+                    # correct pressure of levels according to surface pressure
+                    # error (so that interpolation is done in a consistent way)
+
+                    p_e = self.input.Ps - self.input.sp
+                    for irow in self.input.air_ac.index[::-1]:
+                       self.input.air_ac.p.iloc[irow] =\
+                        self.input.air_ac.p.iloc[irow] + p_e
+                       p_e = p_e -\
+                       (self.input.air_ac.p.iloc[irow]+p_e)/\
+                        self.input.air_ac.p.iloc[irow] *\
+                        self.input.air_ac.delpdgrav.iloc[irow]*grav
+
+
+
+                # 2. Air circulation data 
+                if 'sw_ap' in self.input.__dict__.keys() \
+                   and self.input.__dict__['sw_ap']:
+                    self.input.__dict__['air_ap'] = model_input.__dict__['air_ap']
+
+            # standard class input
+            else:
+                self.input = cp.deepcopy(model_input)
+
+    def load_yaml_dict(self,yaml_dict):
+        for key,data in yaml_dict.items():
+            if key == 'pars':
+                for keydata,value in data.items():
+                    self.__dict__[keydata] = value
+            elif key in ['air_ap','air_balloon','air_ac','air_ach']:
+                self.__dict__[key] = pd.DataFrame(data)
+            #elif key == 'sources':
+            #    self.__dict__[key] = data
+            elif key == 'out':
+                # lets convert it to a list of dictionaries
+                dictouttemp = pd.DataFrame(data).to_dict('list')
+            else: 
+                 warnings.warn("Key '"+key+"' is be implemented.")
+            #     self.__dict__[key] = data
+
+
+        self.tsteps = len(dictouttemp['h'])
+        self.out = model_output(self.tsteps)
+        for keydictouttemp in dictouttemp.keys():
+            self.out.__dict__[keydictouttemp] = np.array(dictouttemp[keydictouttemp])
+
+
   
     def run(self):
         # initialize model variables
@@ -104,14 +240,19 @@ class model:
         self.sw_ls      = self.input.sw_ls      # land surface switch
         self.ls_type    = self.input.ls_type    # land surface paramaterization (js or ags)
         self.sw_cu      = self.input.sw_cu      # cumulus parameterization switch
+
+        self.sw_lit   = self.input.sw_lit       # switch for iterative L calculation
+        self.sw_ac    = self.input.sw_ac        # switch to take account of large-scale gridded Air Circulation (advection and subsidence) fields as input., eg., from ERA-INTERIM 
+        self.sw_ap    = self.input.sw_ap        # switch that tells to initialize with fitted Air Profiles (eg., from balloon soundings) as input
   
         # initialize mixed-layer
         self.h          = self.input.h          # initial ABL height [m]
         self.Ps         = self.input.Ps         # surface pressure [Pa]
+        self.sp         = self.input.sp         # This is also surface pressure
+                                                #but derived from the global data [Pa]
         self.divU       = self.input.divU       # horizontal large-scale divergence of wind [s-1]
         self.ws         = None                  # large-scale vertical velocity [m s-1]
         self.wf         = None                  # mixed-layer growth due to radiative divergence [m s-1]
-        self.fc         = self.input.fc         # coriolis parameter [s-1]
         self.we         = -1.                   # entrainment velocity [m s-1]
        
          # Temperature 
@@ -181,105 +322,6 @@ class model:
         self.qsatsurf   = None                  # surface saturated specific humidity [g kg-1]
         self.dqsatdT    = None                  # slope saturated specific humidity curve [g kg-1 K-1]
       
-  # BEGIN -- HW 20170606
-
-        # z-coordinate for vertical profiles of stratification above the mixed-layer height
-
-        self.z_pro      = self.input.z_pro  # initial profile of potential temperature [K]
-
-        self.theta_pro  = self.input.theta_pro  # initial profile of potential temperature [K]
-
-
-        if ((self.theta_pro is not None) and (self.z_pro is not None)):
-
-            
-            indextheta = np.where(self.z_pro == self.h)
-            if len(indextheta) == 0:
-                raise RuntimeError("Error input profile consistency: mixed-layer height needs to be equal to the second level of the vertical profile input!")
-                
-                
-            if indextheta[0][0] !=1:
-                print("Error input profile consistency: mixed-layer height needs to be equal to the second level of the vertical profile input!")
-                stop
-
-            
-            if self.theta_pro[1] != self.theta_pro[0]:
-                print("error input profile consistency: two lowest profile levels should be equal.")
-            
-            # initialize theta from its profile when available
-            theta_old = self.theta
-            theta_new = self.theta_pro[indextheta[0][0]]
-            
-            
-            
-            if ((theta_old is not None) & (theta_old != theta_new)):
-                print("Warning: theta input was provided ("+str(theta_old)+\
-                    "kg kg-1), but it is now overwritten by the first level (index 0) of theta_pro which is different ("\
-                    +str(theta_new)+"K).")
-                                    
-            self.theta = theta_new
-
-            # make a profile of the stratification 
-            # please note that the stratification between z_pro[i] and z_pro[i+1] 
-            # is given by gammatheta_pro[i]
-
-            # self.gammatheta_pro = np.gradient(self.theta_pro) / np.gradient(self.z_pro)
-            with np.errstate(divide='ignore'):
-                self.gammatheta_pro = np.array(self.theta_pro[1:] - self.theta_pro[:-1]) \
-                           / np.array(self.z_pro[1:] -  self.z_pro[:-1]    )
-                           
-            self.gammatheta = self.gammatheta_pro[np.where(self.h >= self.z_pro)[0][-1]]
-        else:
-            self.gammatheta_pro = None
-
-
-        self.q_pro  = self.input.q_pro  # initial profile of potential temperature [K]
-
-        if ((self.q_pro is not None) and (self.z_pro is not None)):
-            
-            indexq = np.where(self.z_pro == self.h)
-            if len(indexq) == 0:
-                print("Error input profile consistency: mixed-layer height needs to be equal to the second level of the vertical profile input!")
-                stop   
-                
-            if indexq[0][0] !=1:
-                print("Error input profile consistency: mixed-layer height needs to be equal to the second level of the vertical profile input!")
-                stop
-
-            
-            if self.q_pro[1] != self.q_pro[0]:
-                print("error inpuy ptogilr consistency: two lowest profile levels should be equal.")
-            
-            # initialize q from its profile when available
-            q_old = self.q
-            q_new = self.q_pro[indexq[0][0]]
-            
-            
-            
-            if ((q_old is not None) & (q_old != q_new)):
-                print("Warning: q input was provided ("+str(q_old)+\
-                    "kg kg-1), but it is now overwritten by the first level (index 0) of q_pro which is different ("\
-                    +str(q_new)+"kg kg-1).")
-                                    
-            self.q = q_new
-
-            # make a profile of the stratification 
-            # please note that the stratification between z_pro[i] and z_pro[i+1] 
-            # is given by gammaq_pro[i]
-
-            # self.gammaq_pro = np.gradient(self.q_pro) / np.gradient(self.z_pro)
-            with np.errstate(divide='ignore'):
-                self.gammaq_pro = np.array(self.q_pro[1:] - self.q_pro[:-1]) \
-                           / np.array(self.z_pro[1:] -  self.z_pro[:-1]    )
-                           
-            self.gammaq = self.gammaq_pro[np.where(self.h >= self.z_pro)[0][-1]]
-        else:
-            self.gammaq_pro = None
-
-# END -- HW 20170606      
-        
-        
-        
         
         
         # CO2
@@ -304,7 +346,248 @@ class model:
         self.dv         = self.input.dv         # initial u-wind jump at h [m s-1]
         self.gammav     = self.input.gammav     # free atmosphere v-wind speed lapse rate [s-1]
         self.advv       = self.input.advv       # advection of v-wind [m s-2]
- 
+         
+  # BEGIN -- HW 20170606
+        # z-coordinate for vertical profiles of stratification above the mixed-layer height
+
+        if self.sw_ac:
+        # this is the data frame with the grided profile on the L60 grid
+        # (subsidence, and advection) 
+            self.air_ac      = self.input.air_ac  # full level air circulation
+                                                  # forcing
+            # self.air_ach     = self.input.air_ach # half level air circulation
+            #                                       # forcing
+            
+
+        if self.sw_ap:
+        # this is the data frame with the fitted profile (including HAGL,
+        # THTA,WSPD, SNDU,WNDV PRES ...)
+            self.air_ap      = self.input.air_ap  # initial profile of potential temperature [K]
+
+            # just for legacy reasons...
+            if 'z' not in list(self.air_ap.columns):
+                self.air_ap = self.air_ap.assign(z= lambda x: x.HAGL)
+            if 'p' not in list(self.air_ap.columns):
+                self.air_ap = self.air_ap.assign(p= lambda x: x.PRES*100.)
+
+            indexh = np.where(self.air_ap.z.values == self.h)
+            if (len(indexh) == 0) or (indexh[0][0] !=1) or (indexh[0][1] !=2):
+                raise ValueError("Error input profile consistency: mixed- \
+                                 layer height needs to be equal to the second \
+                                 and third \
+                                 level of the vertical profile input!")
+            # initialize q from its profile when available
+            p_old = self.Ps
+            p_new = self.air_ap.p[indexh[0][0]]
+            
+            if ((p_old is not None) & (p_old != p_new)):
+                print("Warning: Ps input was provided ("+str(p_old)+\
+                    "Pa), but it is now overwritten by the first level (index 0) of p_pro which is different ("\
+                    +str(p_new)+"Pa).")
+                                    
+            self.Ps = p_new
+            # these variables/namings are more convenient to work with in the code
+            # we will update the original variables afterwards
+            #self.air_ap['q'] = self.air_ap.QABS/1000.
+
+            self.air_ap = \
+                    self.air_ap.assign(R= lambda x: self.Rd*(1.-x.q) + self.Rv*x.q)
+            # we require the temperature fields, since we need to consider
+            # advection
+            # if self.sw_ac:
+            #     #self.air_ap['theta'] = self.air_ap['t'] *
+
+            #     # we consider self.sp in case of air-circulation input (for
+            #     # consistence)
+            #     self.air_ap['t'] = \
+            #                 self.air_ap.theta *  \
+            #                 (self.air_ap.p/self.sp)**(self.air_ap['R']/self.cp)
+            # else:
+            # we consider self.Ps in case of balloon input only 
+            self.air_ap = self.air_ap.assign(t = lambda x: \
+                               x.theta * (x.p/self.Ps)**(x.R/self.cp))
+
+            #self.air_ap['theta'] = self.air_ap.THTA
+            if 'u' not in list(self.air_ap.columns):
+                self.air_ap = self.air_ap.assign(u = lambda x: x.WNDU)
+            if 'v' not in list(self.air_ap.columns):
+                self.air_ap = self.air_ap.assign(v = lambda x: x.WNDV)
+
+            for var in ['theta','q','u','v']:
+
+                
+                if self.air_ap[var][1] != self.air_ap[var][0]:
+                    raise ValueError("Error input profile consistency: two \
+                                     lowest profile levels for "+var+" should \
+                                     be equal.")
+                
+                # initialize the value from its profile when available
+                value_old = self.__dict__[var]
+                value_new = self.air_ap[var][indexh[0][0]]
+                
+                if ((value_old is not None) & (value_old != value_new)):
+                    warnings.warn("Warning:  input was provided \
+                                     ("+str(value_old)+ "kg kg-1), \
+                                     but it is now overwritten by the first \
+                                     level (index 0) of air_ap]var\ which is \
+                                     different (" +str(value_new)+"K).")
+                                        
+                self.__dict__[var] = value_new
+
+                # make a profile of the stratification 
+                # please note that the stratification between z_pro[i] and
+                # z_pro[i+1] is given by air_ap.GTHT[i]
+
+                # self.air_ap.GTHT = np.gradient(self.air_ap.THTA) /
+                # np.gradient(self.z_pro)
+                with np.errstate(divide='ignore'):
+                    gammavar = list(np.array(self.air_ap[var][1:].values - \
+                                             self.air_ap[var][:-1].values) \
+                                    / np.array(self.air_ap['z'][1:].values - \
+                                               self.air_ap['z'][:-1].values))
+
+                # add last element twice (since we have one element less)
+                gammavar.append(gammavar[-1])
+                gammavar = np.array(gammavar)
+                self.air_ap = self.air_ap.assign(**{'gamma'+var : gammavar})
+
+
+                self.__dict__['gamma'+var] = \
+                    self.air_ap['gamma'+var][np.where(self.h >= \
+                                                     self.air_ap.z)[0][-1]]
+
+
+
+        # the variable p_pro is just for diagnosis of lifted index
+            
+            
+
+            # input Ph is wrong, so we correct it according to hydrostatic equation
+            #self.Ph = self.Ps - self.h * self.g * Density(self.T2m,self.Ps,self.q)
+
+            #if self.sw_ac:
+                # note that we use sp as surface pressure, which is determined
+                # from era-interim instead of the observations. This is to
+                # avoid possible failure of the interpolation routine
+                # self.air_ap.p = np.array([self.Ps, self.P_h, self.P_h-0.1]\
+                #                          + \
+                #                          list(self.air_ap.p[3:]))
+
+            # else:
+                # in the other case, it is updated at the time of calculting
+                # the statistics 
+
+# END -- HW 20170606      
+        #print(self.air_ap)
+
+        if self.sw_ac and not self.sw_ap:
+            raise ValueError("air circulation switch only possible when air \
+                             profiles are given")
+        
+        if self.sw_ac:
+
+            # # # we comment this out, because subsidence is calculated
+            # according to advection
+            # #interpolate subsidence towards the air_ap height coordinate
+            # self.air_ap['w'] = np.interp(self.air_ap.p,\
+            #                               self.air_ac.p,\
+            #                               self.air_ac.w) 
+            # #subsidence at the mixed-layer top
+            # self.w = self.air_ap.w[1]
+        
+            self.P_h    = self.Ps - self.rho * self.g * self.h
+            in_ml = (self.air_ac.p >= self.P_h)
+
+            if (self.sw_ac is not None) and ('adv' in self.sw_ac):
+                # in case we didn't find any points, we just take the lowest one.
+                # actually, this can happen if ERA-INTERIM pressure levels are
+                # inconsistent with 
+                if in_ml.sum() == 0:
+                    warnings.warn(" no circulation points in the mixed layer \
+                                  found. We just take the bottom one.")
+                    in_ml = self.air_ac.index == (len(self.air_ac) - 1)
+
+                for var in ['t','q','u','v']:
+    
+                   # calculation of the advection variables for the mixed layer
+                   # we weight by the hydrostatic thickness of each layer and
+                   # divide by the total thickness
+                   self.__dict__['adv'+var] = \
+                            ((self.air_ac['adv'+var+'_x'][in_ml] \
+                             + \
+                             self.air_ac['adv'+var+'_y'][in_ml])* \
+                            self.air_ac['delpdgrav'][in_ml]).sum()/ \
+                            self.air_ac['delpdgrav'][in_ml].sum()
+
+                   # calculation of the advection variables for the profile above
+                   # (lowest 3 values are not used by class)
+                   self.air_ap = self.air_ap.assign(**{'adv'+var : 0.})
+                   self.air_ap['adv'+var] = \
+                           np.interp(self.air_ap.p,\
+                                     self.air_ac.p,\
+                                     self.air_ac['adv'+var+'_x']) \
+                           + \
+                           np.interp(self.air_ap.p, \
+                                       self.air_ac.p, \
+                                       self.air_ac['adv'+var+'_y'])
+
+                # as an approximation, we consider that advection of theta in the
+                # mixed layer is equal to advection of t. This is a sufficient
+                # approximation since theta and t are very similar at the surface
+                # pressure.
+                self.__dict__['advtheta'] = self.__dict__['advt']
+
+
+            # # # STRANGE, THIS DOESN'T GIVE REALISTIC VALUES, IT NEEDS TO BE
+            # # # CHECKED AGAIN SINCE THERE IS SIMILAR STRATEGY USED FOR 
+            # # # CALCULATING THE ADVECTION PROFILES
+            # # interpolate subsidence x density
+            # self.air_ap['wrho'] = \
+            #            np.interp(self.air_ap.p,\
+            #                      self.air_ach.p,\
+            #                      self.air_ach['wrho']) \
+            #     
+            # self.air_ap['w'] = \
+            #     self.air_ap['wrho']/(self.air_ap.p/ \
+            #                          (self.Rd*(1.-self.air_ap.q) + \
+            #                           self.Rv*self.air_ap.q)* \
+            #                          self.air_ap.TEMP)
+            # self.wrho = np.interp(self.P_h,\
+            #                      self.air_ach.p,\
+            #                      self.air_ach['wrho']) 
+            # self.ws   = self.air_ap.w.iloc[1]
+
+            if (self.sw_ac is not None) and ('w' in self.sw_ac):
+                self.air_ap = self.air_ap.assign(wp = 0.)
+                self.air_ap['wp'] = np.interp(self.air_ap.p, \
+                                              self.air_ac.p, \
+                                              self.air_ac['wp'])
+                self.air_ap = self.air_ap.assign(R = 0.)
+                self.air_ap['R'] = (self.Rd*(1.-self.air_ap.q) + \
+                                                     self.Rv*self.air_ap.q)
+                self.air_ap = self.air_ap.assign(rho = 0.)
+                self.air_ap['rho'] = self.air_ap.p /self.air_ap.R/  self.air_ap.t
+                
+                self.air_ap = self.air_ap.assign(w = 0.)
+                self.air_ap['w'] = -self.air_ap['wp'] /self.air_ap['rho']/self.g
+                #print('hello w ini')
+
+                # Note: in case of sw_ac is False, we update it from prescribed
+                # divergence
+                self.ws   = self.air_ap.w[1]
+
+                # self.ws   = self.wrho/self.rho
+                # self.ws   = self.wrho/(self.P_h/ \
+                #                        (self.Rd*(1.-self.q) + self.Rv*self.q) * \
+                #                         self.theta) # this should be T!!!
+
+                # self.__dict__['divU'] = ((self.air_ac['divU_x'][in_ml] \
+                #                         + \
+                #                         self.air_ac['divU_y'][in_ml])* \
+                #             self.air_ac['delpdgrav'][in_ml]).sum()/ \
+                #             self.air_ac['delpdgrav'][in_ml].sum() \
+        
+
         # Tendencies 
         self.htend      = None                  # tendency of CBL [m s-1]
         self.thetatend  = None                  # tendency of mixed-layer potential temperature [K s-1]
@@ -333,6 +616,8 @@ class model:
   
         # initialize radiation
         self.lat        = self.input.lat        # latitude [deg]
+        #self.fc         = self.input.fc         # coriolis parameter [s-1]
+        self.fc         = 4. * np.pi/(24.*3600.) * np.sin(self.lat/180.*np.pi)
         self.lon        = self.input.lon        # longitude [deg]
         self.doy        = self.input.doy        # day of the year [-]
         self.tstart     = self.input.tstart     # time of the day [-]
@@ -441,54 +726,79 @@ class model:
             self.run_mixed_layer()
 
     def timestep(self):
+
+        self.dtmax = +np.inf
+        self.logger.debug('before stats') 
         self.statistics()
 
         # run radiation model
+        self.logger.debug('before rad') 
         if(self.sw_rad):
             self.run_radiation()
   
         # run surface layer model
         if(self.sw_sl):
+            self.logger.debug('before surface layer') 
             self.run_surface_layer()
         
         # run land surface model
         if(self.sw_ls):
+            self.logger.debug('before land surface') 
             self.run_land_surface()
  
         # run cumulus parameterization
         if(self.sw_cu):
+            self.logger.debug('before cumulus') 
             self.run_cumulus()
    
+        self.logger.debug('before mixed layer') 
         # run mixed-layer model
         if(self.sw_ml):
             self.run_mixed_layer()
+        self.logger.debug('after mixed layer') 
  
         #get first profile data point above mixed layer
-        zidx_first = np.where(self.z_pro > self.h)[0][0]
+        if self.sw_ap:
+            zidx_first = np.where(self.air_ap.z > self.h)[0][0]
+            
+            if (self.sw_ac is not None) and ('w' in self.sw_ac):
+                # here we correct for the fact that the upper profile also
+                # shifts in the vertical.
+
+                diffhtend = self.htend - self.air_ap.w[zidx_first]
+                if diffhtend > 0:
+                    dtmax_new = (self.air_ap.z[zidx_first] - self.h)/ diffhtend
+                    self.dtmax= min(dtmax_new,self.dtmax)
+            else:
+                if self.htend > 0:
+                    dtmax_new = ( self.air_ap.z[zidx_first] - self.h)/self.htend 
+                    self.dtmax= min(dtmax_new,self.dtmax)
+            #print(self.h,zidx_first,self.ws,self.air_ap.z)
+
         
-        if self.htend != 0.:
-            dtmax = ( self.z_pro[zidx_first] - self.h)/self.htend
-        else:
-            dtmax = +np.inf
-        
-        
-        self.substep =  (self.dtcur > dtmax)
+        #print(self.t,self.dtcur,self.dt,dtmax,self.air_ap.z[zidx_first],self.h)
+        self.logger.debug('before store') 
+        self.substep =  (self.dtcur > self.dtmax)
         if self.substep:
-            dtnext = self.dtcur - dtmax
-            self.dtcur = dtmax
+            dtnext = self.dtcur - self.dtmax
+            self.dtcur = self.dtmax
+
+        #print(self.t,self.dtcur,self.dt,dtmax,self.tstart + self.t*self.dt/3600.)
+
         # HW: this will be done multiple times in case of a substep is needed
         # store output before time integration
         if self.firsttime:
             self.store()
   
+        self.logger.debug('before integrate land surface ('+str(self.t)+', '+str(self.dtcur)+')')
         # time integrate land surface model
         if(self.sw_ls):
             self.integrate_land_surface()
-  
+        self.logger.debug('before integrate mixed layer') 
         # time integrate mixed-layer model
         if(self.sw_ml):
-            self.integrate_mixed_layer()
-        
+            self.integrate_mixed_layer() 
+        self.logger.debug('after integrate mixed layer') 
         if self.substep:
             self.dtcur = dtnext
             self.firsttime = False
@@ -498,7 +808,7 @@ class model:
             self.t += 1 
             self.firsttime = True
             self.substeps = 0
-        
+        self.logger.debug('going to next step')
         
         
   
@@ -509,6 +819,10 @@ class model:
         self.dthetav  = (self.theta + self.dtheta) * (1. + 0.61 * (self.q + self.dq)) - self.theta * (1. + 0.61 * self.q)
         # Mixed-layer top properties
         self.P_h    = self.Ps - self.rho * self.g * self.h
+        # else:
+            # in the other case, it is updated at the time that the profile is
+            # updated (and at the initialization
+
         self.T_h    = self.theta - self.g/self.cp * self.h
 
         #self.P_h    = self.Ps / np.exp((self.g * self.h)/(self.Rd * self.theta))
@@ -533,6 +847,7 @@ class model:
             it          += 1
 
         if(it == itmax):
+
             print("LCL calculation not converged!!")
             print("RHlcl = %f, zlcl=%f, theta=%f, q=%f"%(RHlcl, self.lcl,self.theta,self.q))
 
@@ -565,7 +880,12 @@ class model:
 
 
         # calculate large-scale vertical velocity (subsidence)
-        self.ws = -self.divU * self.h
+        if not ((self.sw_ac is not None) and ('w' in self.sw_ac)):
+            self.ws = -self.divU * self.h
+        # else:
+        #     in case the air circulation switch is turned on, subsidence is
+        #     calculated from the circulate profile at the initialization and
+        #     in the integrate_mixed_layer routine
               
         # calculate compensation to fix the free troposphere in case of subsidence 
         if(self.sw_fixft):
@@ -603,29 +923,105 @@ class model:
         self.wqe         = -self.we * self.dq
         self.wCO2e       = -self.we * self.dCO2
         
-        self.htend       = self.we + self.ws + self.wf - self.M
+        htend_pre       = self.we + self.ws + self.wf - self.M
         
-        self.thetatend   = (self.wtheta - self.wthetae             ) / self.h + self.advtheta 
-        self.qtend       = (self.wq     - self.wqe     - self.wqM  ) / self.h + self.advq
-        self.CO2tend     = (self.wCO2   - self.wCO2e   - self.wCO2M) / self.h + self.advCO2
+        #self.thetatend   = (self.wtheta - self.wthetae             ) / self.h + self.advtheta 
+        thetatend_pre = (self.wtheta - self.wthetae             ) / self.h + self.advtheta
         
-        self.dthetatend  = self.gammatheta * (self.we + self.wf - self.M) - self.thetatend + w_th_ft
-        self.dqtend      = self.gammaq     * (self.we + self.wf - self.M) - self.qtend     + w_q_ft
-        self.dCO2tend    = self.gammaCO2   * (self.we + self.wf - self.M) - self.CO2tend   + w_CO2_ft
+ 
+        #print('thetatend_pre',thetatend_pre)
+        
+        #preliminary boundary-layer top chenage
+        #htend_pre = self.we + self.ws + self.wf - self.M
+        #preliminary change in temperature jump
+        dthetatend_pre  = self.gammatheta * (self.we + self.wf - self.M) - \
+                          thetatend_pre + w_th_ft
+        
+        dtheta_pre = float(self.dtheta + dthetatend_pre *self.dt)
+        l_entrainment = True
+
+        if (self.dtheta <= 0.1) and (dthetatend_pre < 0.):
+            l_entrainment = False
+            warnings.warn(str(self.t)+"/"+str(self.tsteps)+\
+                          "Warning! temperature jump is at the lower limit \
+                          and is not growing: entrainment is disabled for this (sub)timestep.") 
+        elif dtheta_pre < 0.1:
+            dtmax_new = float((0.1 - self.dtheta)/dthetatend_pre)
+            l_entrainment = True
+            warnings.warn(str(self.t)+"/"+str(self.tsteps)+\
+                          " Warning! Potential temperature jump at mixed- \
+                          layer height would become too low limiting timestep \
+                          from "+ str(self.dtmax)+' to '+str(dtmax_new))
+            self.dtmax = min(self.dtmax,dtmax_new)
+            warnings.warn(str(self.t)+"/"+str(self.tsteps)+\
+                          "next subtimestep, entrainment will be disabled")
+            #self.dthetatend = (0.1 - self.dtheta)/self.dtcur 
+
+
+
+        # when entrainment is disabled, we just use the simplified formulation
+        # as in Wouters et al., 2013 (section 2.2.1)
+
+        self.dthetatend = l_entrainment*dthetatend_pre + \
+                        (1.-l_entrainment)*0.
+        self.thetatend = l_entrainment*thetatend_pre + \
+                        (1.-l_entrainment)*((self.wtheta  ) / self.h + self.advtheta)
+        self.htend = l_entrainment*htend_pre + \
+                     (1.-l_entrainment)*((self.ws - self.M)+ self.thetatend/self.gammatheta)
+        #print(l_entrainment,htend_pre,self.ws,self.M,self.thetatend,self.gammatheta)
+        #stop
+
+
+        self.qtend       = (self.wq     - l_entrainment*self.wqe     - self.wqM  ) / self.h + self.advq
+        self.CO2tend     = (self.wCO2   - l_entrainment*self.wCO2e   - self.wCO2M) / self.h + self.advCO2
+
+
+        # self.qtend = l_entrainment*qtend_pre + \
+        #              (1.-l_entrainment)*( (self.wq  - self.wqM)/self.h + self.advq)
+        # self.CO2tend = l_entrainment*CO2tend_pre + \
+        #              (1.-l_entrainment)*( (self.wCO2  - self.wCO2M)/self.h + self.advCO2)
+
+
+
+        #     # part of the timestep for which the temperature mixed-layer jump
+        #     # was changing, and for which entrainment took place. For the other
+        #     # part, we don't assume entrainment anymore, and we use the
+        #     # simplified formulation  of Wouters et al., 2013
+
+        #     #self.htend =(self.dthetatend + self.thetatend - w_th_ft)/self.gammatheta +self.ws
+        #   
+        #     self.thetatend = l_entrainment*(self.gammatheta * (self.we + self.wf - self.M) - \
+        #                      self.dthetatend + w_th_ft) + \
+        #                      l_entrainment*((self.wtheta  ) / self.h + self.advtheta)
+        #     self.htend = fac*self.htend + \
+        #                  (1.-fac)* (( self.ws  - self.M)+((self.wtheta) / self.h + self.advtheta)/self.gammatheta)
+        #     self.qtend = fac*self.qtend + (1.-fac)* ( (self.wq  - self.wqM)/self.h + self.advq)
+        #     self.CO2tend = fac*self.qtend + (1.-fac)* ( (self.wCO2  - self.wCO2M)/self.h + self.advCO2)
+
+        #     #self.thetatend += (self.wtheta - self.wthetae             ) / self.h + self.advtheta
+
+        # else:
+        #     #self.htend = htend_pre
+        #     self.dthetatend = dthetatend_pre
+        #     self.thetatend = thetatend_pre
+        
+        self.dqtend      = self.gammaq     * (self.we*l_entrainment + self.wf - self.M) - self.qtend     + w_q_ft
+        self.dCO2tend    = self.gammaCO2   * (self.we*l_entrainment + self.wf - self.M) - self.CO2tend   + w_CO2_ft
      
         # assume u + du = ug, so ug - u = du
         if(self.sw_wind):
-            self.utend       = -self.fc * self.dv + (self.uw + self.we * self.du)  / self.h + self.advu
-            self.vtend       =  self.fc * self.du + (self.vw + self.we * self.dv)  / self.h + self.advv
+            self.utend       = -self.fc * self.dv + (self.uw + l_entrainment*self.we * self.du)  / self.h + self.advu
+            self.vtend       =  self.fc * self.du + (self.vw + l_entrainment*self.we * self.dv)  / self.h + self.advv
   
-            self.dutend      = self.gammau * (self.we + self.wf - self.M) - self.utend
-            self.dvtend      = self.gammav * (self.we + self.wf - self.M) - self.vtend
+            self.dutend      = self.gammau * (l_entrainment*self.we + self.wf - self.M) - self.utend
+            self.dvtend      = self.gammav * (l_entrainment*self.we + self.wf - self.M) - self.vtend
         
         # tendency of the transition layer thickness
         if(self.ac > 0 or self.lcl - self.h < 300):
             self.dztend = ((self.lcl - self.h)-self.dz_h) / 7200.
         else:
             self.dztend = 0.
+
    
     def integrate_mixed_layer(self):
         # set values previous time step
@@ -650,16 +1046,18 @@ class model:
             
 
 # END -- HW 20170606        
-        
         self.h        = h0      + self.dtcur * self.htend
+        # print(self.h,self.htend)
+        # stop
         self.theta    = theta0  + self.dtcur * self.thetatend
+        #print(dtheta0,self.dtcur,self.dthetatend)
         self.dtheta   = dtheta0 + self.dtcur * self.dthetatend
         self.q        = q0      + self.dtcur * self.qtend
         self.dq       = dq0     + self.dtcur * self.dqtend
         self.CO2      = CO20    + self.dtcur * self.CO2tend
         self.dCO2     = dCO20   + self.dtcur * self.dCO2tend
         self.dz_h     = dz0     + self.dtcur * self.dztend
-
+            
         # Limit dz to minimal value
         dz0 = 50
         if(self.dz_h < dz0):
@@ -671,61 +1069,312 @@ class model:
             self.v        = v0      + self.dtcur * self.vtend
             self.dv       = dv0     + self.dtcur * self.dvtend
 
+        if (self.sw_ac is not None) and ('adv' in self.sw_ac):
 
-        
+            for var in ['t','q','u','v']:
+                #if ((self.z_pro is not None) and (self.__dict__['adv'+var+'_pro'] is not None)):
+
+            # take into account advection for the whole profile
+                
+                self.air_ap[var] = self.air_ap[var] + self.dtcur * self.air_ap['adv'+var]
+
+            var = 'z'
+            #print(self.air_ap[var])
+                #     print(self.air_ap['adv'+var])
+
+
+
+
+            #moving the profile vertically according to the vertical wind
+                #if ((self.air_ap.z is not None) and (self.air_ap.w is not None)):
+
+
+            # air_apvarold = pd.Series(np.array(self.air_ap.z))
+            # print(self.h,self.ws,self.htend,self.dtcur,air_apvarold )
+            # stop
+
+
+                # # recalculate subsidence at the mixed-layer top from the profile. Yet, this would be overwritten from the external forcing.
+                # self.ws = np.interp(self.h , self.z_pro,self.w_pro)
+
+            #As t is updated, we also need to recalculate theta (and R)
+            self.air_ap['R'] = (self.Rd*(1.-self.air_ap.q) + \
+                                                 self.Rv*self.air_ap.q)
+
+            # air_aptheta_old = pd.Series(self.air_ap['theta'])
+            self.air_ap['theta'] = \
+                        self.air_ap.t * \
+                        (self.Ps/self.air_ap.p)**(self.air_ap['R']/self.cp)
+        if (self.sw_ac is not None) and ('w' in self.sw_ac):
+            zidx_first = np.where(self.air_ap.z > self.h)[0][0]
+            self.air_ap.z[zidx_first:] = self.air_ap.z[zidx_first:] + \
+                                         self.dtcur * self.air_ap.w[zidx_first:]
+
+#            print(self.t, self.dtcur,self.dt,self.air_ap.w[zidx_first])
+#            print(self.t, self.dtcur,self.dt,self.htend)
+
+            # # the pressure levels of the profiles are recalculated according to
+            # # there new height (after subsidence)
+            # self.air_ap.p[zidx_first:] = self.air_ap.p[zidx_first:] - \
+            #         self.air_ap.p[zidx_first:]/self.air_ap['R'][zidx_first:]/self.air_ap['t'][zidx_first:] \
+            #         * self.dtcur *  self.air_ap.w[zidx_first:]
+
+            self.air_ap.p[zidx_first:] = self.air_ap.p[zidx_first:] + \
+                    self.dtcur * self.air_ap.wp[zidx_first:]
+
+            #print(pd.DataFrame([self.air_ap.z,air_apvarold]))
         # note that theta and q itself are updatet by class itself
 
-        #Afterwards, update the vertical profiles by removing any data points below the new h
-        if self.theta_pro is not None:
-            self.theta_pro = np.array([self.theta,self.theta,self.theta+self.dtheta]+list(self.theta_pro[self.z_pro > self.h]))
+    
+        if self.sw_ap:
+            # Just for model consistency preservation purposes, we set the
+            # theta variables of the mixed-layer to nan values, since the
+            # mixed-layer values should overwritte by the mixed-layer
+            # calculations of class.
+            self.air_ap['theta'][0:3] = np.nan 
+            self.air_ap['p'][0:3] = np.nan 
+            self.air_ap['q'][0:3] = np.nan 
+            self.air_ap['u'][0:3] = np.nan 
+            self.air_ap['v'][0:3] = np.nan 
+            self.air_ap['t'][0:3] = np.nan 
+            self.air_ap['z'][0:3] = np.nan 
 
-        if self.q_pro is not None:
-            self.q_pro = np.array([self.q,self.q,self.q+self.dq]+list(self.q_pro[self.z_pro > self.h]))
+            # Update the vertical profiles: 
+            #   - new mixed layer properties( h, theta, q ...)
+            #   - any data points below the new ixed-layer height are removed
+
+            # Three data points at the bottom that describe the mixed-layer
+            # properties
+            air_ap_head = self.air_ap.iloc[0:3] # make an empty table with similar
+                                           # columns as air_ap
+            # air_ap_head['z'].iloc[0] = 2.
+            # air_ap_head['z'].iloc[1] = self.__dict__['h']
+            # air_ap_head['z'].iloc[2] = self.__dict__['h']
+            air_ap_head.values[:,list(air_ap_head.columns).index('z')] = \
+                        [2.,self.__dict__['h'],self.__dict__['h']]
+            for var in ['theta','q','u','v']:
+
+                air_ap_head.values[:,list(air_ap_head.columns).index(var)] = \
+                        [self.__dict__[var], \
+                         self.__dict__[var], \
+                         self.__dict__[var] + self.__dict__['d'+var]]
+                
+            #print(self.air_ap)
+
+            # This is the remaining profile considering the remaining
+            # datapoints above the mixed layer height
+            air_ap_tail = self.air_ap.iloc[3:]
+            air_ap_tail = air_ap_tail[air_ap_tail.z > self.h]
+
+            # print('h',self.h)
+            # # only select samples monotonically increasing with height
+            # air_ap_tail_orig = pd.DataFrame(air_ap_tail)
+            # air_ap_tail = pd.DataFrame()
+            # theta_low = self.theta
+            # z_low =     self.h
+            # air_ap_tail = air_ap_tail.append(air_ap_tail_orig.iloc[0],ignore_index=True)
+            # for ibottom in range(1,len(air_ap_tail_orig)):
+            #     if air_ap_tail_orig.iloc[ibottom].z > air_ap_tail.iloc[-1].z +2.:
+            #         air_ap_tail = air_ap_tail.append(air_ap_tail_orig.iloc[ibottom],ignore_index=True)
 
 
 
-        if self.z_pro is not None:
-            self.z_pro = np.array([2.,self.h,self.h]+list(self.z_pro[self.z_pro > self.h]))
 
-        
-        if self.gammatheta_pro is not None:
+            # make theta increase strong enough to avoid numerical
+            # instability
+            air_ap_tail_orig = pd.DataFrame(air_ap_tail)
+            air_ap_tail = pd.DataFrame()
+            #air_ap_tail = air_ap_tail.append(air_ap_tail_orig.iloc[0],ignore_index=True)
+            #air_ap_tail = air_ap_tail.append(air_ap_tail_orig.iloc[0],ignore_index=True)
+            theta_low = self.theta
+            z_low =     self.h
+            ibottom = 0
+            itop = 0
+            # print(air_ap_tail_orig)
+            # stop
+
+            # HW: this is the lower limit that we use for gammatheta, which is
+            # there to avoid model crashes. Besides on this limit, the upper
+            # air profile is modified in a way that is still conserves total
+            # quantities of moisture and temperature. The limit is set by trial
+            # and error. The numerics behind the crash should be investigated
+            # so that a cleaner solution can be provided.
+            gammatheta_lower_limit = 0.002
+            while ((itop in range(0,1)) or (itop != ibottom)):
+                theta_mean = air_ap_tail_orig.theta.iloc[ibottom:(itop+1)].mean()
+                z_mean =     air_ap_tail_orig.z.iloc[ibottom:(itop+1)].mean()
+                if (
+                    #(z_mean > (z_low+0.2)) and \
+                    #(theta_mean > (theta_low+0.02) ) and \
+                    (((theta_mean - theta_low)/(z_mean - z_low)) > gammatheta_lower_limit)) or \
+                  (itop >= (len(air_ap_tail_orig)-1)) \
+                   :
+
+                    air_ap_tail = air_ap_tail.append(air_ap_tail_orig.iloc[ibottom:(itop+1)].mean(),ignore_index=True)
+                    ibottom = itop+1
+                    theta_low = air_ap_tail.theta.iloc[-1]
+                    z_low =     air_ap_tail.z.iloc[-1]
+    
+
+                itop +=1
+                # elif  (itop > len(air_ap_tail_orig)-10):
+                #     air_ap_tail = air_ap_tail.append(air_ap_tail_orig.iloc[itop],ignore_index=True)
+                #print(itop,ibottom)
+
+            if itop > 1:
+                    warnings.warn(str(self.t)+"/"+str(self.tsteps)+\
+                          "Warning! Temperature profile was too steep. \
+                                  Modifying profile: "+ \
+                                  str(itop - 1)+ " measurements were dropped \
+                                  and replaced with its average \
+                                  Modifying profile. \
+                                  mean with next profile point(s).") 
+
+
+            self.air_ap = pd.concat((air_ap_head,\
+                                     air_ap_tail,\
+                                     air_ap_tail_orig[itop:])).reset_index().drop('index',\
+                                                                      axis=1)
+
+            if  self.sw_ac:
+                qvalues = \
+                        self.air_ap.values[:,list(self.air_ap.columns).index('q')]
+
+                self.air_ap.values[:,list(self.air_ap.columns).index('R')] = \
+                        (self.Rd*(1.-qvalues) + self.Rv*qvalues)
+                #self.Ph = self.Ps - self.h * self.g * Density(self.T2m,self.Ps,self.q)
+                self.P_h    = self.Ps - self.rho * self.g * self.h
+                self.air_ap.values[:3,list(self.air_ap.columns).index('p')] = \
+                        [self.Ps,  self.P_h, self.P_h-0.1]
+
+                self.air_ap.t = \
+                            self.air_ap.theta * \
+                            (self.air_ap.p/self.Ps)**(self.air_ap['R']/self.cp)
+
+
+        # WARNING: self.sw_ac always requires self.sw_ap for now!!!
+
+
+
+
+        # else:
+            # in the other case, it is updated at the time the statistics are
+            # calculated 
+
+        if (self.sw_ac is not None) and ('adv' in self.sw_ac):
+
+
+            self.P_h    = self.Ps - self.rho * self.g * self.h
+            in_ml = (self.air_ac.p >= self.P_h)
+
+            if in_ml.sum() == 0:
+                warnings.warn(" no circulation points in the mixed layer \
+                              found. We just take the bottom one.")
+                in_ml = self.air_ac.index == (len(self.air_ac) - 1)
+            for var in ['t','q','u','v']:
+
+                # calculation of the advection variables for the mixed-layer
+                # these will be used for the next timestep
+                # Warning: w is excluded for now.
+
+                self.__dict__['adv'+var] = \
+                        ((self.air_ac['adv'+var+'_x'][in_ml] \
+                         + \
+                         self.air_ac['adv'+var+'_y'][in_ml])* \
+                        self.air_ac['delpdgrav'][in_ml]).sum()/ \
+                        self.air_ac['delpdgrav'][in_ml].sum()
+
+                # calculation of the advection variables for the profile above
+                # the mixed layer (also for the next timestep)
+                self.air_ap['adv'+var] = \
+                                    np.interp(self.air_ap.p,\
+                                              self.air_ac.p,\
+                                              self.air_ac['adv'+var+'_x']) \
+                                    + \
+                                    np.interp(self.air_ap.p,\
+                                              self.air_ac.p, \
+                                              self.air_ac['adv'+var+'_y'])
+                # if var == 't':
+                #     print(self.air_ap['adv'+var])
+                #     stop
+
+            # as an approximation, we consider that advection of theta in the
+            # mixed layer is equal to advection of t. This is a sufficient
+            # approximation since theta and t are very similar at the surface
+            # pressure.
+
+            self.__dict__['advtheta'] = self.__dict__['advt']
+
+        if (self.sw_ac is not None) and ('w' in self.sw_ac):
+            # update the vertical wind profile
+            self.air_ap['wp'] = np.interp(self.air_ap.p, \
+                                          self.air_ac.p, \
+                                          self.air_ac['wp'])
+            self.air_ap['R'] = (self.Rd*(1.-self.air_ap.q) + \
+                                                 self.Rv*self.air_ap.q)
+            self.air_ap['rho'] = self.air_ap.p /self.air_ap.R/  self.air_ap.t
             
-                        # self.gammatheta_pro = np.gradient(self.theta_pro) / np.gradient(self.z_pro)
-            with np.errstate(divide='ignore'):
-                self.gammatheta_pro = np.array(self.theta_pro[1:] - self.theta_pro[:-1]) \
-                           / np.array(self.z_pro[1:] -  self.z_pro[:-1]    )
-                           
-            self.gammatheta = self.gammatheta_pro[np.where(self.h >= self.z_pro)[0][-1]]
-            
-            
-            
-            #self.gammatheta_pro = np.array([self.gammatheta,self.gammatheta,self.gammatheta]+list(self.gammatheta_pro[self.z_pro[:-1] > self.h]))
+            air_apwold = self.air_ap['w']
+            self.air_ap['w'] = -self.air_ap['wp'] /self.air_ap['rho']/self.g
+            #print('hello w upd')
 
-        if self.gammaq_pro is not None:            
-                        
-            #self.gammaq_pro = np.gradient(self.q_pro) / np.gradient(self.z_pro)
-            with np.errstate(divide='ignore'):
-                self.gammaq_pro = (self.q_pro[1:] -self.q_pro[:-1])  / (self.z_pro[1:] -self.z_pro[:-1])
-            
-            self.gammaq = self.gammaq_pro[np.where(self.h >= self.z_pro)[0][-1]]
-            
-            
-            self.gammaq_pro = np.array([self.gammaq,self.gammaq,self.gammaq]+list(self.gammaq_pro[self.z_pro[:-1] > self.h]))
+            # # # WARNING, THIS DOESN't GIVE THE EXPECTED VALUE!!!
+            # # interpolate subsidence x density
+            # self.air_ap['wrho'] = \
+            #            np.interp(self.air_ap.p,\
+            #                      self.air_ach.p,\
+            #                      self.air_ach['wrho']) \
+            #     
+            # self.air_ap['w'] = \
+            #     self.air_ap['wrho']/(self.air_ap.p/ \
+            #                          (self.Rd*(1.-self.air_ap.q) + \
+            #                           self.Rv*self.air_ap.q)* \
+            #                          self.air_ap.TEMP)
+            # # self.wrho = np.interp(self.P_h,\
+            # #                      self.air_ach.p,\
+            # #                      self.air_ach['wrho']) \
 
 
-#	# BEGIN -- HW 20170606
-#        # get new gammatheta(h) from its vertical profile when available:
-#        if(self.gammatheta_pro != None):
-#            #self.gammatheta = np.interp(self.h, self.z_pro, self.gammatheta_pro) 
-#            self.gammatheta = self.gammatheta_pro[np.where(self.h >= self.z_pro )[0][-1]]
-#
-#        # get gammaq(h) from its vertical profile when available:
- #       if(self.gammaq_pro != None):
- #           #self.gammaq = np.interp(self.h, self.z_pro, self.gammaq_pro) 
- #           self.gammaq = self.gammaq_pro[np.where(self.h >= self.z_pro)[0][-1]]
-#
-        
- 
+
+            # Also update the vertical wind at the mixed-layer height
+            # (subsidence)
+            self.ws   = self.air_ap.w[1]
+        #    print('ws',self.ws,self.air_ap.wp[1],self.air_ap.R[1],self.air_ap.t[1],self.air_ap.q[1])
+
+            ## Finally, we update he 
+            #self.__dict__['divU'] = ((self.air_ac['divU_x'][in_ml] \
+            #                        + \
+            #                        self.air_ac['divU_y'][in_ml])* \
+            #            self.air_ac['delpdgrav'][in_ml]).sum()/ \
+            #            self.air_ac['delpdgrav'][in_ml].sum() 
+            
+
+        if self.sw_ap:
+            for var in ['theta','q','u','v']:
+
+                # update of the slope (gamma) for the different variables, for
+                # the next timestep!
+
+                # there is an warning message that tells about dividing through
+                # zero, which we ignore
+
+                with np.errstate(divide='ignore'):
+                    gammavar = list(np.array(self.air_ap[var][1:].values - \
+                                             self.air_ap[var][:-1].values) \
+                                    / np.array(self.air_ap['z'][1:].values - \
+                                               self.air_ap['z'][:-1].values))
+
+                    # add last element twice (since we have one element less)
+                gammavar.append(gammavar[-1])
+                gammavar = np.array(gammavar)
+                self.air_ap['gamma'+var] = gammavar
+
+                # Based on the above, update the gamma value at the mixed-layer
+                # top
+                self.__dict__['gamma'+var] = self.air_ap['gamma'+var][np.where(self.h >=
+                                                                     self.air_ap.z)[0][-1]]
+
+            
     def run_radiation(self):
         sda    = 0.409 * np.cos(2. * np.pi * (self.doy - 173.) / 365.)
         sinlea = np.sin(2. * np.pi * self.lat / 360.) * np.sin(sda) - np.cos(2. * np.pi * self.lat / 360.) * np.cos(sda) * np.cos(2. * np.pi * (self.t * self.dt + self.tstart * 3600.) / 86400. - 2. * np.pi * self.lon / 360.)
@@ -743,9 +1392,23 @@ class model:
         self.Lwout = self.bolz * self.Ts ** 4.
           
         self.Q     = self.Swin - self.Swout + self.Lwin - self.Lwout
+        #print('Q',self.Q,self.Swin,self.Swout,self.Lwin,self.Lwout)
   
     def run_surface_layer(self):
-        ueff           = max(0.01, np.sqrt(self.u**2. + self.v**2. + self.wstar**2.))
+        # HW: I had to raise the minimum wind speed to make the simulation with
+        # the non-iterative solution stable (this solution was a wild guess, so I don't
+        # know the exact problem of the instability in case of very low wind
+        # speeds yet)
+        #ueff           = max(0.01, np.sqrt(self.u**2. + self.v**2. + self.wstar**2.))
+
+        # version of 20180730 where there are still some runs crashing. Maybe
+        # an upper limit should be set on the monin-obukhov length instead of
+        # a lower limmit on the wind speed?
+        #ueff           = max(0.1, np.sqrt(self.u**2. + self.v**2. + self.wstar**2.))
+
+        ueff           = max(0.5, np.sqrt(self.u**2. + self.v**2. + self.wstar**2.))
+
+        
         self.thetasurf = self.theta + self.wtheta / (self.Cs * ueff)
         qsatsurf       = qsat(self.thetasurf, self.Ps)
         cq             = (1. + self.Cs * ueff * self.rs) ** -1.
@@ -755,23 +1418,56 @@ class model:
   
         zsl       = 0.1 * self.h
         self.Rib  = self.g / self.thetav * zsl * (self.thetav - self.thetavsurf) / ueff**2.
-        self.Rib  = min(self.Rib, 0.2)
+        
 
-        self.L     = self.ribtol(self.Rib, zsl, self.z0m, self.z0h)  # Slow python iteration
-        #self.L    = ribtol.ribtol(self.Rib, zsl, self.z0m, self.z0h) # Fast C++ iteration
- 
-        self.Cm   = self.k**2. / (np.log(zsl / self.z0m) - self.psim(zsl / self.L) + self.psim(self.z0m / self.L)) ** 2.
-        self.Cs   = self.k**2. / (np.log(zsl / self.z0m) - self.psim(zsl / self.L) + self.psim(self.z0m / self.L)) / (np.log(zsl / self.z0h) - self.psih(zsl / self.L) + self.psih(self.z0h / self.L))
-  
-        self.ustar = np.sqrt(self.Cm) * ueff
-        self.uw    = - self.Cm * ueff * self.u
-        self.vw    = - self.Cm * ueff * self.v
- 
-        # diagnostic meteorological variables
-        self.T2m    = self.thetasurf - self.wtheta / self.ustar / self.k * (np.log(2. / self.z0h) - self.psih(2. / self.L) + self.psih(self.z0h / self.L))
-        self.q2m    = self.qsurf     - self.wq     / self.ustar / self.k * (np.log(2. / self.z0h) - self.psih(2. / self.L) + self.psih(self.z0h / self.L))
-        self.u2m    =                - self.uw     / self.ustar / self.k * (np.log(2. / self.z0m) - self.psim(2. / self.L) + self.psim(self.z0m / self.L))
-        self.v2m    =                - self.vw     / self.ustar / self.k * (np.log(2. / self.z0m) - self.psim(2. / self.L) + self.psim(self.z0m / self.L))
+
+        if self.sw_lit:
+            self.Rib  = min(self.Rib, 0.2)
+            self.L     = ribtol(self.Rib, zsl, self.z0m, self.z0h)  # Slow python iteration
+            self.zeta  = zsl/self.L
+            #self.L    = ribtol.ribtol(self.Rib, zsl, self.z0m, self.z0h) # Fast C++ iteration
+            
+        
+            self.Cm   = self.k**2. / (np.log(zsl / self.z0m) - psim(self.zeta) + psim(self.z0m / zsl* self.zeta)) ** 2.
+            self.Cs   = self.k**2. / (np.log(zsl / self.z0m) - psim(self.zeta) + psim(self.z0m / zsl* self.zeta)) / (np.log(zsl / self.z0h) - self.psih(self.zeta) + self.psih(self.z0h / zsl* self.zeta))
+            
+            
+            self.ustar = np.sqrt(self.Cm) * ueff
+            self.uw    = - self.Cm * ueff * self.u
+            self.vw    = - self.Cm * ueff * self.v
+        
+     
+            # diagnostic meteorological variables
+            self.T2m    = self.thetasurf - self.wtheta / self.ustar / self.k * (np.log(2. / self.z0h) - psih(2. / zsl* self.zeta) + psih(self.z0h / zsl* self.zeta))
+            self.q2m    = self.qsurf     - self.wq     / self.ustar / self.k * (np.log(2. / self.z0h) - psih(2. / zsl* self.zeta) + psih(self.z0h / zsl* self.zeta))
+            self.u2m    =                - self.uw     / self.ustar / self.k * (np.log(2. / self.z0m) - psim(2. / zsl* self.zeta) + psim(self.z0m / zsl* self.zeta))
+            self.v2m    =                - self.vw     / self.ustar / self.k * (np.log(2. / self.z0m) - psim(2. / zsl* self.zeta) + self.psim(self.z0m / zsl* self.zeta))
+            
+            # diagnostic meteorological variables
+        else:
+            
+            ## circumventing any iteration with Wouters et al., 2012
+            self.zslz0m = np.max((zsl/self.z0m,10.))
+            #self.Rib  = self.Rib / zsl*self.z0m *self.zslz0m
+            self.zeta = zeta_hs2(self.Rib, self.zslz0m, np.log(self.z0m/self.z0h))
+            #print(str(self.t)+'/'+str(self.tsteps)+' zeta: ',self.zeta,self.Rib, zsl,self.z0m,self.z0h)
+            self.L = zsl/self.zeta
+            funm,funh = funcsche(self.zeta,self.zslz0m, np.log(self.z0m/self.z0h))
+        
+            self.Cm = self.k**2.0/funm/funm
+            self.Cs = self.k**2.0/funm/funh
+            
+            self.ustar = np.sqrt(self.Cm) * ueff
+            self.uw    = - self.Cm * ueff * self.u
+            self.vw    = - self.Cm * ueff * self.v
+            
+            # extrapolation from mixed layer (instead of from surface) to 2meter
+            self.T2m    = self.theta - self.wtheta / self.ustar / self.k * funh
+            self.q2m    = self.q     - self.wq     / self.ustar / self.k * funh
+            self.u2m    =                - self.uw     / self.ustar / self.k * funm
+            self.v2m    =                - self.vw     / self.ustar / self.k * funm
+        
+        
         self.esat2m = 0.611e3 * np.exp(17.2694 * (self.T2m - 273.16) / (self.T2m - 35.86))
         self.e2m    = self.q2m * self.Ps / 0.622
      
@@ -782,6 +1478,7 @@ class model:
         else:
             L  = -1.
             L0 = -2.
+        #print(Rib,zsl,z0m,z0h)
         
         while (abs(L - L0) > 0.001):
             L0      = L
@@ -793,8 +1490,8 @@ class model:
                       - (-zsl /  Lend   * (np.log(zsl / z0h) - self.psih(zsl / Lend  ) + self.psih(z0h / Lend  )) / \
                                           (np.log(zsl / z0m) - self.psim(zsl / Lend  ) + self.psim(z0m / Lend  ))**2.) ) / (Lstart - Lend)
             L       = L - fx / fxdif
-
-            if(abs(L) > 1e15):
+            #print(L)
+            if(abs(L) > 1e12):
                 break
 
         return L
@@ -938,11 +1635,14 @@ class model:
     def run_land_surface(self):
         # compute ra
         ueff = np.sqrt(self.u ** 2. + self.v ** 2. + self.wstar**2.)
+        #print('ueff',self.u,self.v,self.wstar)
 
         if(self.sw_sl):
           self.ra = (self.Cs * ueff)**-1.
         else:
           self.ra = ueff / max(1.e-3, self.ustar)**2.
+
+        #print('ra',self.ra,self.ustar,ueff)
 
         # first calculate essential thermodynamic variables
         self.esat    = esat(self.theta)
@@ -966,6 +1666,7 @@ class model:
         self.rssoil = self.rssoilmin * f2 
  
         Wlmx = self.LAI * self.Wmax
+        #print('Wlmx',Wlmx,self.LAI,self.Wmax,self.Wl)
         self.cliq = min(1., self.Wl / Wlmx) 
      
         # calculate skin temperature implictly
@@ -975,6 +1676,10 @@ class model:
             + self.cveg * self.cliq        * self.rho * self.Lv /  self.ra                * (self.dqsatdT * self.theta - self.qsat + self.q) + self.Lambda * self.Tsoil) \
             / (self.rho * self.cp / self.ra + self.cveg * (1. - self.cliq) * self.rho * self.Lv / (self.ra + self.rs) * self.dqsatdT \
             + (1. - self.cveg) * self.rho * self.Lv / (self.ra + self.rssoil) * self.dqsatdT + self.cveg * self.cliq * self.rho * self.Lv / self.ra * self.dqsatdT + self.Lambda)
+
+        #print('Ts',self.Ts,self.Q,self.rho,self.cp,self.ra,self.theta)
+        #print('Ts',self.cveg, self.cliq,self.Lv,self.Lambda,self.dqsatdT)
+        #print('Ts',self.rs)
 
         esatsurf      = esat(self.Ts)
         self.qsatsurf = qsat(self.Ts, self.Ps)
@@ -987,6 +1692,7 @@ class model:
   
         self.LE     = self.LEsoil + self.LEveg + self.LEliq
         self.H      = self.rho * self.cp / self.ra * (self.Ts - self.theta)
+        #print('H',self.ra,self.Ts,self.theta)
         self.G      = self.Lambda * (self.Ts - self.Tsoil)
         self.LEpot  = (self.dqsatdT * (self.Q - self.G) + self.rho * self.cp / self.ra * (self.qsat - self.q)) / (self.dqsatdT + self.cp / self.Lv)
         self.LEref  = (self.dqsatdT * (self.Q - self.G) + self.rho * self.cp / self.ra * (self.qsat - self.q)) / (self.dqsatdT + self.cp / self.Lv * (1. + self.rsmin / self.LAI / self.ra))
@@ -1003,6 +1709,7 @@ class model:
   
         # calculate kinematic heat fluxes
         self.wtheta   = self.H  / (self.rho * self.cp)
+        #print('wtheta',self.wtheta,self.H,self.rho,self.cp)
         self.wq       = self.LE / (self.rho * self.Lv)
  
     def integrate_land_surface(self):
@@ -1018,14 +1725,29 @@ class model:
     # store model output
     def store(self):
         t                      = self.t
-        self.out.t[t]          = t * self.dt / 3600. + self.tstart
+        
+        self.out.time[t]          = t * self.dt / 3600. + self.tstart
+
+        # in case we are at the end of the simulation, we store the vertical
+        # profiles to the output
+        
+        # if t == (len(self.out.time) - 1):
+        #     self.out.air_ac = self.air_ac
+        #     self.out.air_ap = self.air_ap
+
+        
+        # this way, we only need to define the output variables in the output class, so we don't need to specify het again here.
+        #  for key in self.out.__dict__.keys():
+        #      if key in self.__dict__:
+        #          self.out.__dict__[key][t]  = self.__dict__[key]
+        
         self.out.h[t]          = self.h
         
-        # HW20171003 note: most of these updates could also be done with the self.out.__dict__ and self.__dict__ , namely with the following loop:
-        #   for key in list(self.out.__dict__.keys()):
-        #       self.out.__dict__[key][t] = self[key]
+        # HW20171003 note: most of these updates could also be done with the self.out.__dict__ and self.__dict__ , namely with the key-loop above:
         
         self.out.gammatheta[t] = self.gammatheta
+        self.out.gammau[t]     = self.gammau
+        self.out.gammav[t]     = self.gammav
         self.out.gammaq[t]     = self.gammaq
         self.out.theta[t]      = self.theta
         self.out.thetav[t]     = self.thetav
@@ -1068,6 +1790,12 @@ class model:
         self.out.v2m[t]        = self.v2m
         self.out.e2m[t]        = self.e2m
         self.out.esat2m[t]     = self.esat2m
+
+
+        self.out.Tsoil[t]      = self.Tsoil
+        self.out.T2[t]         = self.T2
+        self.out.Ts[t]         = self.Ts
+        self.out.wg[t]         = self.wg
         
         self.out.thetasurf[t]  = self.thetasurf
         self.out.thetavsurf[t] = self.thetavsurf
@@ -1256,7 +1984,7 @@ class model:
 # class for storing mixed-layer model output data
 class model_output:
     def __init__(self, tsteps):
-        self.t          = np.zeros(tsteps)    # time [s]
+        self.time          = np.zeros(tsteps)    # time [s]
 
         # mixed-layer variables
         self.h          = np.zeros(tsteps)    # ABL height [m]
@@ -1264,6 +1992,8 @@ class model_output:
         self.theta      = np.zeros(tsteps)    # initial mixed-layer potential temperature [K]
         self.gammatheta = np.zeros(tsteps)    # initial mixed-layer potential temperature [K]
         self.gammaq     = np.zeros(tsteps)    # initial mixed-layer potential temperature [K]
+        self.gammau     = np.zeros(tsteps)
+        self.gammav     = np.zeros(tsteps)
         self.thetav     = np.zeros(tsteps)    # initial mixed-layer virtual potential temperature [K]
         self.dtheta     = np.zeros(tsteps)    # initial potential temperature jump at h [K]
         self.dthetav    = np.zeros(tsteps)    # initial virtual potential temperature jump at h [K]
@@ -1306,6 +2036,12 @@ class model_output:
         self.e2m        = np.zeros(tsteps)    # 2m vapor pressure [Pa]
         self.esat2m     = np.zeros(tsteps)    # 2m saturated vapor pressure [Pa]
 
+        # ground variables
+        self.Tsoil       = np.zeros(tsteps)
+        self.T2          = np.zeros(tsteps)
+        self.Ts          = np.zeros(tsteps)
+        self.wg          = np.zeros(tsteps)
+
         # surface-layer variables
         self.thetasurf  = np.zeros(tsteps)    # surface potential temperature [K]
         self.thetavsurf = np.zeros(tsteps)    # surface virtual potential temperature [K]
@@ -1346,11 +2082,19 @@ class model_output:
         self.M          = np.zeros(tsteps)    # cloud core mass flux [m s-1]
         self.dz         = np.zeros(tsteps)    # transition layer thickness [m]
         
+        
         self.substeps   = np.zeros(tsteps)    # number of additional substep time integrations needed [-]
 
 # class for storing mixed-layer model input data
 class model_input:
     def __init__(self):
+
+        # # comment not valid
+        # we comment out the initialization, because there is a problem when
+        # inheriting values from one the another class4gl_iput. We also expect
+        # that the user specifies all the required parmameters (if not, an error
+        # is raised). 
+
         # general model variables
         self.runtime    = None  # duration of model run [s]
         self.dt         = None  # time step [s]
@@ -1365,9 +2109,9 @@ class model_input:
         self.fc         = None  # Coriolis parameter [s-1]
         
         self.theta      = None  # initial mixed-layer potential temperature [K]
-        self.theta_pro  = None  # optional/initial profile of potential temperature [K]
+        #self.air_ap.THTA  = None  # optional/initial profile of potential temperature [K]
 
-        self.z_pro      = None  # height coordinate of the optional input profiles [m]
+        #self.z_pro      = None  # height coordinate of the optional input profiles [m]
 
         self.dtheta     = None  # initial temperature jump at h [K]
         self.gammatheta = None  # free atmosphere potential temperature lapse rate [K m-1]
@@ -1376,7 +2120,8 @@ class model_input:
         self.wtheta     = None  # surface kinematic heat flux [K m s-1]
         
         self.q          = None  # initial mixed-layer specific humidity [kg kg-1]
-        self.q_pro      = None  # optional/initial profile of specific humidity [kg kg-1]
+        #self.q_pro      = None  # optional/initial profile of specific humidity [kg kg-1]
+        #self.p_pro      = None  # optional/initial profile of pressure, just for diagnosis purposes [Pa]
 
         self.dq         = None  # initial specific humidity jump at h [kg kg-1]
         self.gammaq     = None  # free atmosphere specific humidity lapse rate [kg kg-1 m-1]
@@ -1464,6 +2209,6 @@ class model_input:
         self.dz_h       = None  # Transition layer thickness [m]
         
 # BEGIN -- HW 20171027
-        self.cala       = None      # soil heat conductivity [W/(K*m)]
-        self.crhoc      = None      # soil heat capacity  [J/K*m**3]
+        # self.cala       = None      # soil heat conductivity [W/(K*m)]
+        # self.crhoc      = None      # soil heat capacity  [J/K*m**3]
 # END -- HW 20171027
