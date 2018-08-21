@@ -1,0 +1,9 @@
+# Note: boost-python needs to be installed: brew install boost-python -with-python3 -without-python
+ribtol.so : ribtol.o
+	clang++ -O3 -shared -o ribtol.so -L/usr/local/Cellar/python3/3.6.1/Frameworks/Python.framework/Versions/3.6/lib -lpython3.6m -L/usr/local/lib -lboost_python3-mt -lpython ribtol.o
+
+ribtol.o : ribtol.cpp
+	clang++ -c -O3 -fPIC ribtol.cpp -I/usr/local/Cellar/python3/3.6.1/Frameworks/Python.framework/Versions/3.6/include/python3.6m -I/usr/local/include
+
+clean : 
+	rm -rf ribtol.o ribtol.so
