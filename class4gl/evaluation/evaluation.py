@@ -3,6 +3,9 @@ import numpy as np
 import pandas as pd
 import sys
 
+import matplotlib
+matplotlib.use('TkAgg')
+
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--path-experiments')#,default='/user/data/gent/gvo000/gvo00090/D2D/data/C4GL/')
@@ -29,8 +32,6 @@ from taylorDiagram import TaylorDiagram
 from matplotlib import ticker
 # import importlib
 # importlib.reload(mpl); importlib.reload(plt); importlib.reload(sns)
-import matplotlib
-matplotlib.use('TkAgg')
 
 
 
