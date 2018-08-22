@@ -27,7 +27,7 @@ import numpy as np
 import sys
 import warnings
 import pandas as pd
-from ribtol_hw import zeta_hs2 , funcsche
+from ribtol.ribtol_hw import zeta_hs2 , funcsche
 import logging
 #from SkewT.thermodynamics import Density
 #import ribtol

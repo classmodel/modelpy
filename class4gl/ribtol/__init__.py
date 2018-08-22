@@ -1,4 +1,4 @@
-from . import model,class4gl,interface_multi,data_air,data_global
+from . import ribtol_hw
 
 __version__ = '0.1.0'
 

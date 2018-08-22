@@ -7,8 +7,17 @@ import datetime as dt
 import io
 import os
 import calendar
-import Pysolar
-import Pysolar.util
+
+import importlib
+spam_loader = importlib.find_loader('Pysolar')
+found = spam_loader is not None
+if found:
+    import Pysolar
+else:
+    import pysolar as Pysolar
+import Pysolar.util as Pysolarutil
+
+
 
 
 
@@ -360,7 +369,7 @@ class wyoming(object):
             PARAMS['ldatetime'] = PARAMS.datetime.value + dt.timedelta(hours=PARAMS.longitude.value/360.*24.) 
             PARAMS['SolarAltitude'] = Pysolar.GetAltitude(PARAMS.lat.value,PARAMS.longitude.value,PARAMS.datetime.value)
             PARAMS['SolarAzimuth'] = Pysolar.GetAzimuth(PARAMS.lat.value,PARAMS.longitude.value,PARAMS.datetime.value)
-            PARAMS['lSunrise'], PARAMS['lSunset'] = Pysolar.util.GetSunriseSunset(PARAMS.lat.value,0.,PARAMS.datetime.value,0.)
+            PARAMS['lSunrise'], PARAMS['lSunset'] = Pysolarutil.GetSunriseSunset(PARAMS.lat.value,0.,PARAMS.datetime.value,0.)
             # This is the nearest datetime when sun is up (for class)
             PARAMS['ldatetime_daylight'] = np.min(np.max(PARAMS['ldatetime'].value ,PARAMS['lSunrise'].value),PARAMS['lSunset'].value) 
             # apply the same time shift for UTC datetime
@@ -371,7 +380,7 @@ class wyoming(object):
             PARAMS['ldatetime'] = dt.datetime(1900,1,1)
             PARAMS['SolarAltitude'] = np.nan #Pysolar.GetAltitude(PARAMS.lat.value,PARAMS.lon.value,PARAMS.datetime.value)
             PARAMS['SolarAzimuth'] = np.nan #Pysolar.GetAzimuth(PARAMS.lat.value,PARAMS.lon.value,PARAMS.datetime.value)
-            PARAMS['lSunrise'], PARAMS['lSunset'] = dt.datetime(1900,1,1), dt.datetime(1900,1,1) #Pysolar.util.GetSunriseSunset(PARAMS.lat.value,0.,PARAMS.datetime.value,0.)
+            PARAMS['lSunrise'], PARAMS['lSunset'] = dt.datetime(1900,1,1), dt.datetime(1900,1,1) #Pysolarutil.GetSunriseSunset(PARAMS.lat.value,0.,PARAMS.datetime.value,0.)
             PARAMS['ldatetime_daylight'] =PARAMS['ldatetime'].value
             PARAMS['datetime_daylight'] =PARAMS['datetime'].value
 

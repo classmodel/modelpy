@@ -163,14 +163,12 @@ class stations(object):
             self.table.to_csv(self.file)
         
         self.table = self.table.set_index('STNID')
-        #print(self.table)
 
     def get_stations(self,suffix):
         stations_list_files = glob.glob(self.path+'/?????_0_'+suffix+'.yaml')
         if len(stations_list_files) == 0:
             stations_list_files = glob.glob(self.path+'/?????_'+suffix+'.yaml')
         stations_list_files.sort()
-        print(stations_list_files)
         if len(stations_list_files) == 0:
             raise ValueError('no stations found that match "'+self.path+'/?????[_0]_'+suffix+'.yaml'+'"')
         stations_list = []
@@ -190,7 +188,7 @@ class stations(object):
             yamlgen.close()
             thisfile.close()
     
-        print(stations_list)
+        #print(stations_list)
         return pd.DataFrame(stations_list)
 
 class stations_iterator(object):
@@ -345,6 +343,7 @@ def get_records(stations,path_yaml,getchunk='all',subset='morning',refetch_recor
 
             # we try the old single-chunk filename format first (usually for
             # original profile pairs)
+            print('hello',STNID)
             fn = path_yaml+'/'+format(STNID,'05d')+'_'+subset+'.yaml'
             if os.path.isfile(fn):
                 chunk = 0

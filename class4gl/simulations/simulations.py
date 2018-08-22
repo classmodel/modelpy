@@ -17,7 +17,6 @@ parser.add_argument('--global-chunk') # this is the batch number according to sp
 parser.add_argument('--first-station-row')
 parser.add_argument('--last-station-row')
 parser.add_argument('--station-id') # run a specific station id
-parser.add_argument('--dataset')
 parser.add_argument('--path-experiments')#,default='/user/data/gent/gvo000/gvo00090/D2D/data/C4GL/')
 parser.add_argument('--path-soundings')#,default='/user/data/gent/gvo000/gvo00090/D2D/data/SOUNDINGS/')
 parser.add_argument('--error-handling',default='dump_on_success')
@@ -55,22 +54,23 @@ EXP_DEFS  =\
 }
 
 
-#SET = 'GLOBAL'
-SET = args.dataset
+# #SET = 'GLOBAL'
+# SET = args.dataset
 
-path_soundingsSET = args.path_soundings+'/'+SET+'/'
+# path_soundingsSET = args.path_soundings+'/'+SET+'/'
 
-all_stations = stations(path_soundingsSET,suffix='morning',refetch_stations=True).table
-
-all_records_morning = get_records(all_stations,\
-                              path_soundingsSET,\
-                              subset='morning',
-                              refetch_records=False,
-                              )
+print("getting stations")
+all_stations = stations(args.path_soundings,suffix='morning',refetch_stations=False)
 
 if args.global_chunk is not None:
+    
+    all_records_morning = get_records(all_stations.table,\
+                                  args.path_soundings,\
+                                  subset='morning',
+                                  refetch_records=False,
+                                  )
     totalchunks = 0
-    stations_iter = all_stations.iterrows()
+    stations_iter = all_stations.table.iterrows()
     in_current_chunk = False
     while not in_current_chunk:
         istation,current_station = stations_iter.__next__()
@@ -86,27 +86,28 @@ if args.global_chunk is not None:
 
 else:
     if args.station_id is not None:
+        print("Selecting station by ID")
+        print(all_stations.table)
         stations_iter = stations_iterator(all_stations)
-        STNID,run_station = stations_iterator.set_STNID(STNID)
-        run_stations = pd.DataFrame(run_station)
+        STNID,run_station = stations_iter.set_STNID(STNID=int(args.station_id))
+        run_stations = pd.DataFrame([run_station])
     else:
-        run_stations = pd.DataFrame(all_stations)
+        print("Selecting stations from a row range in the table")
+        run_stations = pd.DataFrame(all_stations.table)
         if args.last_station_row is not None:
             run_stations = run_stations.iloc[:(int(args.last_station)+1)]
         if args.first_station_row is not None:
             run_stations = run_stations.iloc[int(args.first_station):]
-        run_station_chunk = args.station_chunk
+    run_station_chunk = args.station_chunk
 
 #print(all_stations)
-print(run_stations)
-print(args.__dict__.keys())
 records_morning = get_records(run_stations,\
-                              path_soundingsSET,\
+                              args.path_soundings,\
                               subset='morning',
                               refetch_records=False,
                               )
 records_afternoon = get_records(run_stations,\
-                                path_soundingsSET,\
+                                args.path_soundings,\
                                 subset='afternoon',
                                 refetch_records=False,
                                 )
@@ -119,7 +120,7 @@ records_afternoon.index = records_morning.index
 experiments = args.experiments.split(';')
 for expname in experiments:
     exp = EXP_DEFS[expname]
-    path_exp = args.path_experiments+'/'+SET+'_'+expname+'/'
+    path_exp = args.path_experiments+'/'+expname+'/'
 
     os.system('mkdir -p '+path_exp)
     for istation,current_station in run_stations.iterrows():
@@ -128,8 +129,8 @@ for expname in experiments:
             print("warning: outside of profile number range for station "+\
                   str(current_station)+". Skipping chunk number for this station.")
         else:
-            file_morning = open(path_soundingsSET+'/'+format(current_station.name,'05d')+'_morning.yaml')
-            file_afternoon = open(path_soundingsSET+'/'+format(current_station.name,'05d')+'_afternoon.yaml')
+            file_morning = open(args.path_soundings+'/'+format(current_station.name,'05d')+'_morning.yaml')
+            file_afternoon = open(args.path_soundings+'/'+format(current_station.name,'05d')+'_afternoon.yaml')
             fn_ini = path_exp+'/'+format(current_station.name,'05d')+'_'+\
                      str(int(run_station_chunk))+'_ini.yaml'
             fn_mod = path_exp+'/'+format(current_station.name,'05d')+'_'+\
@@ -166,10 +167,12 @@ for expname in experiments:
                     c4gli_morning.update(source=expname, pars=exp)
 
                     c4gl = class4gl(c4gli_morning)
+                    print(args.error_handling)
 
                     if args.error_handling == 'dump_always':
                         try:
                             c4gl.run()
+                            print('run succesfull')
                         except:
                             print('run not succesfull')
                         onerun = True
@@ -184,12 +187,10 @@ for expname in experiments:
                         onerun = True
                     # in this case, only the file will dumped if the runs were
                     # successful
-                    elif args.error_handling == 'dump_on_succes':
+                    elif args.error_handling == 'dump_on_success':
                         try:
                             c4gl.run()
-                            print('run not succesfull')
-                            onerun = True
-
+                            print('run succesfull')
                             c4gli_morning.dump(file_ini)
                             
                             
@@ -201,7 +202,7 @@ for expname in experiments:
                         except:
                             print('run not succesfull')
 
-                #iexp = iexp +1
+
             file_ini.close()
             file_mod.close()
             file_morning.close()

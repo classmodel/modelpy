@@ -35,7 +35,14 @@ from model import model_output as class4gl_output
 from model import model_input
 from model import qsat
 #from data_soundings import wyoming 
-import Pysolar
+
+import importlib
+spam_loader = importlib.find_loader('Pysolar')
+found = spam_loader is not None
+if found:
+    import Pysolar
+else:
+    import pysolar as Pysolar
 import yaml
 import logging
 import warnings
