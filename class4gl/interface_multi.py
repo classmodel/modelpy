@@ -445,7 +445,7 @@ class c4gl_interface_soundings(object):
         key = self.frames['worldmap']['inputkey']
         # only redraw the map if the current world map has a time
         # dimension
-        if 'time' in self.globaldata.datasets[key].page[key].dims:
+        if (self.globaldata is not None) and ('time' in self.globaldata.datasets[key].page[key].dims):
             self.goto_datetime_worldmap(
                 self.frames['profiles']['current_record_ini'].datetime.to_pydatetime(),
                 'after')
@@ -747,20 +747,21 @@ class c4gl_interface_soundings(object):
 
     def goto_datetime_worldmap(self,DT,shift=None):
         DT = np.datetime64(DT) #self.globaldata.datasets[self.axes['worldmap'].focus['key']].variables['time'].values[self.axes['worldmap'].focus['iDT']]
-        if 'time' in self.globaldata.datasets[self.frames['worldmap']['inputkey']].page.variables[self.frames['worldmap']['inputkey']].dims:
-            self.globaldata.datasets[self.frames['worldmap']['inputkey']].browse_page(time=DT)
-            DIST = np.abs((self.globaldata.datasets[self.frames['worldmap']['inputkey']].page.variables['time'].values - DT))
-            self.frames['worldmap']['iDT'] = np.where((DIST) == np.min(DIST))[0][0]
-            if ((shift == 'after') and (self.globaldata.datasets[self.frames['worldmap']['inputkey']].page.variables['time'].values[self.frames['worldmap']['iDT']] < DT)):
-                self.frames['worldmap']['iDT'] += 1
-            elif ((shift == 'before') and (self.globaldata.datasets[self.frames['worldmap']['inputkey']].page.variables['time'].values[self.frames['worldmap']['iDT']] > DT)):
-                self.frames['worldmap']['iDT'] -= 1 
-            # for gleam, we take the values of the previous day
-            if self.frames['worldmap']['inputkey'] in ['wg','w2']:
-                self.frames['worldmap']['iDT'] -= 2 
-            self.frames['worldmap']['DT'] = self.globaldata.datasets[self.frames['worldmap']['inputkey']].page.variables['time'].values[self.frames['worldmap']['iDT']]
-        #else:
-        #    self.frames['worldmap'].pop('DT')
+        if self.globaldata is not None:
+            if 'time' in self.globaldata.datasets[self.frames['worldmap']['inputkey']].page.variables[self.frames['worldmap']['inputkey']].dims:
+                self.globaldata.datasets[self.frames['worldmap']['inputkey']].browse_page(time=DT)
+                DIST = np.abs((self.globaldata.datasets[self.frames['worldmap']['inputkey']].page.variables['time'].values - DT))
+                self.frames['worldmap']['iDT'] = np.where((DIST) == np.min(DIST))[0][0]
+                if ((shift == 'after') and (self.globaldata.datasets[self.frames['worldmap']['inputkey']].page.variables['time'].values[self.frames['worldmap']['iDT']] < DT)):
+                    self.frames['worldmap']['iDT'] += 1
+                elif ((shift == 'before') and (self.globaldata.datasets[self.frames['worldmap']['inputkey']].page.variables['time'].values[self.frames['worldmap']['iDT']] > DT)):
+                    self.frames['worldmap']['iDT'] -= 1 
+                # for gleam, we take the values of the previous day
+                if self.frames['worldmap']['inputkey'] in ['wg','w2']:
+                    self.frames['worldmap']['iDT'] -= 2 
+                self.frames['worldmap']['DT'] = self.globaldata.datasets[self.frames['worldmap']['inputkey']].page.variables['time'].values[self.frames['worldmap']['iDT']]
+            #else:
+            #    self.frames['worldmap'].pop('DT')
 
     def next_datetime(self,event=None):
         if 'time' in self.globaldata.datasets[self.frames['worldmap']['inputkey']].page.variables[self.frames['worldmap']['inputkey']].dims:
@@ -824,28 +825,29 @@ class c4gl_interface_soundings(object):
         frames = self.frames
         fig = self.fig
  
-        if (only is None) or ('worldmap' in only):
-            globaldata = self.globaldata
-            if 'time' in globaldata.datasets[frames['worldmap']['inputkey']].page.variables[frames['worldmap']['inputkey']].dims:
-                globaldata.datasets[frames['worldmap']['inputkey']].browse_page(time=frames['worldmap']['DT'])
-                datasetxr = globaldata.datasets[frames['worldmap']['inputkey']].page.isel(time = frames['worldmap']['iDT'])
-            else:
-                datasetxr = globaldata.datasets[frames['worldmap']['inputkey']].page
-            keystotranspose = ['lat','lon']
-            for key in dict(datasetxr.dims).keys():
-                if key not in keystotranspose:
-                    keystotranspose.append(key)
+        if globaldata is not None:
+            if (only is None) or ('worldmap' in only):
+                globaldata = self.globaldata
+                if 'time' in globaldata.datasets[frames['worldmap']['inputkey']].page.variables[frames['worldmap']['inputkey']].dims:
+                    globaldata.datasets[frames['worldmap']['inputkey']].browse_page(time=frames['worldmap']['DT'])
+                    datasetxr = globaldata.datasets[frames['worldmap']['inputkey']].page.isel(time = frames['worldmap']['iDT'])
+                else:
+                    datasetxr = globaldata.datasets[frames['worldmap']['inputkey']].page
+                keystotranspose = ['lat','lon']
+                for key in dict(datasetxr.dims).keys():
+                    if key not in keystotranspose:
+                        keystotranspose.append(key)
 
-            datasetxr = datasetxr.transpose(*keystotranspose)
-            datasetxr = datasetxr.sortby('lat',ascending=False)
+                datasetxr = datasetxr.transpose(*keystotranspose)
+                datasetxr = datasetxr.sortby('lat',ascending=False)
 
-            lonleft = datasetxr['lon'].where(datasetxr.lon > 180.,drop=True) 
-            lonleft = lonleft - 360.
-            lonright = datasetxr['lon'].where(datasetxr.lon <= 180.,drop=True) 
-            label = 'worldmap'
-            axes[label].clear()
-            axes[label].lon = xr.concat([lonleft,lonright],'lon').values
-            axes[label].lat = np.sort(globaldata.datasets[frames['worldmap']['inputkey']].page.variables['lat'].values)[::-1] #sortby('lat',ascending=False).values
+                lonleft = datasetxr['lon'].where(datasetxr.lon > 180.,drop=True) 
+                lonleft = lonleft - 360.
+                lonright = datasetxr['lon'].where(datasetxr.lon <= 180.,drop=True) 
+                label = 'worldmap'
+                axes[label].clear()
+                axes[label].lon = xr.concat([lonleft,lonright],'lon').values
+                axes[label].lat = np.sort(globaldata.datasets[frames['worldmap']['inputkey']].page.variables['lat'].values)[::-1] #sortby('lat',ascending=False).values
 
         if (only is None) or ('worldmap' in only):
             #if 'axmap' not in self.__dict__ :
@@ -887,10 +889,10 @@ class c4gl_interface_soundings(object):
             from matplotlib import cm
             axes[label].fields[label] = axes[label].imshow(field[:,:],interpolation='none',cmap = cm.viridis )
             
-            
             title=frames['worldmap']['inputkey']
-            if 'time' in globaldata.datasets[frames['worldmap']['inputkey']].page.variables[frames['worldmap']['inputkey']].dims:
-                title = title+' ['+pd.to_datetime(frames['worldmap']['DT']).strftime("%Y/%m/%d %H:%M") +'UTC]'
+            if globaldata is not None: 
+                if 'time' in globaldata.datasets[frames['worldmap']['inputkey']].page.variables[frames['worldmap']['inputkey']].dims:
+                    title = title+' ['+pd.to_datetime(frames['worldmap']['DT']).strftime("%Y/%m/%d %H:%M") +'UTC]'
             axes[label].set_title(title)
 
             label ='worldmap_colorbar'
