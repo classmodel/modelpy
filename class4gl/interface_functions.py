@@ -7,6 +7,10 @@ import sys
 from contextlib import suppress
 from time import sleep
 
+import tempfile
+
+
+
 
 sys.path.insert(0, '/user/data/gent/gvo000/gvo00090/D2D/software/CLASS/class4gl/')
 from class4gl import class4gl_input, data_global,class4gl,units
@@ -47,32 +51,33 @@ def get_record_yaml(yaml_file,index_start,index_end,mode='mod'):
     filename = yaml_file.name
     #filename = path_yaml+'/'+format(current_station.name,'05d')+suffix
     #yaml_file = open(filename)
+    shortfn = filename.split('/')[-1]
 
     #print('going to next observation',filename)
     yaml_file.seek(index_start)
 
     buf =  yaml_file.read(index_end- index_start).replace('inf','9e19').replace('nan','9e19').replace('---','')
 
-    filebuffer = open(filename+'.buffer.yaml.'+str(index_start),'w')
+    filebuffer = open(gettempdir()+'/'+shortfn+'.buffer.yaml.'+str(index_start),'w')
     filebuffer.write(buf)
     filebuffer.close()
     # print("HHHEEELOOOO",filename+'.buffer.yaml'+str(index_start))
     
-    command = '/apps/gent/CO7/sandybridge/software/Ruby/2.4.2-foss-2017b/bin/ruby -rjson -ryaml -e "'+"puts YAML.load_file('"+filename+".buffer.yaml."+str(index_start)+"').to_json"+'" > '+filename+'.buffer.json.'+str(index_start)+' '
+    command = '/apps/gent/CO7/sandybridge/software/Ruby/2.4.2-foss-2017b/bin/ruby -rjson -ryaml -e "'+"puts YAML.load_file('"+gettempdir()+'/'+shortfn+".buffer.yaml."+str(index_start)+"').to_json"+'" > '+gettempdir()+'/'+shortfn+'.buffer.json.'+str(index_start)+' '
 
     #command = '/apps/gent/CO7/sandybridge/software/Ruby/2.4.2-foss-2017b/bin/ruby -rjson -ryaml -e "'+"puts YAML.load(ARGF.read()).to_json"+'"'
     print(command)
     os.system(command)
-    jsonstream = open(filename+'.buffer.json.'+str(index_start))
+    jsonstream = open(gettempdir()+'/'+shortfn+'.buffer.json.'+str(index_start))
     record_dict = json.load(jsonstream)
     jsonstream.close()
-    os.system('rm '+filename+'.buffer.yaml.'+str(index_start))
+    os.system('rm '+gettempdir()+'/'+shortfn+'.buffer.yaml.'+str(index_start))
 
 
     if mode =='mod':
         modelout = class4gl()
         modelout.load_yaml_dict(record_dict)
-        os.system('rm '+filename+'.buffer.json.'+str(index_start))
+        os.system('rm '+gettempdir()+'/'+shortfn+'.buffer.json.'+str(index_start))
 
         return modelout
     elif mode == 'ini':
@@ -99,9 +104,9 @@ def get_record_yaml(yaml_file,index_start,index_end,mode='mod'):
         #os.system('rm '+filename+'.buffer.json.'+str(index_start))
 
         c4gli = class4gl_input()
-        print(c4gli.logger,'hello')
+        #print(c4gli.logger,'hello')
         c4gli.load_yaml_dict(record_dict)
-        os.system('rm '+filename+'.buffer.json.'+str(index_start))
+        os.system('rm '+gettempdir()+'/'+shortfn+'.buffer.json.'+str(index_start))
         return c4gli
 
 
@@ -365,14 +370,13 @@ def get_records(stations,path_yaml,getchunk='all',subset='morning',refetch_recor
             # yamlfilenames = glob.glob(globyamlfilenames)
             # yamlfilenames.sort()
         else:
-            fn = path_yaml+'/'+format(STNID,'05d')+'_'+str(getchunk)+'_'+subset+'.yaml'
+            fn = format(STNID,'05d')+'_'+str(getchunk)+'_'+subset+'.yaml'
             dictfnchunks.append(dict(fn=fn,chunk=getchunk))
             
         if len(dictfnchunks) > 0:
             for dictfnchunk in dictfnchunks:
                 yamlfilename = dictfnchunk['fn']
                 chunk = dictfnchunk['chunk']
-                print(chunk)
 
                 #pklfilename = path_yaml+'/'+format(STNID,'05d')+'_'+subset+'.pkl'
                 pklfilename = yamlfilename.replace('.yaml','.pkl')
@@ -380,25 +384,25 @@ def get_records(stations,path_yaml,getchunk='all',subset='morning',refetch_recor
                 #print(yamlfilename+": "+str(os.path.getmtime(yamlfilename)))
                 #print(pklfilename+": "+str(os.path.getmtime(pklfilename)))
                 generate_pkl = False
-                if not os.path.isfile(pklfilename): 
+                if not os.path.isfile(path_yaml+'/'+pklfilename): 
                     print('pkl file does not exist. I generate "'+\
-                          pklfilename+'" from "'+yamlfilename+'"...')
+                          path_yaml+'/'+pklfilename+'" from "'+path_yaml+'/'+yamlfilename+'"...')
                     generate_pkl = True
-                elif not (os.path.getmtime(yamlfilename) <  \
+                elif not (os.path.getmtime(path_yaml+'/'+yamlfilename) <  \
                     os.path.getmtime(pklfilename)):
                     print('pkl file older than yaml file, so I regenerate "'+\
-                          pklfilename+'" from "'+yamlfilename+'"...')
+                          path_yaml+'/'+pklfilename+'" from "'+path_yaml+'/'+yamlfilename+'"...')
                     generate_pkl = True
 
                 if refetch_records:
                     print('refetch_records flag is True. I regenerate "'+\
-                          pklfilename+'" from "'+yamlfilename+'"...')
+                          path_yaml+'/'+pklfilename+'" from "'+path_yaml+'/'+yamlfilename+'"...')
                     generate_pkl = True
                 if not generate_pkl:
-                    records = pd.concat([records,pd.read_pickle(pklfilename)])
+                    records = pd.concat([records,pd.read_pickle(path_yaml+'/'+pklfilename)])
                    # irecord = 0
                 else:
-                    with open(yamlfilename) as yaml_file:
+                    with open(path_yaml+'/'+yamlfilename) as yaml_file:
 
                         dictout = {}
 
@@ -416,7 +420,7 @@ def get_records(stations,path_yaml,getchunk='all',subset='morning',refetch_recor
                             current_tell = next_tell
                             next_record_found = False
                             yaml_file.seek(current_tell)
-                            filebuffer = open(yamlfilename+'.buffer.yaml.'+str(current_tell),'w')
+                            filebuffer = open(gettempdir()+'/'+yamlfilename+'.buffer.yaml.'+str(current_tell),'w')
                             linebuffer = ''
                             while ( (not next_record_found) and (not end_of_file)):
                                 filebuffer.write(linebuffer.replace('inf','0').replace('nan','0'))
@@ -431,14 +435,14 @@ def get_records(stations,path_yaml,getchunk='all',subset='morning',refetch_recor
 
                             
                             #if ((irecord >= start) and (np.mod(irecord - start,2) == 0.) :
-                            command = '/apps/gent/CO7/sandybridge/software/Ruby/2.4.2-foss-2017b/bin/ruby -rjson -ryaml -e "'+"puts YAML.load_file('"+yamlfilename+".buffer.yaml."+str(current_tell)+"').to_json"+'" > '+yamlfilename+'.buffer.json.'+str(current_tell)+' ' 
+                            command = 'ruby -rjson -ryaml -e "'+"puts YAML.load_file('"+gettempdir()+yamlfilename+".buffer.yaml."+str(current_tell)+"').to_json"+'" > '+gettempdir()+yamlfilename+'.buffer.json.'+str(current_tell)+' ' 
                             print(command)
                             
                             os.system(command)
                             #jsonoutput = subprocess.check_output(command,shell=True) 
                             #print(jsonoutput)
                             #jsonstream = io.StringIO(jsonoutput)
-                            jsonstream = open(yamlfilename+'.buffer.json.'+str(current_tell))
+                            jsonstream = open(gettempdir()+yamlfilename+'.buffer.json.'+str(current_tell))
                             record = json.load(jsonstream)
                             dictouttemp = {}
                             for key,value in record['pars'].items():
@@ -456,19 +460,19 @@ def get_records(stations,path_yaml,getchunk='all',subset='morning',refetch_recor
                             dictouttemp['chunk'] = chunk
                             dictouttemp['index_start'] = index_start
                             dictouttemp['index_end'] = index_end
-                            os.system('rm '+yamlfilename+'.buffer.json.'+str(current_tell))
+                            os.system('rm '+gettempdir()+yamlfilename+'.buffer.json.'+str(current_tell))
                             for key,value in dictouttemp.items():
                                 if key not in dictout.keys():
                                     dictout[key] = {}
                                 dictout[key][(STNID,chunk,recordindex)] = dictouttemp[key]
                             print(' obs record registered')
                             jsonstream.close()
-                            os.system('rm '+yamlfilename+'.buffer.yaml.'+str(current_tell))
+                            os.system('rm '+gettempdir()+yamlfilename+'.buffer.yaml.'+str(current_tell))
                     records_station = pd.DataFrame.from_dict(dictout)
                     records_station.index.set_names(('STNID','chunk','index'),inplace=True)
-                    print('writing table file ('+pklfilename+') for station '\
+                    print('writing table file ('+path_yaml+'/'pklfilename+') for station '\
                           +str(STNID))
-                    records_station.to_pickle(pklfilename)
+                    records_station.to_pickle(path_yaml+'/'pklfilename)
                     # else:
                     #     os.system('rm '+pklfilename)
                     records = pd.concat([records,records_station])

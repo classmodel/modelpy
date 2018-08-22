@@ -140,11 +140,16 @@ for expname in experiments:
 
             #iexp = 0
             onerun = False
+            print('starting station chunk number: '\
+                  +str(run_station_chunk)+'(size: '+str(args.split_by)+' soundings)')
 
             records_morning_station_chunk = records_morning_station[(int(args.split_by)*run_station_chunk):(int(args.split_by)*(run_station_chunk+1))]
-            print(records_morning_station_chunk)
 
+            isim = 0
             for (STNID,chunk,index),record_morning in records_morning_station_chunk.iterrows():
+                    print('starting '+str(isim)+' out of '+\
+                      str(len(records_morning_station_chunk) )+\
+                      ' (station total: ',str(len(records_morning_station)),')')  
                 
             
                     c4gli_morning = get_record_yaml(file_morning, 
@@ -167,7 +172,6 @@ for expname in experiments:
                     c4gli_morning.update(source=expname, pars=exp)
 
                     c4gl = class4gl(c4gli_morning)
-                    print(args.error_handling)
 
                     if args.error_handling == 'dump_always':
                         try:
@@ -201,6 +205,7 @@ for expname in experiments:
                             onerun = True
                         except:
                             print('run not succesfull')
+                    isim += 1
 
 
             file_ini.close()
