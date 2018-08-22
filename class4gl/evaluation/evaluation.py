@@ -2,13 +2,24 @@ import numpy as np
 
 import pandas as pd
 import sys
-sys.path.insert(0, '/user/data/gent/gvo000/gvo00090/D2D/software/CLASS/class4gl/')
+
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument('--path-experiments')#,default='/user/data/gent/gvo000/gvo00090/D2D/data/C4GL/')
+parser.add_argument('--path-soundings')#,default='/user/data/gent/gvo000/gvo00090/D2D/data/SOUNDINGS/')
+parser.add_argument('--experiments')
+parser.add_argument('--c4gl-path-lib')#,default='/user/data/gent/gvo000/gvo00090/D2D/software/CLASS/class4gl/lib')
+parser.add_argument('--load-globaldata',default=False)
+args = parser.parse_args()
+
+print('Adding python library:',args.c4gl_path_lib)
+sys.path.insert(0, args.c4gl_path_lib)
 from interface_multi import c4gl_interface_soundings,get_record_yaml
 from class4gl import class4gl_input, data_global,class4gl,units
-from sklearn.metrics import mean_squared_error
+#from sklearn.metrics import mean_squared_error
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import seaborn.apionly as sns
+#import seaborn.apionly as sns
 import pylab as pl
 import numpy as np
 import matplotlib.pyplot as plt
@@ -19,16 +30,7 @@ from matplotlib import ticker
 # import importlib
 # importlib.reload(mpl); importlib.reload(plt); importlib.reload(sns)
 
-import argparse
 
-#if __name__ == '__main__':
-parser = argparse.ArgumentParser()
-parser.add_argument('--path-experiments')#,default='/user/data/gent/gvo000/gvo00090/D2D/data/C4GL/')
-parser.add_argument('--path-soundings')#,default='/user/data/gent/gvo000/gvo00090/D2D/data/SOUNDINGS/')
-parser.add_argument('--experiments')
-parser.add_argument('--c4gl-path-lib')#,default='/user/data/gent/gvo000/gvo00090/D2D/software/CLASS/class4gl/lib')
-parser.add_argument('--load-globaldata',default=False)
-args = parser.parse_args()
 
 
 def abline(slope, intercept,axis):
@@ -76,8 +78,9 @@ def rmse(y_actual,y_predicted,z_actual = None, z_predicted = None,filternan_actu
         # which is the case for evaluating eg., mixed-layer estimates)
         y_predicted_temp = y_actual_temp*0. + y_predicted_temp
         
-    
-    return np.sqrt(mean_squared_error(y_actual_temp,y_predicted_temp))
+    rmse_temp = (y_actual_temp - y_predicted_temp)
+    rmse_temp = np.mean(rmse_temp*rmse_temp)
+    return np.sqrt(rmse_temp)
 
 
 
