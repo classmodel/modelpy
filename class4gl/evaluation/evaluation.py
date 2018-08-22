@@ -29,6 +29,8 @@ from taylorDiagram import TaylorDiagram
 from matplotlib import ticker
 # import importlib
 # importlib.reload(mpl); importlib.reload(plt); importlib.reload(sns)
+import matplotlib
+matplotlib.use('TkAgg')
 
 
 
