@@ -150,7 +150,7 @@ for varkey in ['h','theta','q']:
     #dia.ax.plot(x99,y99,color='k')
 
     
-    for ikey,key in enumerate(EXPS.keys()):
+    for ikey,key in enumerate(args.experiments.split(';')):
         # cc = c4gldata[key].frames['stats']['records_all_stations_ini']['cc']
         # clearsky = (cc < 0.05)
         # mod = c4gldata[key].frames['stats']['records_all_stations_mod_stats'].loc[clearsky]['d'+varkey+'dt']
@@ -194,8 +194,8 @@ for varkey in ['h','theta','q']:
 
 i = 0
 for varkey in ['h','theta','q']:                                                    
-    ikey = 2
-    key = list(EXPS.keys())[ikey]
+    ikey = 0
+    key = list(args.experiments.split(';'))[ikey]
     cc = c4gldata[key].frames['stats']['records_all_stations_ini']['cc']
     clearsky = (cc < 0.05)
 
@@ -260,12 +260,12 @@ for varkey in ['h','theta','q']:
 # legend for different forcing simulations (colors)
 ax = fig.add_axes([0.05,0.00,0.15,0.15]) #[*left*, *bottom*, *width*,    *height*]
 leg = []
-for ikey,key in enumerate(EXPS.keys()):
+for ikey,key in enumerate(args.experiments.split(';')):
     leg1, = ax.plot([],colors[ikey]+'o' ,markersize=10)
     leg.append(leg1)
 ax.axis('off')
 #leg1 =
-ax.legend(leg,list(EXPS.keys()),loc=2,fontsize=10)
+ax.legend(leg,list(args.experiments.split(';')),loc=2,fontsize=10)
 
 
 # # legend for different stations (symbols)
