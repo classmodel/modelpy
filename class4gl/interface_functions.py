@@ -7,7 +7,7 @@ import sys
 from contextlib import suppress
 from time import sleep
 
-import tempfile
+from tempfile import gettempdir
 
 
 
@@ -348,9 +348,8 @@ def get_records(stations,path_yaml,getchunk='all',subset='morning',refetch_recor
 
             # we try the old single-chunk filename format first (usually for
             # original profile pairs)
-            print('hello',STNID)
-            fn = path_yaml+'/'+format(STNID,'05d')+'_'+subset+'.yaml'
-            if os.path.isfile(fn):
+            fn = format(STNID,'05d')+'_'+subset+'.yaml'
+            if os.path.isfile(path_yaml+'/'+fn):
                 chunk = 0
                 dictfnchunks.append(dict(fn=fn,chunk=chunk))
 
@@ -359,8 +358,8 @@ def get_records(stations,path_yaml,getchunk='all',subset='morning',refetch_recor
                 chunk = 0
                 end_of_chunks = False
                 while not end_of_chunks:
-                    fn = path_yaml+'/'+format(STNID,'05d')+'_'+str(chunk)+'_'+subset+'.yaml'
-                    if os.path.isfile(fn):
+                    fn = format(STNID,'05d')+'_'+str(chunk)+'_'+subset+'.yaml'
+                    if os.path.isfile(path_yaml+'/'+fn):
                         dictfnchunks.append(dict(fn=fn,chunk=chunk))
                     else:
                         end_of_chunks = True
@@ -389,7 +388,7 @@ def get_records(stations,path_yaml,getchunk='all',subset='morning',refetch_recor
                           path_yaml+'/'+pklfilename+'" from "'+path_yaml+'/'+yamlfilename+'"...')
                     generate_pkl = True
                 elif not (os.path.getmtime(path_yaml+'/'+yamlfilename) <  \
-                    os.path.getmtime(pklfilename)):
+                    os.path.getmtime(path_yaml+'/'+pklfilename)):
                     print('pkl file older than yaml file, so I regenerate "'+\
                           path_yaml+'/'+pklfilename+'" from "'+path_yaml+'/'+yamlfilename+'"...')
                     generate_pkl = True
@@ -435,14 +434,14 @@ def get_records(stations,path_yaml,getchunk='all',subset='morning',refetch_recor
 
                             
                             #if ((irecord >= start) and (np.mod(irecord - start,2) == 0.) :
-                            command = 'ruby -rjson -ryaml -e "'+"puts YAML.load_file('"+gettempdir()+yamlfilename+".buffer.yaml."+str(current_tell)+"').to_json"+'" > '+gettempdir()+yamlfilename+'.buffer.json.'+str(current_tell)+' ' 
+                            command = 'ruby -rjson -ryaml -e "'+"puts YAML.load_file('"+gettempdir()+'/'+yamlfilename+".buffer.yaml."+str(current_tell)+"').to_json"+'" > '+gettempdir()+'/'+yamlfilename+'.buffer.json.'+str(current_tell)+' ' 
                             print(command)
                             
                             os.system(command)
                             #jsonoutput = subprocess.check_output(command,shell=True) 
                             #print(jsonoutput)
                             #jsonstream = io.StringIO(jsonoutput)
-                            jsonstream = open(gettempdir()+yamlfilename+'.buffer.json.'+str(current_tell))
+                            jsonstream = open(gettempdir()+'/'+yamlfilename+'.buffer.json.'+str(current_tell))
                             record = json.load(jsonstream)
                             dictouttemp = {}
                             for key,value in record['pars'].items():
@@ -460,19 +459,19 @@ def get_records(stations,path_yaml,getchunk='all',subset='morning',refetch_recor
                             dictouttemp['chunk'] = chunk
                             dictouttemp['index_start'] = index_start
                             dictouttemp['index_end'] = index_end
-                            os.system('rm '+gettempdir()+yamlfilename+'.buffer.json.'+str(current_tell))
+                            os.system('rm '+gettempdir()+'/'+yamlfilename+'.buffer.json.'+str(current_tell))
                             for key,value in dictouttemp.items():
                                 if key not in dictout.keys():
                                     dictout[key] = {}
                                 dictout[key][(STNID,chunk,recordindex)] = dictouttemp[key]
                             print(' obs record registered')
                             jsonstream.close()
-                            os.system('rm '+gettempdir()+yamlfilename+'.buffer.yaml.'+str(current_tell))
+                            os.system('rm '+gettempdir()+'/'+yamlfilename+'.buffer.yaml.'+str(current_tell))
                     records_station = pd.DataFrame.from_dict(dictout)
                     records_station.index.set_names(('STNID','chunk','index'),inplace=True)
-                    print('writing table file ('+path_yaml+'/'pklfilename+') for station '\
+                    print('writing table file ('+path_yaml+'/'+pklfilename+') for station '\
                           +str(STNID))
-                    records_station.to_pickle(path_yaml+'/'pklfilename)
+                    records_station.to_pickle(path_yaml+'/'+pklfilename)
                     # else:
                     #     os.system('rm '+pklfilename)
                     records = pd.concat([records,records_station])

@@ -112,6 +112,8 @@ records_afternoon = get_records(run_stations,\
                                 refetch_records=False,
                                 )
 
+# print(records_morning.index)
+# print(records_afternoon.index)
 # align afternoon records with the noon records, and set same index
 records_afternoon.index = records_afternoon.ldatetime.dt.date
 records_afternoon = records_afternoon.loc[records_morning.ldatetime.dt.date]
