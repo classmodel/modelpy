@@ -8,7 +8,7 @@ from contextlib import suppress
 from time import sleep
 
 
-sys.path.insert(0, '/user/data/gent/gvo000/gvo00090/D2D/software/CLASS/class4gl/')
+# sys.path.insert(0, '/user/data/gent/gvo000/gvo00090/D2D/software/CLASS/class4gl/')
 from class4gl import class4gl_input, data_global,class4gl,units
 from interface_functions import *
 # from data_soundings import wyoming
