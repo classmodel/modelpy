@@ -28,7 +28,8 @@ parser.add_argument('--subset_forcing',default='morning')
 # Tuntime is usually specified from the afternoon profile. You can also just
 # specify the simulation length in seconds
 parser.add_argument('--runtime')
-
+# delete folders of experiments before running them
+parser.add_argument('--cleanup_experiments',default=False)
 parser.add_argument('--experiments')
 parser.add_argument('--split_by',default=50)# station soundings are split
                                             # up in chunks
@@ -104,6 +105,8 @@ print('total chunks (= size of array-job) per experiment: ' + str(totalchunks))
 #if sys.argv[1] == 'qsub':
 # with qsub
 for EXP in args.experiments.strip().split(" "):
+    if args.cleanup_experiments:
+        os.system("rm -R "+args.path_experiments+'/'+EXP)
 
     command = 'qsub '+args.pbs_string+' '+args.c4gl_path_lib+'/simulations/batch_simulations.pbs -t 0-'+\
                 str(totalchunks-1)+" -v C4GLJOB_experiments="+str(EXP)
