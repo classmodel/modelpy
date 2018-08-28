@@ -13,19 +13,29 @@ import argparse
 
 #if __name__ == '__main__':
 parser = argparse.ArgumentParser()
-parser.add_argument('--global-chunk') # this is the batch number according to split-by in case of considering all stations
-parser.add_argument('--first-station-row')
-parser.add_argument('--last-station-row')
-parser.add_argument('--station-id') # run a specific station id
-parser.add_argument('--path-experiments')#,default='/user/data/gent/gvo000/gvo00090/D2D/data/C4GL/')
-parser.add_argument('--path-soundings')#,default='/user/data/gent/gvo000/gvo00090/D2D/data/SOUNDINGS/')
-parser.add_argument('--error-handling',default='dump_on_success')
+parser.add_argument('--path_forcing')#,default='/user/data/gent/gvo000/gvo00090/D2D/data/SOUNDINGS/')
+parser.add_argument('--path_experiments')#,default='/user/data/gent/gvo000/gvo00090/D2D/data/C4GL/')
+parser.add_argument('--first_station_row')
+parser.add_argument('--last_station_row')
+parser.add_argument('--station_id') # run a specific station id
+parser.add_argument('--error_handling',default='dump_on_success')
+parser.add_argument('--subset_forcing',default='morning') # this tells which yaml subset
+                                                      # to initialize with.
+                                                      # Most common options are
+                                                      # 'morning' and 'ini'.
+
+# Tuntime is usually specified from the afternoon profile. You can also just
+# specify the simulation length in seconds
+parser.add_argument('--runtime',default='from_afternoon_profile')
+
 parser.add_argument('--experiments')
-parser.add_argument('--split-by',default=-1)# station soundings are split
+parser.add_argument('--split_by',default=-1)# station soundings are split
                                             # up in chunks
 
-parser.add_argument('--station-chunk',default=0)
-parser.add_argument('--c4gl-path-lib')#,default='/user/data/gent/gvo000/gvo00090/D2D/software/CLASS/class4gl/lib')
+#parser.add_argument('--station-chunk',default=0)
+parser.add_argument('--c4gl_path_lib')#,default='/user/data/gent/gvo000/gvo00090/D2D/software/CLASS/class4gl/lib')
+parser.add_argument('--global_chunk_number') # this is the batch number according to split-by in case of considering all stations
+parser.add_argument('--station_chunk_number') # this is the batch number according to split-by in case of considering all stations
 args = parser.parse_args()
 
 sys.path.insert(0, args.c4gl_path_lib)
@@ -60,67 +70,120 @@ EXP_DEFS  =\
 
 # path_soundingsSET = args.path_soundings+'/'+SET+'/'
 
+
 print("getting stations")
-all_stations = stations(args.path_soundings,suffix='morning',refetch_stations=False)
+# these are all the stations that are found in the input dataset
+all_stations = stations(args.path_forcing,suffix=args.subset_forcing,refetch_stations=False)
 
-if args.global_chunk is not None:
-    
-    all_records_morning = get_records(all_stations.table,\
-                                  args.path_soundings,\
-                                  subset='morning',
-                                  refetch_records=False,
-                                  )
-    totalchunks = 0
-    stations_iter = all_stations.table.iterrows()
-    in_current_chunk = False
-    while not in_current_chunk:
-        istation,current_station = stations_iter.__next__()
-        all_records_morning_station = all_records_morning.query('STNID == '+str(current_station.name))
-        chunks_current_station = math.ceil(float(len(all_records_morning_station))/float(args.split_by))
-        in_current_chunk = (int(args.global_chunk) < (totalchunks+chunks_current_station))
-
-        if in_current_chunk:
-            run_stations = pd.DataFrame([current_station])# run_stations.loc[(int(args.__dict__['last_station'])]
-            run_station_chunk = int(args.global_chunk) - totalchunks 
-
-        totalchunks +=chunks_current_station
-
+print('defining all_stations_select')
+# these are all the stations that are supposed to run by the whole batch (all
+# chunks). We narrow it down according to the station(s) specified.
+if args.station_id is not None:
+    print("Selecting station by ID")
+    stations_iter = stations_iterator(all_stations)
+    STNID,run_station = stations_iter.set_STNID(STNID=int(args.station_id))
+    all_stations_select = pd.DataFrame([run_station])
 else:
-    if args.station_id is not None:
-        print("Selecting station by ID")
-        print(all_stations.table)
-        stations_iter = stations_iterator(all_stations)
-        STNID,run_station = stations_iter.set_STNID(STNID=int(args.station_id))
-        run_stations = pd.DataFrame([run_station])
+    print("Selecting stations from a row range in the table")
+    all_stations_select = pd.DataFrame(all_stations.table)
+    if args.last_station_row is not None:
+        all_stations_select = all_station_select.iloc[:(int(args.last_station)+1)]
+    if args.first_station_row is not None:
+        all_stations_select = all_station_select.iloc[int(args.first_station):]
+print("station numbers included in the whole batch "+\
+      "(all chunks):",list(all_stations_select.index))
+
+print("getting all records of the whole batch")
+all_records_morning_select = get_records(all_stations_select,\
+                                         args.path_forcing,\
+                                         subset=args.subset_forcing,
+                                         refetch_records=False,
+                                         )
+
+# only run a specific chunck from the selection
+if args.global_chunk_number is not None:
+    if args.station_chunk_number is not None:
+        raise ValueError('You need to specify either global-chunk-number or station-chunk-number, not both.')
+
+
+    if not (int(args.split_by) > 0) :
+            raise ValueError("global_chunk_number is specified, but --split-by is not a strict positive number, so I don't know how to split the batch into chunks.")
+
+    run_station_chunk = None
+    print('determining the station and its chunk number according global_chunk_number ('+args.global_chunk_number+')')
+    totalchunks = 0
+    stations_iter = all_stations_select.iterrows()
+    in_current_chunk = False
+    try:
+        while not in_current_chunk:
+            istation,current_station = stations_iter.__next__()
+            all_records_morning_station_select = all_records_morning_select.query('STNID == '+str(current_station.name))
+            chunks_current_station = math.ceil(float(len(all_records_morning_station_select))/float(args.split_by))
+            print('chunks_current_station',chunks_current_station)
+            in_current_chunk = (int(args.global_chunk_number) < (totalchunks+chunks_current_station))
+        
+            if in_current_chunk:
+                run_stations = pd.DataFrame([current_station])# run_stations.loc[(int(args.__dict__['last_station'])]
+                run_station_chunk = int(args.global_chunk_number) - totalchunks 
+        
+            totalchunks +=chunks_current_station
+        
+
+    except StopIteration:
+       raise ValueError("Could not determine station chunk number.  --global_chunk_number ("+args.global_chunk_number+") outside of range [0,"+ str(totalchunks)+'[')
+    print("station = ",list(run_stations.index))
+    print("station chunk number:",run_station_chunk)
+
+# if no global chunk is specified, then run the whole station selection in one run, or
+# a specific chunk for each selected station according to # args.station_chunk_number
+else:
+    run_stations = pd.DataFrame(all_stations_select)# run_stations.loc[(int(args.__dict__['last_station'])]
+    if args.station_chunk_number is not None:
+        run_station_chunk = int(args.station_chunk_number)
+        print("station(s) that is processed.",list(run_stations.index))
+        print("chunk number: ",run_station_chunk)
     else:
-        print("Selecting stations from a row range in the table")
-        run_stations = pd.DataFrame(all_stations.table)
-        if args.last_station_row is not None:
-            run_stations = run_stations.iloc[:(int(args.last_station)+1)]
-        if args.first_station_row is not None:
-            run_stations = run_stations.iloc[int(args.first_station):]
-    run_station_chunk = args.station_chunk
+        if args.split_by != -1:
+            raise ValueError("Chunks are defined by --split-by, but I don't know which chunk to run. Please provide --global_chunk_number or --station_chunk_number, or leave out --split-by.")
+        run_station_chunk = 0
+        print("stations that are processed.",list(run_stations.index))
+        
 
 #print(all_stations)
+print('Fetching initial/forcing records')
 records_morning = get_records(run_stations,\
-                              args.path_soundings,\
-                              subset='morning',
+                              args.path_forcing,\
+                              subset=args.subset_forcing,
                               refetch_records=False,
                               )
-records_afternoon = get_records(run_stations,\
-                                args.path_soundings,\
-                                subset='afternoon',
-                                refetch_records=False,
-                                )
 
-# print(records_morning.index)
-# print(records_afternoon.index)
-# align afternoon records with the noon records, and set same index
-records_afternoon.index = records_afternoon.ldatetime.dt.date
-records_afternoon = records_afternoon.loc[records_morning.ldatetime.dt.date]
-records_afternoon.index = records_morning.index
+# note that if runtime is an integer number, we don't need to get the afternoon
+# profiles. 
+if args.runtime == 'from_afternoon_profile':
+    print('Fetching afternoon records for determining the simulation runtimes')
+    records_afternoon = get_records(run_stations,\
+                                    args.path_forcing,\
+                                    subset='afternoon',
+                                    refetch_records=False,
+                                    )
+    
+    # print(records_morning.index)
+    # print(records_afternoon.index)
+    # align afternoon records with the noon records, and set same index
+    print('hello')
+    print(len(records_afternoon))
+    print(len(records_morning))
 
-experiments = args.experiments.split(';')
+    print("aligning morning and afternoon records")
+    records_morning['dates'] = records_morning.ldatetime.dt.date
+    records_afternoon['dates'] = records_afternoon.ldatetime.dt.date
+    records_afternoon.set_index(['STNID','dates'],inplace=True)
+    ini_index_dates = records_morning.set_index(['STNID','dates']).index
+    records_afternoon = records_afternoon.loc[ini_index_dates]
+    records_afternoon.index = records_morning.index
+
+experiments = args.experiments.strip(' ').split(' ')
+
 for expname in experiments:
     exp = EXP_DEFS[expname]
     path_exp = args.path_experiments+'/'+expname+'/'
@@ -132,8 +195,8 @@ for expname in experiments:
             print("warning: outside of profile number range for station "+\
                   str(current_station)+". Skipping chunk number for this station.")
         else:
-            file_morning = open(args.path_soundings+'/'+format(current_station.name,'05d')+'_morning.yaml')
-            file_afternoon = open(args.path_soundings+'/'+format(current_station.name,'05d')+'_afternoon.yaml')
+            file_morning = open(args.path_forcing+'/'+format(current_station.name,'05d')+'_morning.yaml')
+            file_afternoon = open(args.path_forcing+'/'+format(current_station.name,'05d')+'_afternoon.yaml')
             fn_ini = path_exp+'/'+format(current_station.name,'05d')+'_'+\
                      str(int(run_station_chunk))+'_ini.yaml'
             fn_mod = path_exp+'/'+format(current_station.name,'05d')+'_'+\
@@ -150,7 +213,7 @@ for expname in experiments:
 
             isim = 0
             for (STNID,chunk,index),record_morning in records_morning_station_chunk.iterrows():
-                    print('starting '+str(isim)+' out of '+\
+                    print('starting '+str(isim+1)+' out of '+\
                       str(len(records_morning_station_chunk) )+\
                       ' (station total: ',str(len(records_morning_station)),')')  
                 
@@ -163,15 +226,19 @@ for expname in experiments:
                     #print('c4gli_morning_ldatetime',c4gli_morning.pars.ldatetime)
                     
                     
-                    record_afternoon = records_afternoon.loc[(STNID,chunk,index)]
-                    c4gli_afternoon = get_record_yaml(file_afternoon, 
-                                                      record_afternoon.index_start, 
-                                                      record_afternoon.index_end,
-                                                    mode='ini')
+                    if args.runtime == 'from_afternoon_profile':
+                        record_afternoon = records_afternoon.loc[(STNID,chunk,index)]
+                        c4gli_afternoon = get_record_yaml(file_afternoon, 
+                                                          record_afternoon.index_start, 
+                                                          record_afternoon.index_end,
+                                                        mode='ini')
+                        runtime = int((c4gli_afternoon.pars.datetime_daylight - 
+                                             c4gli_morning.pars.datetime_daylight).total_seconds())
+                    else:
+                        runtime = int(args.runtime)
             
                     c4gli_morning.update(source='pairs',pars={'runtime' : \
-                                        int((c4gli_afternoon.pars.datetime_daylight - 
-                                             c4gli_morning.pars.datetime_daylight).total_seconds())})
+                                        runtime})
                     c4gli_morning.update(source=expname, pars=exp)
 
                     c4gli_morning.update(source=expname, \
