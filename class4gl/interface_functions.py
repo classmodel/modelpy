@@ -57,7 +57,7 @@ def get_record_yaml(yaml_file,index_start,index_end,mode='mod'):
 
     buf =  yaml_file.read(index_end- index_start).replace('inf','9e19').replace('nan','9e19').replace('---','')
 
-    os.system('mkdir -p '+TEMPDIR
+    os.system('mkdir -p '+TEMPDIR)
     filebuffer = open(TEMPDIR+'/'+shortfn+'.buffer.yaml.'+str(index_start),'w')
     filebuffer.write(buf)
     filebuffer.close()
