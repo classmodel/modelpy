@@ -68,7 +68,6 @@ EXP_DEFS  =\
 # #SET = 'GLOBAL'
 # SET = args.dataset
 
-# path_soundingsSET = args.path_soundings+'/'+SET+'/'
 
 
 print("getting stations")

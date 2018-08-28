@@ -67,7 +67,6 @@ EXP_DEFS  =\
 # #SET = 'GLOBAL'
 # SET = args.dataset
 
-# path_forcingSET = args.path_forcing+'/'+SET+'/'
 
 print("getting stations")
 # these are all the stations that are found in the input dataset
