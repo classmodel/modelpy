@@ -239,11 +239,12 @@ for expname in experiments:
                     c4gli_morning.update(source='pairs',pars={'runtime' : \
                                         runtime})
                     c4gli_morning.update(source=expname, pars=exp)
-
-                    c4gli_morning.update(source=expname, \
-                                         pars={'wg':c4gli_morning.pars.wwilt,\
-                                               'w2':c4gli_morning.pars.wwilt},
-                                        )
+                    
+                    if expname == 'WILT':
+                       c4gli_morning.update(source=expname, \
+                                            pars={'wg':c4gli_morning.pars.wwilt,\
+                                                  'w2':c4gli_morning.pars.wwilt},
+                                           )
                     c4gl = class4gl(c4gli_morning)
 
                     if args.error_handling == 'dump_always':
