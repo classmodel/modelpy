@@ -24,6 +24,8 @@ from scipy.stats import mstats
 
 from matplotlib.colors import LinearSegmentedColormap
 
+TEMPDIR = gettempdir().replace('[',"").replace(']',"")
+
 class records_iterator(object):
     def __init__(self,records):
             
@@ -55,27 +57,27 @@ def get_record_yaml(yaml_file,index_start,index_end,mode='mod'):
 
     buf =  yaml_file.read(index_end- index_start).replace('inf','9e19').replace('nan','9e19').replace('---','')
 
-    os.system('mkdir -p '+gettempdir())
-    filebuffer = open(gettempdir()+'/'+shortfn+'.buffer.yaml.'+str(index_start),'w')
+    os.system('mkdir -p '+TEMPDIR
+    filebuffer = open(TEMPDIR+'/'+shortfn+'.buffer.yaml.'+str(index_start),'w')
     filebuffer.write(buf)
     filebuffer.close()
     # print("HHHEEELOOOO",filename+'.buffer.yaml'+str(index_start))
     
-    command = '/apps/gent/CO7/sandybridge/software/Ruby/2.4.2-foss-2017b/bin/ruby -rjson -ryaml -e "'+"puts YAML.load_file('"+gettempdir()+'/'+shortfn+".buffer.yaml."+str(index_start)+"').to_json"+'" > '+gettempdir()+'/'+shortfn+'.buffer.json.'+str(index_start)+' '
+    command = '/apps/gent/CO7/sandybridge/software/Ruby/2.4.2-foss-2017b/bin/ruby -rjson -ryaml -e "'+"puts YAML.load_file('"+TEMPDIR+'/'+shortfn+".buffer.yaml."+str(index_start)+"').to_json"+'" > '+TEMPDIR+'/'+shortfn+'.buffer.json.'+str(index_start)+' '
 
     #command = '/apps/gent/CO7/sandybridge/software/Ruby/2.4.2-foss-2017b/bin/ruby -rjson -ryaml -e "'+"puts YAML.load(ARGF.read()).to_json"+'"'
     print(command)
     os.system(command)
-    jsonstream = open(gettempdir()+'/'+shortfn+'.buffer.json.'+str(index_start))
+    jsonstream = open(TEMPDIR+'/'+shortfn+'.buffer.json.'+str(index_start))
     record_dict = json.load(jsonstream)
     jsonstream.close()
-    os.system('rm '+gettempdir()+'/'+shortfn+'.buffer.yaml.'+str(index_start))
+    os.system('rm '+TEMPDIR+'/'+shortfn+'.buffer.yaml.'+str(index_start))
 
 
     if mode =='mod':
         modelout = class4gl()
         modelout.load_yaml_dict(record_dict)
-        os.system('rm '+gettempdir()+'/'+shortfn+'.buffer.json.'+str(index_start))
+        os.system('rm '+TEMPDIR+'/'+shortfn+'.buffer.json.'+str(index_start))
 
         return modelout
     elif mode == 'ini':
@@ -104,7 +106,7 @@ def get_record_yaml(yaml_file,index_start,index_end,mode='mod'):
         c4gli = class4gl_input()
         #print(c4gli.logger,'hello')
         c4gli.load_yaml_dict(record_dict)
-        os.system('rm '+gettempdir()+'/'+shortfn+'.buffer.json.'+str(index_start))
+        os.system('rm '+TEMPDIR+'/'+shortfn+'.buffer.json.'+str(index_start))
         return c4gli
 
 
@@ -417,8 +419,8 @@ def get_records(stations,path_yaml,getchunk='all',subset='morning',refetch_recor
                             current_tell = next_tell
                             next_record_found = False
                             yaml_file.seek(current_tell)
-                            os.system('mkdir -p '+gettempdir())
-                            filebuffer = open(gettempdir()+'/'+yamlfilename+'.buffer.yaml.'+str(current_tell),'w')
+                            os.system('mkdir -p '+TEMPDIR)
+                            filebuffer = open(TEMPDIR+'/'+yamlfilename+'.buffer.yaml.'+str(current_tell),'w')
                             linebuffer = ''
                             while ( (not next_record_found) and (not end_of_file)):
                                 filebuffer.write(linebuffer.replace('inf','0').replace('nan','0'))
@@ -433,14 +435,14 @@ def get_records(stations,path_yaml,getchunk='all',subset='morning',refetch_recor
 
                             
                             #if ((irecord >= start) and (np.mod(irecord - start,2) == 0.) :
-                            command = 'ruby -rjson -ryaml -e "'+"puts YAML.load_file('"+gettempdir()+'/'+yamlfilename+".buffer.yaml."+str(current_tell)+"').to_json"+'" > '+gettempdir()+'/'+yamlfilename+'.buffer.json.'+str(current_tell)+' ' 
+                            command = 'ruby -rjson -ryaml -e "'+"puts YAML.load_file('"+TEMPDIR+'/'+yamlfilename+".buffer.yaml."+str(current_tell)+"').to_json"+'" > '+TEMPDIR+'/'+yamlfilename+'.buffer.json.'+str(current_tell)+' ' 
                             print(command)
                             
                             os.system(command)
                             #jsonoutput = subprocess.check_output(command,shell=True) 
                             #print(jsonoutput)
                             #jsonstream = io.StringIO(jsonoutput)
-                            jsonstream = open(gettempdir()+'/'+yamlfilename+'.buffer.json.'+str(current_tell))
+                            jsonstream = open(TEMPDIR+'/'+yamlfilename+'.buffer.json.'+str(current_tell))
                             record = json.load(jsonstream)
                             dictouttemp = {}
                             for key,value in record['pars'].items():
@@ -458,14 +460,14 @@ def get_records(stations,path_yaml,getchunk='all',subset='morning',refetch_recor
                             dictouttemp['chunk'] = chunk
                             dictouttemp['index_start'] = index_start
                             dictouttemp['index_end'] = index_end
-                            os.system('rm '+gettempdir()+'/'+yamlfilename+'.buffer.json.'+str(current_tell))
+                            os.system('rm '+TEMPDIR+'/'+yamlfilename+'.buffer.json.'+str(current_tell))
                             for key,value in dictouttemp.items():
                                 if key not in dictout.keys():
                                     dictout[key] = {}
                                 dictout[key][(STNID,chunk,recordindex)] = dictouttemp[key]
                             print(' obs record registered')
                             jsonstream.close()
-                            os.system('rm '+gettempdir()+'/'+yamlfilename+'.buffer.yaml.'+str(current_tell))
+                            os.system('rm '+TEMPDIR+'/'+yamlfilename+'.buffer.yaml.'+str(current_tell))
                     records_station = pd.DataFrame.from_dict(dictout)
                     records_station.index.set_names(('STNID','chunk','index'),inplace=True)
                     print('writing table file ('+path_yaml+'/'+pklfilename+') for station '\
