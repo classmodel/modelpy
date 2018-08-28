@@ -24,6 +24,25 @@ from scipy.stats import mstats
 
 from matplotlib.colors import LinearSegmentedColormap
 
+def which(program):
+    import os
+    def is_exe(fpath):
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+    fpath, fname = os.path.split(program)
+    if fpath:
+        if is_exe(program):
+            return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return exe_file
+
+    return None
+
+
+
 TEMPDIR = gettempdir() #.replace('[',"").replace(']',"")
 #TEMPDIR = '/tmp/'
 
@@ -64,7 +83,9 @@ def get_record_yaml(yaml_file,index_start,index_end,mode='mod'):
     filebuffer.close()
     # print("HHHEEELOOOO",filename+'.buffer.yaml'+str(index_start))
     
-    command = '/apps/gent/CO7/sandybridge/software/Ruby/2.4.2-foss-2017b/bin/ruby -rjson -ryaml -e "'+"puts YAML.load_file('"+TEMPDIR+'/'+shortfn+".buffer.yaml."+str(index_start)+"').to_json"+'" > '+TEMPDIR+'/'+shortfn+'.buffer.json.'+str(index_start)+' '
+    if which('ruby') is None:
+        raise RuntimeError ('ruby is not found. Aborting...')
+    command = 'ruby -rjson -ryaml -e "'+"puts YAML.load_file('"+TEMPDIR+'/'+shortfn+".buffer.yaml."+str(index_start)+"').to_json"+'" > '+TEMPDIR+'/'+shortfn+'.buffer.json.'+str(index_start)+' '
 
     #command = '/apps/gent/CO7/sandybridge/software/Ruby/2.4.2-foss-2017b/bin/ruby -rjson -ryaml -e "'+"puts YAML.load(ARGF.read()).to_json"+'"'
     print(command)
@@ -435,6 +456,8 @@ def get_records(stations,path_yaml,getchunk='all',subset='morning',refetch_recor
                             index_end = next_tell
 
                             
+                            if which('ruby') is None:
+                                raise RuntimeError ('ruby is not found. Aborting...')
                             #if ((irecord >= start) and (np.mod(irecord - start,2) == 0.) :
                             command = 'ruby -rjson -ryaml -e "'+"puts YAML.load_file('"+TEMPDIR+'/'+yamlfilename+".buffer.yaml."+str(current_tell)+"').to_json"+'" > '+TEMPDIR+'/'+yamlfilename+'.buffer.json.'+str(current_tell)+' ' 
                             print(command)
