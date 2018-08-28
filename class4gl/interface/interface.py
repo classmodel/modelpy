@@ -8,11 +8,11 @@ matplotlib.use('TkAgg')
 
 import argparse
 parser = argparse.ArgumentParser()
-parser.add_argument('--path-experiments')#,default='/user/data/gent/gvo000/gvo00090/D2D/data/C4GL/')
-parser.add_argument('--path-soundings')#,default='/user/data/gent/gvo000/gvo00090/D2D/data/SOUNDINGS/')
+parser.add_argument('--path_experiments')#,default='/user/data/gent/gvo000/gvo00090/D2D/data/C4GL/')
+parser.add_argument('--path_forcing')#,default='/user/data/gent/gvo000/gvo00090/D2D/data/SOUNDINGS/')
 parser.add_argument('--experiments')
-parser.add_argument('--c4gl-path-lib')#,default='/user/data/gent/gvo000/gvo00090/D2D/software/CLASS/class4gl/lib')
-parser.add_argument('--load-globaldata',default=False)
+parser.add_argument('--c4gl_path_lib')#,default='/user/data/gent/gvo000/gvo00090/D2D/software/CLASS/class4gl/lib')
+parser.add_argument('--load_globaldata',default=False)
 args = parser.parse_args()
 
 print('Adding python library:',args.c4gl_path_lib)
