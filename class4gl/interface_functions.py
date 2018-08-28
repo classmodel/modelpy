@@ -24,7 +24,8 @@ from scipy.stats import mstats
 
 from matplotlib.colors import LinearSegmentedColormap
 
-TEMPDIR = gettempdir().replace('[',"").replace(']',"")
+#TEMPDIR = gettempdir().replace('[',"").replace(']',"")
+TEMPDIR = '/tmp/'
 
 class records_iterator(object):
     def __init__(self,records):
