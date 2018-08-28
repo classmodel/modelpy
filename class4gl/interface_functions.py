@@ -213,8 +213,8 @@ class stations_iterator(object):
         return self.stations.table.index[self.ix], self.stations.table.iloc[self.ix]
     def set_STNID(self,STNID):
         self.ix = np.where((self.stations.table.index == STNID))[0][0]
-        print(self.ix)
-        print( self.stations.table.index[self.ix], self.stations.table.iloc[self.ix])
+        #print(self.ix)
+        #print( self.stations.table.index[self.ix], self.stations.table.iloc[self.ix])
         return self.stations.table.index[self.ix], self.stations.table.iloc[self.ix]
 
     def __prev__(self):

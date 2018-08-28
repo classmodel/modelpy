@@ -62,7 +62,7 @@ from class4gl import blh,class4gl_input
 
 # path_forcingSET = args.path_forcing+'/'+SET+'/'
 
-print("getting stations")
+print("getting all stations from --path_forcing")
 # these are all the stations that are found in the input dataset
 all_stations = stations(args.path_forcing,suffix=args.subset_forcing,refetch_stations=False)
 
@@ -70,12 +70,12 @@ print('defining all_stations_select')
 # these are all the stations that are supposed to run by the whole batch (all
 # chunks). We narrow it down according to the station(s) specified.
 if args.station_id is not None:
-    print("Selecting station by ID")
+    print("Selecting stations by --station_id")
     stations_iter = stations_iterator(all_stations)
     STNID,run_station = stations_iter.set_STNID(STNID=int(args.station_id))
     all_stations_select = pd.DataFrame([run_station])
 else:
-    print("Selecting stations from a row range in the table")
+    print("Selecting stations from a row range in the table [--first_station_row,--last_station_row]")
     all_stations_select = pd.DataFrame(all_stations.table)
     if args.last_station_row is not None:
         all_stations_select = all_station_select.iloc[:(int(args.last_station)+1)]
