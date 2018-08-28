@@ -5,7 +5,7 @@
 #PBS -m b
 #PBS -m e
 #PBS -m a
-#PBS -N batch_simulation
+#PBS -N c4gl_sim
 
 module load Python/3.6.4-intel-2018a IPython basemap BeautifulSoup xarray matplotlib Pysolar PyYAML netcdf4-python
 
