@@ -58,6 +58,7 @@ def get_record_yaml(yaml_file,index_start,index_end,mode='mod'):
 
     buf =  yaml_file.read(index_end- index_start).replace('inf','9e19').replace('nan','9e19').replace('---','')
 
+    os.system('mkdir -p '+gettempdir())
     filebuffer = open(gettempdir()+'/'+shortfn+'.buffer.yaml.'+str(index_start),'w')
     filebuffer.write(buf)
     filebuffer.close()
@@ -419,6 +420,7 @@ def get_records(stations,path_yaml,getchunk='all',subset='morning',refetch_recor
                             current_tell = next_tell
                             next_record_found = False
                             yaml_file.seek(current_tell)
+                            os.system('mkdir -p '+gettempdir())
                             filebuffer = open(gettempdir()+'/'+yamlfilename+'.buffer.yaml.'+str(current_tell),'w')
                             linebuffer = ''
                             while ( (not next_record_found) and (not end_of_file)):
