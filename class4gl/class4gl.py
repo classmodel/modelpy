@@ -94,18 +94,26 @@ units = {
 }
 
 class class4gl_input(object):
-# this was the way it was defined previously.
-#class4gl_input = type('class4gl_input', (model_input,gl_input,gl_dia), dict(c='c'))
+    """
+    this is the class4gl_input. It extends the model_input, which is now
+    assigned to self.pars. It now also includes initial profiles as pandas
+    Dataframes:
+        self.air_balloon: raw profile input for profile of u,v,theta,q (not used)
+        self.air_ap : the same as self.air_balloonm, but for which a mixed
+                      layer is fitted. Thi profile is used as input.
+        self.air_ac : atmospheric circulation profiles for advection and
+                      subsidence
+
+    # FYI this was the way it was defined in an early version:
+    #    class4gl_input = type('class4gl_input', (model_input,gl_input,gl_dia), dict(c='c'))
+    """
 
     def __init__(self,set_pars_defaults=True,debug_level=None):
-
 
         """ set up logger (see: https://docs.python.org/2/howto/logging.html)
         """
 
-        print('hello')
         self.logger = logging.getLogger('class4gl_input')
-        print(self.logger)
         if debug_level is not None:
             self.logger.setLevel(debug_level)
 
