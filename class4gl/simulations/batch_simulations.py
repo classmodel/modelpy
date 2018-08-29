@@ -101,9 +101,11 @@ for istation,current_station in all_stations_select.iterrows():
 
 print('total chunks (= size of array-job) per experiment: ' + str(totalchunks))
 
-
 #if sys.argv[1] == 'qsub':
 # with qsub
+
+print(args.experiments.strip().split(" "))
+
 for EXP in args.experiments.strip().split(" "):
     if args.cleanup_experiments:
         os.system("rm -R "+args.path_experiments+'/'+EXP)
@@ -112,7 +114,7 @@ for EXP in args.experiments.strip().split(" "):
                 str(totalchunks-1)+" -v C4GLJOB_experiments="+str(EXP)
     # propagate arguments towards the job script
     for argkey in args.__dict__.keys():
-        if ((argkey not in ['experiments','pbs_string']) and \
+        if ((argkey not in ['experiments','pbs_string','cleanup_experiments']) and \
             # default values are specified in the simulation script, so
             # excluded here
             (args.__dict__[argkey] is not None)
