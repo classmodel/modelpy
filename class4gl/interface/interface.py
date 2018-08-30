@@ -231,10 +231,13 @@ if args.make_figures:
                      #                    'R = '+str(round(PR[0],3))+', '+\
                      #                    'RMSE = '+str(round(RMSE,5))+', '+\
                      #                    'BIAS = '+str(round(BIAS,5)),s=1.,color=colors[ikey])
-        axes[varkey].contour(xi, yi, zi_int.reshape(xi.shape),levels=[0.14,0.5,0.86] ,
+        axes[varkey].contour(xi, yi, zi_int.reshape(xi.shape),levels=[0.16,0.5,0.86] ,
                 colors=['darkred','lightgreen','darkred'],linewidths=[1,2,1])
-        axes[varkey].contourf(xi, yi, zi_int.reshape(xi.shape),levels=[0.14,0.86] ,
+        axes[varkey].contourf(xi, yi, zi_int.reshape(xi.shape),levels=[0.16,0.84] ,
                 colors=['darkred'],alpha=0.5,)
+
+        axes[varkey].set_xlim((xi.min(),xi.max())
+        axes[varkey].set_ylim((yi.min(),yi.max())
     
     
         latex = {}
@@ -256,7 +259,10 @@ if args.make_figures:
                                       'BIAS = '+str(round(BIAS,5))+units['d'+varkey+'dt'] ,\
                              s=0.1,alpha=0.14,color='k')
         axes[varkey].legend(fontsize=5)
-                       
+        
+
+
+
         axes[varkey].set_xlabel('observations')     
         if i==0:                                    
             axes[varkey].set_ylabel('model')                                            
@@ -363,7 +369,9 @@ if args.make_figures:
                 plt.legend(loc='lower right')
         fig.tight_layout()
         if args.figure_filename_2 is not None:
-            fig.savefig(args.figure_filename,dpi=200); print("Image file written to:", args.figure_filename)
+            fig.savefig(args.figure_filename_2,dpi=200); print("Image file
+                                                               written to:",
+                                                               args.figure_filename_2)
         fig.show()
 
 
