@@ -122,7 +122,7 @@ for key in args.experiments.strip(' ').split(' '):
                       refetch_records=False
                     )
 
-if args.show_figures:
+if args.make_figures:
     # the lines below activate TaylorPlots but it is disabled for now
     fig = plt.figure(figsize=(10,7))   #width,height
     i = 1                                                                           
