@@ -7,7 +7,7 @@ class4gl/__pycache__/*
 .*
 build/
 dist/
-
+trash/
 */__pychache__/
 *.py[cod]
 *$py.class
