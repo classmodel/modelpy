@@ -231,13 +231,13 @@ if args.make_figures:
                      #                    'R = '+str(round(PR[0],3))+', '+\
                      #                    'RMSE = '+str(round(RMSE,5))+', '+\
                      #                    'BIAS = '+str(round(BIAS,5)),s=1.,color=colors[ikey])
-        axes[varkey].contour(xi, yi, zi_int.reshape(xi.shape),levels=[0.16,0.5,0.86] ,
+        axes[varkey].contour(xi, yi, zi_int.reshape(xi.shape),levels=[0.16,0.5,0.84] ,
                 colors=['darkred','lightgreen','darkred'],linewidths=[1,2,1])
         axes[varkey].contourf(xi, yi, zi_int.reshape(xi.shape),levels=[0.16,0.84] ,
                 colors=['darkred'],alpha=0.5,)
-
-        axes[varkey].set_xlim((xi.min(),xi.max()))
-        axes[varkey].set_ylim((xi.min(),xi.max()))
+        nanxi = xi[zi != np.nan]
+        axes[varkey].set_xlim((nanxi.min(),nanxi.max()))
+        axes[varkey].set_ylim((nanxi.min(),nanxi.max()))
     
     
         latex = {}
