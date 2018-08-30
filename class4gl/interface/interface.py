@@ -236,8 +236,8 @@ if args.make_figures:
         axes[varkey].contourf(xi, yi, zi_int.reshape(xi.shape),levels=[0.16,0.84] ,
                 colors=['darkred'],alpha=0.5,)
 
-        axes[varkey].set_xlim((xi.min(),xi.max())
-        axes[varkey].set_ylim((xi.min(),xi.max())
+        axes[varkey].set_xlim((xi.min(),xi.max()))
+        axes[varkey].set_ylim((xi.min(),xi.max()))
     
     
         latex = {}
