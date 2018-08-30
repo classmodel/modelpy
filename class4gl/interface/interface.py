@@ -238,6 +238,7 @@ if args.make_figures:
         nanxi = xi[zi != np.nan]
         axes[varkey].set_xlim((nanxi.min(),nanxi.max()))
         axes[varkey].set_ylim((nanxi.min(),nanxi.max()))
+        print(varkey,(nanxi.min(),nanxi.max()))
     
     
         latex = {}
