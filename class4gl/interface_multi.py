@@ -826,7 +826,7 @@ class c4gl_interface_soundings(object):
         frames = self.frames
         fig = self.fig
  
-        if globaldata is not None:
+        if self.globaldata is not None:
             if (only is None) or ('worldmap' in only):
                 globaldata = self.globaldata
                 if 'time' in globaldata.datasets[frames['worldmap']['inputkey']].page.variables[frames['worldmap']['inputkey']].dims:
