@@ -369,9 +369,7 @@ if args.make_figures:
                 plt.legend(loc='lower right')
         fig.tight_layout()
         if args.figure_filename_2 is not None:
-            fig.savefig(args.figure_filename_2,dpi=200); print("Image file
-                                                               written to:",
-                                                               args.figure_filename_2)
+            fig.savefig(args.figure_filename_2,dpi=200); print("Image file written to:", args.figure_filename_2)
         fig.show()
 
 
