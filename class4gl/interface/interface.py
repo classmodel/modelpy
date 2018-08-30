@@ -237,7 +237,7 @@ if args.make_figures:
                 colors=['darkred'],alpha=0.5,)
 
         axes[varkey].set_xlim((xi.min(),xi.max())
-        axes[varkey].set_ylim((yi.min(),yi.max())
+        axes[varkey].set_ylim((xi.min(),xi.max())
     
     
         latex = {}
