@@ -57,17 +57,17 @@ from class4gl import blh,class4gl_input
 
 EXP_DEFS  =\
 {
-  'NOAC':    {'sw_ac' : [],'sw_ap': True,'sw_lit': False},
-  'ADV':{'sw_ac' : ['adv',],'sw_ap': True,'sw_lit': False},
-  'W':  {'sw_ac' : ['w',],'sw_ap': True,'sw_lit': False},
-  'AC': {'sw_ac' : ['adv','w'],'sw_ap': True,'sw_lit': False},
-  'WILT':    {'sw_ac' : [],'sw_ap': True,'sw_lit': False},
+  'GLOBAL_NOAC':    {'sw_ac' : [],'sw_ap': True,'sw_lit': False},
+  'GLOBAL_NOAC_WILT':    {'sw_ac' : [],'sw_ap': True,'sw_lit': False},
+  'GLOBAL_NOAC_FC':    {'sw_ac' : [],'sw_ap': True,'sw_lit': False},
+  'GLOBAL_ADV':{'sw_ac' : ['adv',],'sw_ap': True,'sw_lit': False},
+  'GLOBAL_W':  {'sw_ac' : ['w',],'sw_ap': True,'sw_lit': False},
+  'GLOBAL_AC': {'sw_ac' : ['adv','w'],'sw_ap': True,'sw_lit': False},
 }
 
 
 # #SET = 'GLOBAL'
 # SET = args.dataset
-
 
 
 print("getting stations")
@@ -182,7 +182,6 @@ if args.runtime == 'from_afternoon_profile':
     records_afternoon.index = records_morning.index
 
 experiments = args.experiments.strip(' ').split(' ')
-
 for expname in experiments:
     exp = EXP_DEFS[expname]
     path_exp = args.path_experiments+'/'+expname+'/'
@@ -235,24 +234,30 @@ for expname in experiments:
                                              c4gli_morning.pars.datetime_daylight).total_seconds())
                     else:
                         runtime = int(args.runtime)
+
             
                     c4gli_morning.update(source='pairs',pars={'runtime' : \
                                         runtime})
                     c4gli_morning.update(source=expname, pars=exp)
-                    
-                    if expname == 'WILT':
-                       c4gli_morning.update(source=expname, \
-                                            pars={'wg':c4gli_morning.pars.wwilt,\
-                                                  'w2':c4gli_morning.pars.wwilt},
-                                           )
+                    if expname == 'GLOBAL_NOAC_WILT':
+                        c4gli_morning.update(source=expname, pars=\
+                                             {'wg':c4gli_morning.pars.wwilt,\
+                                              'w2':c4gli_morning.pars.wwilt}\
+                                            )
+                    if expname == 'GLOBAL_NOAC_FC':
+                        c4gli_morning.update(source=expname, pars=\
+                                             {'wg':c4gli_morning.pars.wfc,\
+                                              'w2':c4gli_morning.pars.wfc}\
+                                            )
+
                     c4gl = class4gl(c4gli_morning)
 
                     if args.error_handling == 'dump_always':
                         try:
                             c4gl.run()
-                            print('run succesfull')
+                            print('run successful')
                         except:
-                            print('run not succesfull')
+                            print('run not successful')
                         onerun = True
 
                         c4gli_morning.dump(file_ini)
@@ -319,7 +324,7 @@ for expname in experiments:
     #     with \
     #     open(path_exp+'/'+format(STNID,"05d")+'_ini.yaml','r') as file_station_ini, \
     #     open(path_exp+'/'+format(STNID,"05d")+'_mod.yaml','r') as file_station_mod, \
-    #     open(path_soundings+'/'+format(STNID,"05d")+'_afternoon.yaml','r') as file_station_afternoon:
+    #     open(path_forcing+'/'+format(STNID,"05d")+'_afternoon.yaml','r') as file_station_afternoon:
     #         for (STNID,index),record_ini in records_iterator(records_ini):
     #             c4gli_ini = get_record_yaml(file_station_ini, 
     #                                         record_ini.index_start, 

@@ -1,3 +1,5 @@
+'''
+
 import numpy as np
 
 import pandas as pd
@@ -122,7 +124,9 @@ for key in args.experiments.strip(' ').split(' '):
                       refetch_records=False
                     )
 
+'''
 if args.make_figures:
+    '''
     # the lines below activate TaylorPlots but it is disabled for now
     fig = plt.figure(figsize=(10,7))   #width,height
     i = 1                                                                           
@@ -311,15 +315,39 @@ if args.make_figures:
     if args.figure_filename is not None:
         fig.savefig(args.figure_filename,dpi=200); print("Image file written to:",args.figure_filename)
     fig.show()  
-    
-    
+   ''' 
     if bool(args.show_control_parameters):
+
         import seaborn as sns
-        sns.set()
+
+        pkmn_type_colors = [
+                                            '#A0A0A0',  # Poison
+                                            '#78C850',  # Grass
+                                            '#F08030',  # Fire
+                                            '#6890F0',  # Water
+                                            '#F08030',  # Fire
+                                            '#C03028',  # Fighting
+                                            '#F85888',  # Psychic
+                                            '#A8B820',  # Bug
+                                            '#A8A878',  # Normal
+                                            '#F8D030',  # Electric
+                                            '#E0C068',  # Ground
+                                            '#EE99AC',  # Fairy
+                                            '#B8A038',  # Rock
+                                            '#705898',  # Ghost
+                                            '#98D8D8',  # Ice
+                                            '#7038F8',  # Dragon
+                                           ]
+
+
+
+        sns.set_style('whitegrid')
+        #sns.set()
         fig = pl.figure(figsize=(12,8))
         i = 1
         axes = {}
         data_all = pd.DataFrame()
+        data_input = pd.DataFrame()
         
         
         
@@ -334,41 +362,166 @@ if args.make_figures:
         
         ikey = 0
         key = list(args.experiments.strip().split(' '))[ikey]
+        data_all = pd.DataFrame()
+
+        tempdatamodstats = pd.DataFrame(c4gldata[key].frames['stats']['records_all_stations_obs_afternoon_stats'].copy())
+        tempdatamodstats["source"] = "soundings"
+        tempdatamodstats["source_index"] = "soundings"
+
+        ini_ref = pd.DataFrame(c4gldata[key].frames['stats']['records_all_stations_ini'].copy())
+        tempdataini_this = pd.DataFrame(ini_ref.copy())
+
+        tempdatamodstats['dates']= tempdataini_this.ldatetime.dt.date
+        tempdatamodstats['STNID']= tempdataini_this.STNID
+        tempdatamodstats['source']= "soundings"
+        tempdatamodstats['source_index']= "soundings"
+        tempdatamodstats.set_index(['source_index','STNID','dates'],inplace=True)
+        print('hello')
+
+        tempdataini = pd.DataFrame(ini_ref)
+        tempdataini["source"] = "soundings"
+        tempdataini["source_index"] = "soundings"
+        tempdataini = tempdataini.set_index(['source_index','STNID','dates'])
+        print('hello2')
+
+
+        data_all = pd.concat([data_all,tempdatamodstats],axis=0)
+        data_input = pd.concat([data_input,tempdataini],axis=0)
+        print(data_input.shape)
+        print(data_all.shape)
+
+            
+        for key in list(args.experiments.strip().split(' ')):
+
+            tempdatamodstats = pd.DataFrame(c4gldata[key].frames['stats']['records_all_stations_mod_stats'].copy())
+            tempdataini_this= pd.DataFrame(c4gldata[key].frames['stats']['records_all_stations_ini'].copy())
+            tempdatamodstats['dates']= tempdataini_this.ldatetime.dt.date
+            tempdatamodstats['STNID']= tempdataini_this.STNID
+            tempdatamodstats['source']= key
+            tempdatamodstats['source_index']= key
+            tempdatamodstats.set_index(['source_index','STNID','dates'],inplace=True)
+            print('hello')
+
+
+            tempdataini = pd.DataFrame(ini_ref.copy())
+            tempdataini["source"] = key 
+            tempdataini["source_index"] = key
+            tempdataini = tempdataini.set_index(['source_index','STNID','dates'])
+    
+
+            print('hello2')
+            index_intersect = tempdataini.index.intersection(tempdatamodstats.index)
+            print('hello3')
+
+            tempdataini = tempdataini.loc[index_intersect]
+            print('hello4')
+            tempdatamodstats = tempdatamodstats.loc[index_intersect]
+            print('hello5')
+
+
+            # data[varkey] = tempdatamodstats['d'+varkey+'dt']
+            data_all = pd.concat([data_all,tempdatamodstats],axis=0)
+            data_input = pd.concat([data_input, tempdataini],axis=0)
+            print(data_input.shape)
+            print(data_all.shape)
+
+        data_input.cc = data_input.cc.clip(0.,+np.inf)
+
+        for varkey in ['h','theta','q']:
+            varkey_full = 'd'+varkey+'dt ['+units[varkey]+'/h]'
+            data_all = data_all.rename(columns={'d'+varkey+'dt':varkey_full})
+            print(data_input.shape)
+            print(data_all.shape)
+        print('hello6')
+        print(data_all.columns)
+        print('hello7')
         for varkey in ['h','theta','q']:
             for input_key in ['wg','cc']:
-                data_all = pd.DataFrame()
-                data = pd.DataFrame()
-                data[varkey] = ""
-                data[varkey] = c4gldata[key].frames['stats']['records_all_stations_obs_afternoon_stats']['d'+varkey+'dt']
-                data["source"] = "soundings"
-                data_all = pd.concat([data_all,data])
-                    
-                data = pd.DataFrame()
-                
-                
-                data[varkey] = ""
-                data[varkey] = c4gldata[key].frames['stats']['records_all_stations_mod_stats']['d'+varkey+'dt']
-                data["source"] = "model"
-                data_all = pd.concat([data_all,data])
-                data_input = pd.concat([c4gldata[key].frames['stats']['records_all_stations_ini'],
-                                       c4gldata[key].frames['stats']['records_all_stations_ini']],axis=0)
-                input_key_full = input_key + "["+units[input_key]+"]"
-                data_all[input_key_full] =  pd.cut(x=data_input[input_key].values,bins=10)
-                
                 varkey_full = 'd'+varkey+'dt ['+units[varkey]+'/h]'
-                data_all = data_all.rename(columns={varkey:varkey_full})
+
+                print('hello8')
+                print(data_input.shape)
+                print(data_all.shape)
+                input_key_full = input_key + "["+units[input_key]+"]"
+                data_all[input_key_full] = pd.cut(x=data_input[input_key].values,bins=10,precision=2)
+                data_input[input_key_full] = pd.cut(x=data_input[input_key].values,bins=10,precision=2,)
+                print('hello9')
+                print(data_input.shape)
+                print(data_all.shape)
                 
                 qvalmax = data_all[varkey_full].quantile(0.999)
                 qvalmin = data_all[varkey_full].quantile(0.001)
-                data_all = data_all[(data_all[varkey_full] >= qvalmin) & (data_all[varkey_full] < qvalmax)]
+                select_data = (data_all[varkey_full] >= qvalmin) & (data_all[varkey_full] < qvalmax)
+                print('hello11')
+                data_all = data_all[select_data]
+                print('hello12')
+                data_input = data_input[select_data.values]
+                print('hello13')
+                print(data_input.shape)
+                print(data_all.shape)
+                print('hello10')
                 
+                sns.set(style="ticks", palette="pastel")
                 ax = fig.add_subplot(3,2,i)
-                sns.violinplot(x=input_key_full,y=varkey_full,data=data_all,hue='source',linewidth=2.,palette="muted",split=True,inner='quart') #,label=key+", R = "+str(round(PR[0],3)),data=data)       
-                ax.grid()
-                plt.xticks(rotation=45,ha='right')
+                #sns.violinplot(x=input_key_full,y=varkey_full,data=data_all,hue='source',linewidth=2.,palette="muted",split=True,inner='quart') #,label=key+", R = "+str(round(PR[0],3)),data=data)       
+                
+                #ax.set_title(input_key_full)
+                sb = sns.boxplot(x=input_key_full, y=varkey_full, hue="source",
+                                 palette=pkmn_type_colors,
+                                # palette=["m", "g",'r','b'],
+                                 linewidth=1.2, data=data_all,sym='')
+                if i ==1:
+                     plt.legend(loc='upper right',fontsize=7.)
+                else:
+                     ax.get_legend().set_visible(False)
+                #     plt.legend('off')
+                if i >= 5:
+                    ax.set_xticklabels(labels=ax.get_xticklabels(),rotation=45.,ha='right')
+                else:
+                    ax.set_xticklabels([])
+                    ax.set_xlabel('')
+
+                if np.mod(i,2) == 0:
+                    ax.set_yticklabels([])
+                    ax.set_ylabel('')
+
+                for j,artist in enumerate(ax.artists):
+                    if np.mod(j,4) !=0:
+                        # Set the linecolor on the artist to the facecolor, and set the facecolor to None
+                        print(j,artist)
+                        col = artist.get_facecolor()
+                        print(j,artist)
+                        artist.set_edgecolor(col)
+                        print(j,artist)
+                        artist.set_facecolor('None')
+                
+                        # Each box has 6 associated Line2D objects (to make the whiskers, fliers, etc.)
+                        # Loop over them here, and use the same colour as above
+                        
+                        for k in range(j*5,j*5+5):
+                            line = ax.lines[k]
+                            line.set_color(col)
+                            line.set_mfc(col)
+                            line.set_mec(col)
+                
+                # Also fix the legend
+                j = 0
+                for legpatch in ax.get_legend().get_patches():
+                    if j > 0:
+
+                        col = legpatch.get_facecolor()
+                        legpatch.set_edgecolor(col)
+                        legpatch.set_facecolor('None')
+                    j +=1
+
+
+
+
+                #ax.grid()
+                #sns.despine(offset=10, trim=True)
                 i +=1
-                plt.legend(loc='lower right')
         fig.tight_layout()
+        fig.subplots_adjust( bottom=0.18,left=0.09,top=0.99,right=0.99,wspace=0.05,hspace=0.05,)
         if args.figure_filename_2 is not None:
             fig.savefig(args.figure_filename_2,dpi=200); print("Image file written to:", args.figure_filename_2)
         fig.show()
