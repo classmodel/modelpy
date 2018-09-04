@@ -58,10 +58,18 @@ from class4gl import blh,class4gl_input
 
 EXP_DEFS  =\
 {
+  'NOAC':    {'sw_ac' : [],'sw_ap': True,'sw_lit': False},
+  'ADV':{'sw_ac' : ['adv',],'sw_ap': True,'sw_lit': False},
+  'W':  {'sw_ac' : ['w',],'sw_ap': True,'sw_lit': False},
+  'AC': {'sw_ac' : ['adv','w'],'sw_ap': True,'sw_lit': False},
   'GLOBAL_NOAC':    {'sw_ac' : [],'sw_ap': True,'sw_lit': False},
   'GLOBAL_ADV':{'sw_ac' : ['adv',],'sw_ap': True,'sw_lit': False},
   'GLOBAL_W':  {'sw_ac' : ['w',],'sw_ap': True,'sw_lit': False},
   'GLOBAL_AC': {'sw_ac' : ['adv','w'],'sw_ap': True,'sw_lit': False},
+  'IOPS_NOAC':    {'sw_ac' : [],'sw_ap': True,'sw_lit': False},
+  'IOPS_ADV':{'sw_ac' : ['adv',],'sw_ap': True,'sw_lit': False},
+  'IOPS_W':  {'sw_ac' : ['w',],'sw_ap': True,'sw_lit': False},
+  'IOPS_AC': {'sw_ac' : ['adv','w'],'sw_ap': True,'sw_lit': False},
 }
 
 

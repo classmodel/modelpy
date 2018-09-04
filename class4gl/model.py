@@ -926,7 +926,7 @@ class model:
         htend_pre       = self.we + self.ws + self.wf - self.M
         
         #self.thetatend   = (self.wtheta - self.wthetae             ) / self.h + self.advtheta 
-        thetatend_pre = (self.wtheta - self.wthetae             ) / self.h + self.advtheta
+        thetatend_pre = (self.wtheta - self.wthetae             ) / self.h - self.advtheta
         
  
         #print('thetatend_pre',thetatend_pre)

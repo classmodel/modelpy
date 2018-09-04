@@ -29,6 +29,10 @@ from class4gl import blh,class4gl_input
 
 EXP_DEFS  =\
 {
+  'GLOBAL_ITER_NOAC':{'sw_ac' : [],'sw_ap': True,'sw_lit': False},
+  'GLOBAL_ITER_ADV':{'sw_ac' : ['adv',],'sw_ap': True,'sw_lit': False},
+  'GLOBAL_ITER_W':  {'sw_ac' : ['w',],'sw_ap': True,'sw_lit': False},
+  'GLOBAL_ITER_AC': {'sw_ac' : ['adv','w'],'sw_ap': True,'sw_lit': False},
   'ITER_NOAC':{'sw_ac' : [],'sw_ap': True,'sw_lit': False},
   'ITER_ADV':{'sw_ac' : ['adv',],'sw_ap': True,'sw_lit': False},
   'ITER_W':  {'sw_ac' : ['w',],'sw_ap': True,'sw_lit': False},
