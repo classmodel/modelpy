@@ -965,15 +965,15 @@ class model:
         self.dthetatend = l_entrainment*dthetatend_pre + \
                         (1.-l_entrainment)*0.
         self.thetatend = l_entrainment*thetatend_pre + \
-                        (1.-l_entrainment)*((self.wtheta  ) / self.h + self.advtheta)
+                        (1.-l_entrainment)*((self.wtheta  ) / self.h - self.advtheta)
         self.htend = l_entrainment*htend_pre + \
                      (1.-l_entrainment)*((self.ws - self.M)+ self.thetatend/self.gammatheta)
         #print(l_entrainment,htend_pre,self.ws,self.M,self.thetatend,self.gammatheta)
         #stop
 
 
-        self.qtend       = (self.wq     - l_entrainment*self.wqe     - self.wqM  ) / self.h + self.advq
-        self.CO2tend     = (self.wCO2   - l_entrainment*self.wCO2e   - self.wCO2M) / self.h + self.advCO2
+        self.qtend       = (self.wq     - l_entrainment*self.wqe     - self.wqM  ) / self.h - self.advq
+        self.CO2tend     = (self.wCO2   - l_entrainment*self.wCO2e   - self.wCO2M) / self.h - self.advCO2
 
 
         # self.qtend = l_entrainment*qtend_pre + \
@@ -1010,8 +1010,8 @@ class model:
      
         # assume u + du = ug, so ug - u = du
         if(self.sw_wind):
-            self.utend       = -self.fc * self.dv + (self.uw + l_entrainment*self.we * self.du)  / self.h + self.advu
-            self.vtend       =  self.fc * self.du + (self.vw + l_entrainment*self.we * self.dv)  / self.h + self.advv
+            self.utend       = -self.fc * self.dv + (self.uw + l_entrainment*self.we * self.du)  / self.h - self.advu
+            self.vtend       =  self.fc * self.du + (self.vw + l_entrainment*self.we * self.dv)  / self.h - self.advv
   
             self.dutend      = self.gammau * (l_entrainment*self.we + self.wf - self.M) - self.utend
             self.dvtend      = self.gammav * (l_entrainment*self.we + self.wf - self.M) - self.vtend
@@ -1076,7 +1076,7 @@ class model:
 
             # take into account advection for the whole profile
                 
-                self.air_ap[var] = self.air_ap[var] + self.dtcur * self.air_ap['adv'+var]
+                self.air_ap[var] = self.air_ap[var] - self.dtcur * self.air_ap['adv'+var]
 
             var = 'z'
             #print(self.air_ap[var])

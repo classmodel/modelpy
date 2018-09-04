@@ -13,6 +13,7 @@ import argparse
 
 #if __name__ == '__main__':
 parser = argparse.ArgumentParser()
+#parser.add_argument('--timestamp')
 parser.add_argument('--path_forcing')#,default='/user/data/gent/gvo000/gvo00090/D2D/data/SOUNDINGS/')
 parser.add_argument('--path_experiments')#,default='/user/data/gent/gvo000/gvo00090/D2D/data/C4GL/')
 parser.add_argument('--first_station_row')
@@ -57,10 +58,10 @@ from class4gl import blh,class4gl_input
 
 EXP_DEFS  =\
 {
-  'NOAC':    {'sw_ac' : [],'sw_ap': True,'sw_lit': False},
-  'ADV':{'sw_ac' : ['adv',],'sw_ap': True,'sw_lit': False},
-  'W':  {'sw_ac' : ['w',],'sw_ap': True,'sw_lit': False},
-  'AC': {'sw_ac' : ['adv','w'],'sw_ap': True,'sw_lit': False},
+  'GLOBAL_NOAC':    {'sw_ac' : [],'sw_ap': True,'sw_lit': False},
+  'GLOBAL_ADV':{'sw_ac' : ['adv',],'sw_ap': True,'sw_lit': False},
+  'GLOBAL_W':  {'sw_ac' : ['w',],'sw_ap': True,'sw_lit': False},
+  'GLOBAL_AC': {'sw_ac' : ['adv','w'],'sw_ap': True,'sw_lit': False},
 }
 
 

@@ -216,6 +216,7 @@ class book(object):
 
 class data_global(object):
     def __init__(self,sources= {
+        'KOEPPEN:KGC'   : '/user/data/gent/gvo000/gvo00090/EXT/data/KOEPPEN/Koeppen-Geiger.nc',
         # # old gleam
         # 'GLEAM:wg'      : '/user/data/gent/gvo000/gvo00090/GLEAM/data/v3.1a/????/SMsurf_*_GLEAM_v3.1a.nc:SMsurf',
         # 'GLEAM:w2'      : '/user/data/gent/gvo000/gvo00090/GLEAM/data/v3.1a/????/SMroot_*_GLEAM_v3.1a.nc:SMroot',

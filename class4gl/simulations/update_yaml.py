@@ -13,13 +13,12 @@ import argparse
 
 #if __name__ == '__main__':
 parser = argparse.ArgumentParser()
-#parser.add_argument('--timestamp')
+parser.add_argument('--global_keys') 
 parser.add_argument('--path_forcing')#,default='/user/data/gent/gvo000/gvo00090/D2D/data/SOUNDINGS/')
 parser.add_argument('--path_experiments')#,default='/user/data/gent/gvo000/gvo00090/D2D/data/C4GL/')
 parser.add_argument('--first_station_row')
 parser.add_argument('--last_station_row')
 parser.add_argument('--station_id') # run a specific station id
-parser.add_argument('--error_handling',default='dump_on_success')
 parser.add_argument('--subset_forcing',default='morning') # this tells which yaml subset
                                                       # to initialize with.
                                                       # Most common options are
@@ -27,8 +26,6 @@ parser.add_argument('--subset_forcing',default='morning') # this tells which yam
 
 # Tuntime is usually specified from the afternoon profile. You can also just
 # specify the simulation length in seconds
-parser.add_argument('--runtime',default='from_afternoon_profile')
-
 parser.add_argument('--experiments')
 parser.add_argument('--split_by',default=-1)# station soundings are split
                                             # up in chunks
@@ -58,12 +55,10 @@ from class4gl import blh,class4gl_input
 
 EXP_DEFS  =\
 {
-  'GLOBAL_NOAC':    {'sw_ac' : [],'sw_ap': True,'sw_lit': False},
-  'GLOBAL_NOAC_WILT':    {'sw_ac' : [],'sw_ap': True,'sw_lit': False},
-  'GLOBAL_NOAC_FC':    {'sw_ac' : [],'sw_ap': True,'sw_lit': False},
-  'GLOBAL_ADV':{'sw_ac' : ['adv',],'sw_ap': True,'sw_lit': False},
-  'GLOBAL_W':  {'sw_ac' : ['w',],'sw_ap': True,'sw_lit': False},
-  'GLOBAL_AC': {'sw_ac' : ['adv','w'],'sw_ap': True,'sw_lit': False},
+  'NOAC':    {'sw_ac' : [],'sw_ap': True,'sw_lit': False},
+  'ADV':{'sw_ac' : ['adv',],'sw_ap': True,'sw_lit': False},
+  'W':  {'sw_ac' : ['w',],'sw_ap': True,'sw_lit': False},
+  'AC': {'sw_ac' : ['adv','w'],'sw_ap': True,'sw_lit': False},
 }
 
 
@@ -157,30 +152,30 @@ records_morning = get_records(run_stations,\
                               refetch_records=False,
                               )
 
-# note that if runtime is an integer number, we don't need to get the afternoon
-# profiles. 
-if args.runtime == 'from_afternoon_profile':
-    print('Fetching afternoon records for determining the simulation runtimes')
-    records_afternoon = get_records(run_stations,\
-                                    args.path_forcing,\
-                                    subset='afternoon',
-                                    refetch_records=False,
-                                    )
-    
-    # print(records_morning.index)
-    # print(records_afternoon.index)
-    # align afternoon records with the noon records, and set same index
-    print('hello')
-    print(len(records_afternoon))
-    print(len(records_morning))
-
-    print("aligning morning and afternoon records")
-    records_morning['dates'] = records_morning.ldatetime.dt.date
-    records_afternoon['dates'] = records_afternoon.ldatetime.dt.date
-    records_afternoon.set_index(['STNID','dates'],inplace=True)
-    ini_index_dates = records_morning.set_index(['STNID','dates']).index
-    records_afternoon = records_afternoon.loc[ini_index_dates]
-    records_afternoon.index = records_morning.index
+# # note that if runtime is an integer number, we don't need to get the afternoon
+# # profiles. 
+# if args.runtime == 'from_afternoon_profile':
+#     print('Fetching afternoon records for determining the simulation runtimes')
+#     records_afternoon = get_records(run_stations,\
+#                                     args.path_forcing,\
+#                                     subset='afternoon',
+#                                     refetch_records=False,
+#                                     )
+#     
+#     # print(records_morning.index)
+#     # print(records_afternoon.index)
+#     # align afternoon records with the noon records, and set same index
+#     print('hello')
+#     print(len(records_afternoon))
+#     print(len(records_morning))
+# 
+#     print("aligning morning and afternoon records")
+#     records_morning['dates'] = records_morning.ldatetime.dt.date
+#     records_afternoon['dates'] = records_afternoon.ldatetime.dt.date
+#     records_afternoon.set_index(['STNID','dates'],inplace=True)
+#     ini_index_dates = records_morning.set_index(['STNID','dates']).index
+#     records_afternoon = records_afternoon.loc[ini_index_dates]
+#     records_afternoon.index = records_morning.index
 
 experiments = args.experiments.strip(' ').split(' ')
 for expname in experiments:
@@ -194,14 +189,14 @@ for expname in experiments:
             print("warning: outside of profile number range for station "+\
                   str(current_station)+". Skipping chunk number for this station.")
         else:
-            file_morning = open(args.path_forcing+'/'+format(current_station.name,'05d')+'_morning.yaml')
-            file_afternoon = open(args.path_forcing+'/'+format(current_station.name,'05d')+'_afternoon.yaml')
+            fn_forcing = \
+                    args.path_forcing+'/'+format(current_station.name,'05d')+'_'+\
+                    str(run_station_chunk)+'_'+args.subset_forcing+'.yaml'
+
+            #file_morning = open(args.path_forcing+'/'+format(current_station.name,'05d')+'_morning.yaml')
             fn_ini = path_exp+'/'+format(current_station.name,'05d')+'_'+\
                      str(int(run_station_chunk))+'_ini.yaml'
-            fn_mod = path_exp+'/'+format(current_station.name,'05d')+'_'+\
-                     str(int(run_station_chunk))+'_mod.yaml'
             file_ini = open(fn_ini,'w')
-            file_mod = open(fn_mod,'w')
 
             #iexp = 0
             onerun = False
@@ -240,25 +235,15 @@ for expname in experiments:
                     c4gli_morning.update(source='pairs',pars={'runtime' : \
                                         runtime})
                     c4gli_morning.update(source=expname, pars=exp)
-                    if expname == 'GLOBAL_NOAC_WILT':
-                        c4gli_morning.update(source=expname, pars=\
-                                             {'wg':c4gli_morning.pars.wwilt,\
-                                              'w2':c4gli_morning.pars.wwilt}\
-                                            )
-                    if expname == 'GLOBAL_NOAC_FC':
-                        c4gli_morning.update(source=expname, pars=\
-                                             {'wg':c4gli_morning.pars.wfc,\
-                                              'w2':c4gli_morning.pars.wfc}\
-                                            )
 
                     c4gl = class4gl(c4gli_morning)
 
                     if args.error_handling == 'dump_always':
                         try:
                             c4gl.run()
-                            print('run successful')
+                            print('run succesfull')
                         except:
-                            print('run not successful')
+                            print('run not succesfull')
                         onerun = True
 
                         c4gli_morning.dump(file_ini)

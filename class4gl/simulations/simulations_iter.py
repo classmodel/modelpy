@@ -39,6 +39,7 @@ import argparse
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    #parser.add_argument('--timestamp')
     parser.add_argument('--global-chunk')
     parser.add_argument('--first-station')
     parser.add_argument('--last-station')

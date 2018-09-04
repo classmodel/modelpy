@@ -1,5 +1,15 @@
 # -*- coding: utf-8 -*-
 
+"""
+Usage:
+python batch_update.py --exec $CLASS4GL/simulations/update_yaml_old.py
+--path_experiments $VSC_DATA_VO/D2D/data/C4GL/GLOBAL_NOAC/ --path_forcing
+$VSC_DATA_VO/D2D/data/C4GL/GLOBAL_NOAC_BACKUP_20180904/ --c4gl_path_lib
+$CLASS4GL --split_by 50 --global_keys "KGC" --subset_forcing ini --experiments
+"GLOBAL_NOAC"
+"""
+
+
 import pandas as pd
 import io
 import os
@@ -101,7 +111,7 @@ print('splitting batch in --split_by='+args.split_by+' jobs.')
 totalchunks = 0
 for istation,current_station in all_stations_select.iterrows():
     records_morning_station_select = all_records_morning_select.query('STNID == '+str(current_station.name))
-    chunks_current_station = math.ceil(float(len(records_morning_station_select))/float(args.split_by))
+    chunks_current_station = len(records_morning_station_select.query('STNID == '+str(current_station.name)).chunk.unique())
     totalchunks +=chunks_current_station
 
 print('total chunks (= size of array-job) per experiment: ' + str(totalchunks))
@@ -115,7 +125,7 @@ for EXP in args.experiments.strip().split(" "):
     if args.cleanup_experiments:
         os.system("rm -R "+args.path_experiments+'/'+EXP)
 
-    # C4GLJOB_timestamp="+dt.datetime.now().isoformat()+",
+    #C4GLJOB_timestamp="+dt.datetime.now().isoformat()+",
     command = 'qsub '+args.pbs_string+' '+args.c4gl_path_lib+'/simulations/batch_simulations.pbs -t 0-'+\
                 str(totalchunks-1)+" -v C4GLJOB_experiments="+str(EXP)
     # propagate arguments towards the job script

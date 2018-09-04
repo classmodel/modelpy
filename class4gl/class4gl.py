@@ -860,10 +860,6 @@ class class4gl_input(object):
         # by default, we get all dataset keys
         keys = list(globaldata.datasets.keys())
 
-        # We add LAI manually, because it is not listed in the datasets and
-        #they its retreival is hard coded below based on LAIpixel and cveg
-        if ('LAIpixel' in keys) and ('cveg' in keys):
-            keys.append('LAI')
 
         # # In case there is surface pressure, we also calculate the half-level
         # # and full-level pressure fields
@@ -873,9 +869,11 @@ class class4gl_input(object):
 
         # If specified, we only take the keys that are in only_keys
         if only_keys is not None:
-            for key in keys:
+            cycle_keys = list(keys)
+            for key in cycle_keys:
                 if key not in only_keys:
                     keys.remove(key)
+
                 
         # If specified, we take out keys that are in exclude keys
         if exclude_keys is not None:
@@ -883,9 +881,16 @@ class class4gl_input(object):
                 if key in exclude_keys:
                     keys.remove(key)
 
+        # We add LAI manually, because it is not listed in the datasets and
+        #they its retreival is hard coded below based on LAIpixel and cveg
+        if ('LAIpixel' in keys) and ('cveg' in keys):
+            keys.append('LAI')
+
         # we set everything to nan first in the pars section (non-profile parameters
         # without lev argument), so that we can check afterwards whether the
         # data is well-fetched or not.
+
+
         for key in keys:
             if not ((key in globaldata.datasets) and \
                 (globaldata.datasets[key].page is not None) and \
