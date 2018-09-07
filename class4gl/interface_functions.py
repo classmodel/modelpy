@@ -178,7 +178,7 @@ def get_record_yaml(yaml_file,index_start,index_end,mode='mod'):
 
 
 class stations(object):
-    def __init__(self,path,suffix='ini',refetch_stations=False):
+    def __init__(self,path,suffix='ini',refetch_stations=True):
 
         self.path = path
 

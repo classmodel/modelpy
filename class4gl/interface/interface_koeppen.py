@@ -123,25 +123,132 @@ for key in args.experiments.strip(' ').split(' '):
                       globaldata,\
                       refetch_records=False
                     )
+
 '''
+key = args.experiments.strip(' ').split(' ')[0]
+xrkoeppen = xr.open_dataset('/user/data/gent/gvo000/gvo00090/EXT/data/KOEPPEN/Koeppen-Geiger.nc')
+koeppenlookuptable = pd.DataFrame()
+koeppenlookuptable['KGCID'] = pd.Series(xrkoeppen['KGCID'])
+c4gldata[key].frames['stats']['records_all_stations_ini']['KGCname'] =  \
+    c4gldata[key].frames['stats']['records_all_stations_ini']['KGC'].map(koeppenlookuptable['KGCID'])
+
+koeppenlookuptable['amount'] = ""
+for ikoeppen,koeppen in koeppenlookuptable.iterrows():
+    print(ikoeppen,':',koeppen)
+    kgc_select = (c4gldata[key].frames['stats']['records_all_stations_ini']['KGCname'] == koeppen.KGCID)
+    print(np.sum(kgc_select))
+    koeppenlookuptable.iloc[ikoeppen]['amount'] = np.sum(kgc_select)
+
+koeppenlookuptable = koeppenlookuptable.sort_values('amount',ascending=False)
+koeppenlookuptable = koeppenlookuptable[:9]
+koeppenlookuptable = koeppenlookuptable.sort_index()
+
+
+kgccolors = {
+    'Dfa':['navy','white'],
+    'Cfb':['green','white']       ,
+    'BSk':['tan','black']      ,
+    'Csb':['lightgreen','black'] ,     
+    'Cfa':['darkgreen','white']  ,    
+    'BWh':['orange','black']      ,
+    'Aw' :['pink','black'],
+    'Dwc':['rebeccapurple','white'] ,    
+    'Dfb':['darkviolet','white']    , 
+}
+kgcnames = {
+    'Dfa':'snow - fully humid - hot summer',
+    'Cfb':'green'       ,
+    'BSk':''      ,
+    'Csb':''      ,
+    'Cfa':'darkgreen' ,     
+    'BWh':''      ,
+    'Aw' :''     ,
+    'Dwc':''     ,
+    'Dfb':''     ,
+    #'Dfa':'',
+}
+
+
+koeppenlookuptable['color'] = ""
+koeppenlookuptable['textcolor'] = ""
+koeppenlookuptable['name'] = ""
+for ikoeppen,koeppen in koeppenlookuptable.iterrows():
+    print(ikoeppen)
+    print(koeppen.KGCID)
+    print(kgccolors[koeppen.KGCID])
+    koeppenlookuptable['color'].loc[ikoeppen] = kgccolors[koeppen.KGCID][0]
+    koeppenlookuptable['textcolor'].loc[ikoeppen] = kgccolors[koeppen.KGCID][1]
+    koeppenlookuptable['name'].loc[ikoeppen] = kgcnames[koeppen.KGCID]
+
+
 if args.make_figures:
-    """
     # the lines below activate TaylorPlots but it is disabled for now
     fig = plt.figure(figsize=(10,7))   #width,height
     i = 1                                                                           
     axes = {}         
     axes_taylor = {}         
     
-    colors = ['r','g','b','m']
+    colors = ['r','g','b','m','y','purple','orange','sienna','navy']
     symbols = ['*','x','+']
     dias = {}
-    
+
+
+
+    i = 1
     for varkey in ['h','theta','q']:                                                    
+        dias[varkey] =  TaylorDiagram(1., srange=[0.0,1.7],fig=fig, rect=(230+i+3),label='Reference')
         axes[varkey] = fig.add_subplot(2,3,i)                                       
+
+        for ikey,key in enumerate(args.experiments.strip(' ').split(' ')[:1]):
+            icolor = 0
+            for ikoeppen,koeppen in koeppenlookuptable.iterrows():
+                print(ikoeppen,':',koeppen)
+                kgc_select = (c4gldata[key].frames['stats']['records_all_stations_ini']['KGCname'] == koeppen.KGCID)
+                
+                koeppen_mod = c4gldata[key].frames['stats']['records_all_stations_mod_stats']['d'+varkey+'dt'][kgc_select]
+                koeppen_obs = c4gldata[key].frames['stats']['records_all_stations_obs_afternoon_stats']['d'+varkey+'dt'][kgc_select]
+    
+                #axes[varkey].scatter(koeppen_obs,koeppen_mod,marker=symbols[ikoeppen],color=colors[ikey])
+                         #  label=key+", "+\
+                         #                    'R = '+str(round(PR[0],3))+', '+\
+                         #                    'RMSE = '+str(round(RMSE,5))+', '+\
+                         #                    'BIAS = '+str(round(BIAS,5)),s=1.,color=colors[ikey])
+    
+    
+    
+            # # pl.scatter(obs,mod,label=key+", "+\
+            # #                              'R = '+str(round(PR[0],3))+', '+\
+            # #                              'RMSE = '+str(round(RMSE,5))+', '+\
+            # #                              'BIAS = '+str(round(BIAS,5)),s=1.,color=colors[ikey])
+                
+                print('hellobla')
+                print(koeppen.KGCID)
+                print(koeppen.color)
+                dias[varkey].add_sample(koeppen_mod.std()/koeppen_obs.std(),
+                               pearsonr(koeppen_mod,koeppen_obs)[0],
+                               annotate=koeppen.KGCID, color=koeppen.textcolor,weight='bold',fontsize=5.,\
+                               bbox={'edgecolor':'black','boxstyle':'circle','fc':koeppen.color,'alpha':0.7}
+                               )
+                icolor += 1
+    
+            latex = {}
+            latex['dthetadt'] =  r'$d \theta / dt $'
+            latex['dqdt'] =      r'$d q / dt $'
+            latex['dhdt'] =      r'$d h / dt $'
+    
+            axes[varkey].set_xlabel('observations')     
+            axes[varkey].set_title(latex['d'+varkey+'dt']+' ['+units['d'+varkey+'dt']+']')                                     
+        if i==1:                                    
+            axes[varkey].set_ylabel('model')                                            
+        abline(1,0,axis=axes[varkey])
+        i +=1
+
+    
+    i = 0
+    for varkey in ['h','theta','q']:                                                    
         #axes_taylor[varkey] = fig.add_subplot(2,3,i+3)                                       
     
         #print(obs.std())
-        dias[varkey] =  TaylorDiagram(1., srange=[0.0,1.7],fig=fig, rect=(230+i+3),label='Reference')
         if i == 0:
             dias[varkey]._ax.axis["left"].label.set_text(\
                 "Standard deviation (model) / Standard deviation (observations)")
@@ -161,7 +268,8 @@ if args.make_figures:
         #dia.ax.plot(x99,y99,color='k')
     
         
-        for ikey,key in enumerate(args.experiments.strip(' ').split(' ')):
+        #for ikey,key in enumerate(args.experiments.strip(' ').split(' ')):
+        for ikey,key in enumerate(args.experiments.strip(' ').split(' ')[:1]):
             # cc = c4gldata[key].frames['stats']['records_all_stations_ini']['cc']
             # clearsky = (cc < 0.05)
             # mod = c4gldata[key].frames['stats']['records_all_stations_mod_stats'].loc[clearsky]['d'+varkey+'dt']
@@ -189,11 +297,10 @@ if args.make_figures:
             
             # print(STD)
             # print(PR)
-            dias[varkey].add_sample(STD/STD_OBS, PR,
-                           marker='o', ms=5, ls='',
-                           #mfc='k', mec='k', # B&W
-                           mfc=colors[ikey], mec=colors[ikey], # Colors
-                           label=key)
+            dias[varkey].add_sample(STD/STD_OBS, PR,\
+                               annotate='All', zorder=100,color='black',weight='bold',fontsize=5.,\
+                                    bbox={'edgecolor':'black','boxstyle':'circle','fc':'lightgrey','alpha':0.6}\
+                            )
     
         # put ticker position, see
         # https://matplotlib.org/examples/ticks_and_spines/tick-locators.html 
@@ -202,6 +309,7 @@ if args.make_figures:
         # dia.ax.axis['left'].
     
         i += 1
+
     
     i = 0
     for varkey in ['h','theta','q']:                                                    
@@ -275,15 +383,15 @@ if args.make_figures:
     
     
     
-    # legend for different forcing simulations (colors)
-    ax = fig.add_axes([0.05,0.00,0.15,0.15]) #[*left*, *bottom*, *width*,    *height*]
-    leg = []
-    for ikey,key in enumerate(args.experiments.strip().split(' ')):
-        leg1, = ax.plot([],colors[ikey]+'o' ,markersize=10)
-        leg.append(leg1)
-    ax.axis('off')
-    #leg1 =
-    ax.legend(leg,list(args.experiments.strip().split(' ')),loc=2,fontsize=10)
+    # # legend for different forcing simulations (colors)
+    # ax = fig.add_axes([0.05,0.00,0.15,0.15]) #[*left*, *bottom*, *width*,    *height*]
+    # leg = []
+    # for ikey,key in enumerate(args.experiments.strip().split(' ')):
+    #     leg1, = ax.plot([],colors[ikey]+'o' ,markersize=10)
+    #     leg.append(leg1)
+    # ax.axis('off')
+    # #leg1 =
+    # ax.legend(leg,list(args.experiments.strip().split(' ')),loc=2,fontsize=10)
     
     
     # # legend for different stations (symbols)
@@ -314,7 +422,7 @@ if args.make_figures:
     if args.figure_filename is not None:
         fig.savefig(args.figure_filename,dpi=200); print("Image file written to:",args.figure_filename)
     fig.show()  
-"""
+
     if bool(args.show_control_parameters):
 
         import seaborn as sns
@@ -429,11 +537,12 @@ if args.make_figures:
         for varkey in ['h','theta','q']:
             varkey_full = 'd'+varkey+'dt ['+units[varkey]+'/h]'
             data_all = data_all.rename(columns={'d'+varkey+'dt':varkey_full})
+            data_all['KGCname'] = data_input['KGCname']
             #print(data_input.shape)
             #print(data_all.shape)
-        xrkoeppen = xr.open_dataset('/user/data/gent/gvo000/gvo00090/EXT/data/KOEPPEN/Koeppen-Geiger.nc')
-        lookuptable = pd.Series(xrkoeppen['KGCID'])
-        data_all['KGCname'] = data_input['KGC'].map(lookuptable)
+        # xrkoeppen = xr.open_dataset('/user/data/gent/gvo000/gvo00090/EXT/data/KOEPPEN/Koeppen-Geiger.nc')
+        # lookuptable = pd.Series(xrkoeppen['KGCID'])
+        # data_all['KGCname'] = data_input['KGC'].map(lookuptable)
         #print('hello6')
         #print(data_all.columns)
         #print('hello7')

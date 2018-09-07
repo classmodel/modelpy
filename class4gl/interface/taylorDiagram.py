@@ -106,14 +106,19 @@ class TaylorDiagram(object):
         # Collect sample points for latter use (e.g. legend)
         self.samplePoints = [l]
 
-    def add_sample(self, stddev, corrcoef, *args, **kwargs):
+    def add_sample(self, stddev, corrcoef, annotate=None,*args, **kwargs):
         """
         Add sample (*stddev*, *corrcoeff*) to the Taylor
         diagram. *args* and *kwargs* are directly propagated to the
         `Figure.plot` command.
         """
+        print(annotate)
 
-        l, = self.ax.plot(NP.arccos(corrcoef), stddev,
+        if annotate is not None:
+            l = self.ax.annotate(annotate,xy=(NP.arccos(corrcoef), stddev),\
+                              *args, **kwargs)  # (theta, radius)
+        else:
+            l, = self.ax.plot(NP.arccos(corrcoef), stddev,
                           *args, **kwargs)  # (theta, radius)
         self.samplePoints.append(l)
 

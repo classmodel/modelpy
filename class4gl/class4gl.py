@@ -378,6 +378,7 @@ class class4gl_input(object):
         #print(source,kwargs)
 
         for key,data in kwargs.items():
+            #print('update',key,data)
 
             #print(key)
             # if the key is not in class4gl_input object, then just add it. In
@@ -414,24 +415,37 @@ class class4gl_input(object):
                     
 
             elif type(self.__dict__[key]) == model_input:
-                # if the data type is a model_input, then we update its internal
+                # if the data type is a model_input (pars), then we update its internal
                 # dictionary of parameters
                 if type(data) == model_input:
                     self.__dict__[key].__dict__ = {**self.__dict__[key].__dict__, \
                                                    **data.__dict__}
                     datakeys = list(data.__dict__.keys())
                 elif type(data) == dict:
-                    self.__dict__[key].__dict__ = {**self.__dict__[key].__dict__, \
-                                                   **data}
                     datakeys = list(data.keys())
+                    datavalues = list(data.values())
+                    for idatavalue,datavalue in enumerate(datavalues):
+
+                        # convert numpy to native python value types, so that
+                        # we get clean output in the yaml file
+                        if type(datavalue).__module__ == 'numpy':
+                            datavalues[idatavalue] = datavalue.item()
+
+                    self.__dict__[key].__dict__ = \
+                            {**self.__dict__[key].__dict__, \
+                            **dict(zip(datakeys, datavalues))}
                 else:
                     raise TypeError('input key '+key+' is not of the same type\
                                     as the one in the class4gl_object')
 
+
+
             elif type(self.__dict__[key]) == dict:
                 # if the data type is a dictionary, we update the
                 # dictionary 
+               # print('before update', self.__dict__[key] , data)
                 self.__dict__[key] = {self.__dict__[key] , data}
+               # print('after update',self.__dict__[key] )
                 datakeys = list(data.keys())
 
 
@@ -576,7 +590,7 @@ class class4gl_input(object):
         # # this is an alternative pipe/numpy method
         # (~np.isnan(air_balloon).any(axis=1) & (air_balloon.z >= 0)).pipe(np.where)[0]
         valid_indices = air_balloon.index[is_valid].values
-        print(valid_indices)
+        #print(valid_indices)
 
         dpars['Ps'] = air_balloon.p.iloc[valid_indices[0]]
 
@@ -860,6 +874,7 @@ class class4gl_input(object):
         # by default, we get all dataset keys
         keys = list(globaldata.datasets.keys())
 
+        #print('keys orig', keys)
 
         # # In case there is surface pressure, we also calculate the half-level
         # # and full-level pressure fields
@@ -874,6 +889,7 @@ class class4gl_input(object):
                 if key not in only_keys:
                     keys.remove(key)
 
+        #print('keys 1', keys)
                 
         # If specified, we take out keys that are in exclude keys
         if exclude_keys is not None:
@@ -901,14 +917,15 @@ class class4gl_input(object):
             #else:
             #    self.update(source='globaldata',air_ac=pd.DataFrame({key:list([np.nan])}))
 
-        self.logger.debug('getting keys "'+', '.join(keys)+'\
-                          from global data')
+        #print('keys 2', keys)
 
         for key in keys:
             # If we find it, then we obtain the variables
+            #print('key 0', key)
             if ((key in globaldata.datasets) and \
                 (globaldata.datasets[key].page is not None)):
 
+                #print('key 1', key)
                 # check first whether the dataset has a height coordinate (3d space)
                 if 'lev' in globaldata.datasets[key].page[key].dims:
 
@@ -926,12 +943,35 @@ class class4gl_input(object):
                         
                         # if we have a time dimension, then we look up the required timesteps during the class simulation
                         if 'time' in list(globaldata.datasets[key].page[key].dims):
-                            itimes = ((globaldata.datasets[key].page.time >= \
-                                       classdatetime) & (globaldata.datasets[key].page.time < classdatetime_stop))
+
+                            DIST = np.abs((globaldata.datasets[key].page['time'].values - classdatetime))
+                            
+                            idatetime = np.where((DIST) == np.min(DIST))[0][0]
+                            #print('idatetime',idatetime,globaldata.datasets[key].variables['time'].values[idatetime],classdatetime)
+                            if key not in ['t','u','v','q']:
+                                if ((globaldata.datasets[key].page.variables['time'].values[idatetime] < classdatetime) ):
+                                    idatetime += 1
+                            
+                            DIST = np.abs((globaldata.datasets[key].page['time'].values - classdatetime_stop))
+                            idatetimeend = np.where((DIST) == np.min(DIST))[0][0]
+                            #print('idatetimeend',idatetimeend,globaldata.datasets[key].variables['time'].values[idatetime],classdatetimeend)
+                            if ((globaldata.datasets[key].page.variables['time'].values[idatetimeend] > classdatetime_stop)):
+                                idatetimeend -= 1
+                            idatetime = np.min((idatetime,idatetimeend))
+                            #for gleam, we take the previous day values
+
+                            # in case of soil temperature, we take the exact
+                            # timing (which is the morning)
+                            if key in ['t','u','v','q']:
+                                idatetimeend = idatetime
+                            
+                            itimes = range(idatetime,idatetimeend+1)
+                            #print(key,'itimes',itimes)
+
 
                             # In case we didn't find any correct time, we take the
                             # closest one.
-                            if np.sum(itimes) == 0.:
+                            if len(itimes) == 0:
 
 
                                 classdatetimemean = \
@@ -969,8 +1009,6 @@ class class4gl_input(object):
                 else:
                     # this procedure is for reading the ground fields (2d space). 
                     # Actually, the code should be simplified to a similar fasion as the 3d procedure above and tested again.
-
-    
                     if 'time' in list(globaldata.datasets[key].page[key].dims):
     
                        # first, we browse to the correct file
@@ -1029,11 +1067,12 @@ class class4gl_input(object):
                             
                             idatetime = np.where((DIST) == np.min(DIST))[0][0]
                             #print('idatetime',idatetime,globaldata.datasets[key].variables['time'].values[idatetime],classdatetime)
-                            if ((globaldata.datasets[key].page.variables['time'].values[idatetime] < classdatetime) ):
-                                idatetime += 1
+                            if key not in ['Tsoil','T2']:
+                                if ((globaldata.datasets[key].page.variables['time'].values[idatetime] < classdatetime) ):
+                                    idatetime += 1
                             
                             classdatetimeend = np.datetime64(\
-                                                             self.pars.datetime +\
+                                                             self.pars.datetime_daylight +\
                                                              dt.timedelta(seconds=self.pars.runtime)\
                                                             ) 
                             DIST = np.abs((globaldata.datasets[key].page['time'].values - classdatetimeend))
@@ -1224,6 +1263,23 @@ class class4gl_input(object):
             # self.update(source='globaldata',\
             #             air_ach=pd.DataFrame({'wrho':list(wrho)}))
 
+
+    def query_source(self,var):
+        """ 
+        purpose:
+            this procedure returns the name of the data source for a certain
+            variable
+        
+        input:
+            var: this should be in the format "section:variable", eg.,
+            "pars:h", or "air_ac:theta"
+
+        """
+
+        for source,vars_in_source in self.sources.items():
+            if var in vars_in_source:
+                return source
+
     def check_source(self,source,check_only_sections=None):
         """ this procedure checks whether data of a specified source is valid.
 
@@ -1315,6 +1371,184 @@ class class4gl_input(object):
                 source_globaldata_ok = False
 
         return source_globaldata_ok
+
+    def mixed_layer_fit(self,air_ap,source,mode):
+        """ 
+            Purpose: 
+
+
+        """
+
+
+        # Raise an error in case the input stream is not the correct object
+        # if type(wy_strm) is not wyoming:
+        #    raise TypeError('Not a wyoming type input stream')
+
+        # Let's tell the class_input object that it is a Wyoming fit type
+        self.air_ap_type = source+'_fit'
+        # ... and which mode of fitting we apply
+        self.air_ap_mode = mode
+
+
+        # Therefore, determine the sounding that are valid for 'any' column 
+        is_valid = ~np.isnan(air_ap).any(axis=1) & (air_ap.z >= 0)
+        #is_valid = (air_ap.z >= 0)
+        # # this is an alternative pipe/numpy method
+        # (~np.isnan(air_ap).any(axis=1) & (air_ap.z >= 0)).pipe(np.where)[0]
+        valid_indices = air_ap.index[is_valid].values
+        #print(valid_indices)
+
+
+        hvalues = {}
+        if len(valid_indices) > 0:
+            #calculated mixed-layer height considering the critical Richardson number of the virtual temperature profile
+            hvalues['h_b'] ,hvalues['h_u'],hvalues['h_l']  = blh(air_ap.z,air_ap.thetav,np.sqrt(air_ap.u**2. + air_ap.u**2.))
+            
+            hvalues['h_b']  = np.max((hvalues['h_b'] ,10.))
+            hvalues['h_u']  = np.max((hvalues['h_u'] ,10.)) #upper limit of mixed layer height
+            hvalues['h_l']  = np.max((hvalues['h_l'] ,10.)) #low limit of mixed layer height
+            hvalues['h_e']  = np.abs( hvalues['h_u']  - hvalues['h_l'] ) # error of mixed-layer height
+            
+            # the final mixed-layer height that will be used by class. We round it
+            # to 1 decimal so that we get a clean yaml output format
+            hvalues['h']  = np.round(hvalues['h_'+mode],1)
+        else:
+            hvalues['h_u']  =np.nan
+            hvalues['h_l']  =np.nan
+            hvalues['h_e']  =np.nan
+            hvalues['h']    =np.nan
+        self.update(source='fit_from_'+source,pars=hvalues)
+
+        if np.isnan(self.pars.h ):
+            self.pars.Ps  = nan
+
+        mlvalues = {}
+        if ~np.isnan(self.pars.h ):
+            # determine mixed-layer properties (moisture, potential temperature...) from profile
+            
+            # ... and those of the mixed layer
+            is_valid_below_h = is_valid & (air_ap.z < self.pars.h)
+            valid_indices_below_h =  air_ap.index[is_valid_below_h].values
+            if len(valid_indices) > 1:
+                if len(valid_indices_below_h) >= 3.:
+                    ml_mean = air_ap[is_valid_below_h].mean()
+                else:
+                    ml_mean = air_ap.iloc[valid_indices[0]:valid_indices[1]].mean()
+            elif len(valid_indices) == 1:
+                ml_mean = (air_ap.iloc[0:1]).mean()
+            else:
+                temp =  pd.DataFrame(air_ap)
+                temp.iloc[0] = np.nan
+                ml_mean = temp
+                       
+            mlvalues['theta'] = ml_mean.theta
+            mlvalues['q']     = ml_mean.q
+            mlvalues['u']     = ml_mean.u 
+            mlvalues['v']     = ml_mean.v 
+        else:
+            mlvalues['theta']  = np.nan
+            mlvalues['q']  = np.nan
+            mlvalues['u']  = np.nan
+            mlvalues['v']  = np.nan
+            
+
+        self.update(source='fit_from_'+source,pars=mlvalues)
+
+
+        # First 3 data points of the mixed-layer fit. We create a empty head
+        # first
+        air_ap_head = air_ap[0:0] #pd.DataFrame(columns = air_ap.columns)
+        # All other  data points above the mixed-layer fit
+        air_ap_tail = air_ap[air_ap.z > self.pars.h ]
+        
+        #calculate mixed-layer jump ( this should be larger than 0.1)
+        
+        air_ap_head['z'] = pd.Series(np.array([2.,self.pars.h ,self.pars.h ]))
+        #air_ap_head['HGHT'] = air_ap_head['z'] \
+        #                        + \
+        #                        np.round(dpars[ 'Station elevation'],1)
+        
+        # make a row object for defining the jump
+        jump = air_ap_head.iloc[0] * np.nan
+            
+        if air_ap_tail.shape[0] > 1:
+
+            # we originally used THTA, but that has another definition than the
+            # variable theta that we need which should be the temperature that
+            # one would have if brought to surface (NOT reference) pressure.
+            for column in ['theta','q','u','v']:
+               
+               # initialize the profile head with the mixed-layer values
+               air_ap_head[column] = ml_mean[column]
+               # calculate jump values at mixed-layer height, which will be
+               # added to the third datapoint of the profile head
+               jump[column] = (air_ap_tail[column].iloc[1]\
+                               -\
+                               air_ap_tail[column].iloc[0])\
+                              /\
+                              (air_ap_tail.z.iloc[1]\
+                               - air_ap_tail.z.iloc[0])\
+                              *\
+                              (self.pars.h - air_ap_tail.z.iloc[0])\
+                              +\
+                              air_ap_tail[column].iloc[0]\
+                              -\
+                              ml_mean[column] 
+               if column == 'theta':
+                  # for potential temperature, we need to set a lower limit to
+                  # avoid the model to crash
+                  jump.theta = np.max((0.1,jump.theta))
+        
+               air_ap_head[column][2] += jump[column]
+        
+        air_ap_head.WSPD = np.sqrt(air_ap_head.u**2 +air_ap_head.v**2)
+
+
+
+        # make theta increase strong enough to avoid numerical
+        # instability
+        air_ap_tail_orig = pd.DataFrame(air_ap_tail)
+        air_ap_tail = pd.DataFrame()
+        #air_ap_tail = air_ap_tail.append(air_ap_tail_orig.iloc[0],ignore_index=True)
+        #air_ap_tail = air_ap_tail.append(air_ap_tail_orig.iloc[0],ignore_index=True)
+        theta_low = self.pars.theta 
+        z_low =     self.pars.h 
+        ibottom = 0
+        for itop in range(0,len(air_ap_tail_orig)):
+            theta_mean = air_ap_tail_orig.theta.iloc[ibottom:(itop+1)].mean()
+            z_mean =     air_ap_tail_orig.z.iloc[ibottom:(itop+1)].mean()
+            if (
+                (z_mean > (z_low+10.)) and \
+                (theta_mean > (theta_low+0.2) ) and \
+                (((theta_mean - theta_low)/(z_mean - z_low)) > 0.0001)):
+
+                air_ap_tail = air_ap_tail.append(air_ap_tail_orig.iloc[ibottom:(itop+1)].mean(),ignore_index=True)
+                ibottom = itop+1
+                theta_low = air_ap_tail.theta.iloc[-1]
+                z_low =     air_ap_tail.z.iloc[-1]
+            # elif  (itop > len(air_ap_tail_orig)-10):
+            #     air_ap_tail = air_ap_tail.append(air_ap_tail_orig.iloc[itop],ignore_index=True)
+
+
+
+
+
+        air_ap = \
+            pd.concat((air_ap_head,air_ap_tail)).reset_index().drop(['index'],axis=1)
+        
+        # we copy the pressure at ground level from balloon sounding. The
+        # pressure at mixed-layer height will be determined internally by class
+        #print(air_ap['PRES'].iloc[0])
+
+        rho        = 1.2                   # density of air [kg m-3]
+        g          = 9.81                  # gravity acceleration [m s-2]
+
+        air_ap['p'].iloc[0] =self.pars.Ps  
+        air_ap['p'].iloc[1] =(self.pars.Ps - rho * g * self.pars.h )
+        air_ap['p'].iloc[2] =(self.pars.Ps - rho * g * self.pars.h -0.1)
+
+        self.update(source='fit_from_'+source,air_ap=air_ap)
+
 
 
 class c4gli_iterator():

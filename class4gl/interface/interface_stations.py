@@ -203,13 +203,13 @@ if bool(args.make_figures):
     i = 0
     for varkey in ['h','theta','q']:                                                    
         for ikey,key in enumerate(args.experiments.strip(' ').split(' ')):
-            isymbol = 0
+            istation = 0
             for icurrent_station,current_station in c4gldata[key].frames['worldmap']['stations'].table.iterrows():
                 indices =  (c4gldata[key].frames['stats']['records_all_stations_index'].get_level_values('STNID') == current_station.name)
                 station_mod = c4gldata[key].frames['stats']['records_all_stations_mod_stats']['d'+varkey+'dt'].iloc[indices]
                 station_obs = c4gldata[key].frames['stats']['records_all_stations_obs_afternoon_stats']['d'+varkey+'dt'].iloc[indices]
     
-                axes[varkey].scatter(station_obs,station_mod,marker=symbols[isymbol],color=colors[ikey])
+                axes[varkey].scatter(station_obs,station_mod,marker=symbols[istation],color=colors[ikey])
                          #  label=key+", "+\
                          #                    'R = '+str(round(PR[0],3))+', '+\
                          #                    'RMSE = '+str(round(RMSE,5))+', '+\
@@ -223,12 +223,12 @@ if bool(args.make_figures):
             # #                              'BIAS = '+str(round(BIAS,5)),s=1.,color=colors[ikey])
                 
                 dias[varkey].add_sample(station_mod.std()/station_obs.std(),
-                               pearsonr(station_mod,station_obs)[0],
-                               marker=symbols[isymbol], ms=5, ls='',
+                               pearsonr(station_mod,station_obs)[0],annotate=symbols[istation],
+                               marker=symbols[istation], ms=5, ls='',
                                #mfc='k', mec='k', # B&W
                                mfc=colors[ikey], mec=colors[ikey], # Colors
                                label=key)
-                isymbol += 1
+                istation += 1
     
     
             axes[varkey].set_xlabel('observations')     

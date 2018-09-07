@@ -51,7 +51,7 @@ statsviewcmap = LinearSegmentedColormap('statsviewcmap', cdictpres)
 os.system('module load Ruby')
 
 class c4gl_interface_soundings(object):
-    def __init__(self,path_exp,path_obs,globaldata=None,refetch_records=False,refetch_stations=True,inputkeys = ['cveg','wg','w2','cc','sp','wwilt','Tsoil','T2','z0m','alpha','LAI',]):
+    def __init__(self,path_exp,path_obs=None,globaldata=None,refetch_records=False,refetch_stations=True,inputkeys = ['cveg','wg','w2','cc','sp','wwilt','Tsoil','T2','z0m','alpha','LAI',]):
         """ creates an interactive interface for analysing class4gl experiments
 
         INPUT:
@@ -117,48 +117,50 @@ class c4gl_interface_soundings(object):
                                            refetch_records=refetch_records
                                            )
 
-        # get its records and load it into the stats frame
-        self.frames['stats']['records_all_stations_obs_afternoon'] =\
-                        get_records(self.frames['stats']['stations'].table,\
-                                           self.path_obs,\
-                                           subset='afternoon',\
-                                           refetch_records=refetch_records
-                                           )
+        if self.path_obs is not None:
+            # get its records and load it into the stats frame
+            self.frames['stats']['records_all_stations_obs_afternoon'] =\
+                            get_records(self.frames['stats']['stations'].table,\
+                                               self.path_obs,\
+                                               subset='afternoon',\
+                                               refetch_records=refetch_records
+                                               )
 
         self.frames['stats']['records_all_stations_mod'].index = \
             self.frames['stats']['records_all_stations_ini'].index 
 
         self.frames['stats']['records_all_stations_ini']['dates'] = \
-            self.frames['stats']['records_all_stations_ini'].ldatetime.dt.date
+            self.frames['stats']['records_all_stations_ini']['ldatetime'].dt.date
 
-        self.frames['stats']['records_all_stations_obs_afternoon']['dates'] = \
-            self.frames['stats']['records_all_stations_obs_afternoon'].ldatetime.dt.date
+        if self.path_obs is not None:
+            self.frames['stats']['records_all_stations_obs_afternoon']['dates'] = \
+                self.frames['stats']['records_all_stations_obs_afternoon']['ldatetime'].dt.date
 
-        self.frames['stats']['records_all_stations_obs_afternoon'].set_index(['STNID','dates'],inplace=True)
+            self.frames['stats']['records_all_stations_obs_afternoon'].set_index(['STNID','dates'],inplace=True)
 
 
-        ini_index_dates = self.frames['stats']['records_all_stations_ini'].set_index(['STNID','dates']).index
+            ini_index_dates = self.frames['stats']['records_all_stations_ini'].set_index(['STNID','dates']).index
 
-        self.frames['stats']['records_all_stations_obs_afternoon'] = \
-            self.frames['stats']['records_all_stations_obs_afternoon'].loc[ini_index_dates]
+            self.frames['stats']['records_all_stations_obs_afternoon'] = \
+                self.frames['stats']['records_all_stations_obs_afternoon'].loc[ini_index_dates]
 
-        self.frames['stats']['records_all_stations_obs_afternoon'].index = \
-            self.frames['stats']['records_all_stations_ini'].index 
+            self.frames['stats']['records_all_stations_obs_afternoon'].index = \
+                self.frames['stats']['records_all_stations_ini'].index 
 
-        self.frames['stats']['viewkeys'] = ['h','theta','q']
-        print('Calculating table statistics')
-        self.frames['stats']['records_all_stations_mod_stats'] = \
-                tendencies(self.frames['stats']['records_all_stations_mod'],\
-                           self.frames['stats']['records_all_stations_obs_afternoon'],\
-                           self.frames['stats']['records_all_stations_ini'],\
-                           self.frames['stats']['viewkeys']\
-                          )
-        self.frames['stats']['records_all_stations_obs_afternoon_stats'] = \
-                tendencies(self.frames['stats']['records_all_stations_obs_afternoon'],\
-                           self.frames['stats']['records_all_stations_obs_afternoon'],\
-                           self.frames['stats']['records_all_stations_ini'],\
-                           self.frames['stats']['viewkeys']\
-                          )
+            self.frames['stats']['viewkeys'] = ['h','theta','q']
+            print('Calculating table statistics')
+            self.frames['stats']['records_all_stations_mod_stats'] = \
+                    tendencies(self.frames['stats']['records_all_stations_mod'],\
+                               self.frames['stats']['records_all_stations_obs_afternoon'],\
+                               self.frames['stats']['records_all_stations_ini'],\
+                               self.frames['stats']['viewkeys']\
+                              )
+            self.frames['stats']['records_all_stations_obs_afternoon_stats'] = \
+                    tendencies(self.frames['stats']['records_all_stations_obs_afternoon'],\
+                               self.frames['stats']['records_all_stations_obs_afternoon'],\
+                               self.frames['stats']['records_all_stations_ini'],\
+                               self.frames['stats']['viewkeys']\
+                              )
 
         self.frames['stats']['inputkeys'] = inputkeys
         
@@ -204,21 +206,25 @@ class c4gl_interface_soundings(object):
         #               obs = self.frames['stats']['records_all_stations_ini'], \
         #               columns = self.frames['stats']['viewkeys'], \
         #              )
-        indextype = self.frames['stats']['records_all_stations_mod_stats'].index.names
-        
-        print('filtering pathological data')
-        # some observational sounding still seem problematic, which needs to be
-        # investigated. In the meantime, we filter them
-        valid = ((self.frames['stats']['records_all_stations_obs_afternoon_stats'].dthetadt > - 0.0020) & 
-                ~np.isnan(self.frames['stats']['records_all_stations_mod_stats'].dthetadt) & 
-                ~np.isnan(self.frames['stats']['records_all_stations_obs_afternoon_stats'].dthetadt))
 
-        # we filter ALL data frames!!!
-        for key in self.frames['stats'].keys():
-            if (type(self.frames['stats'][key]) == pd.DataFrame) and \
-               (self.frames['stats'][key].index.names == indextype):
-                self.frames['stats'][key] = self.frames['stats'][key][valid]
-        print(str(len(valid) - np.sum(valid))+' soundings are filtered')
+        
+
+        if self.path_obs is not None:
+            print('filtering pathological data')
+            indextype = self.frames['stats']['records_all_stations_mod_stats'].index.names
+            # some observational sounding still seem problematic, which needs to be
+            # investigated. In the meantime, we filter them
+
+            if self.path_obs is not None:
+                valid = ((self.frames['stats']['records_all_stations_obs_afternoon_stats'].dthetadt > - 0.0020) & 
+                        ~np.isnan(self.frames['stats']['records_all_stations_mod_stats'].dthetadt) & 
+                        ~np.isnan(self.frames['stats']['records_all_stations_obs_afternoon_stats'].dthetadt))
+
+                for key in self.frames['stats'].keys():
+                    if (type(self.frames['stats'][key]) == pd.DataFrame) and \
+                       (self.frames['stats'][key].index.names == indextype):
+                        self.frames['stats'][key] = self.frames['stats'][key][valid]
+                print(str(len(valid) - np.sum(valid))+' soundings are filtered')
 
         self.frames['stats']['records_all_stations_index'] = self.frames['stats']['records_all_stations_mod'].index
 
@@ -300,7 +306,10 @@ class c4gl_interface_soundings(object):
 
         # create the value table of the records of the current station
         tab_suffixes = \
-                ['_mod','_ini','_obs_afternoon','_mod_stats','_obs_afternoon_stats','_ini_pct']
+                ['_mod','_ini','_ini_pct']
+        if self.path_obs is not None:
+            tab_suffixes=tab_suffixes+['_obs_afternoon','_mod_stats','_obs_afternoon_stats']
+
         for tab_suffix in tab_suffixes:
             self.frames['stats']['records_current_station'+tab_suffix] = \
                 self.frames['stats']['records_all_stations'+tab_suffix].iloc[self.frames['stats']['records_current_station_index']]
@@ -330,8 +339,9 @@ class c4gl_interface_soundings(object):
             open(self.path_exp+'/'+format(STNID,"05d")+'_'+str(chunk)+'_mod.yaml','r')
         if 'current_station_file_afternoon' in self.frames['profiles'].keys():
             self.frames['profiles']['current_station_file_afternoon'].close()
-        self.frames['profiles']['current_station_file_afternoon'] = \
-            open(self.path_obs+'/'+format(STNID,"05d")+'_afternoon.yaml','r')
+        if self.path_obs is not None:
+            self.frames['profiles']['current_station_file_afternoon'] = \
+                open(self.path_obs+'/'+format(STNID,"05d")+'_afternoon.yaml','r')
 
         # for the profiles we make a distinct record iterator, so that the
         # stats iterator can move independently
@@ -379,22 +389,23 @@ class c4gl_interface_soundings(object):
                   (self.frames['profiles']['STNID'] , \
                   self.frames['profiles']['current_record_chunk'],\
                   self.frames['profiles']['current_record_index'])]
-        self.frames['profiles']['current_record_obs_afternoon'] =  \
-            self.frames['profiles']['records_current_station_obs_afternoon'].loc[\
-                  (self.frames['profiles']['STNID'] , \
-                  self.frames['profiles']['current_record_chunk'] , \
-                  self.frames['profiles']['current_record_index'])]
+        if self.path_obs is not None:
+            self.frames['profiles']['current_record_obs_afternoon'] =  \
+                self.frames['profiles']['records_current_station_obs_afternoon'].loc[\
+                      (self.frames['profiles']['STNID'] , \
+                      self.frames['profiles']['current_record_chunk'] , \
+                      self.frames['profiles']['current_record_index'])]
 
-        self.frames['profiles']['current_record_mod_stats'] = \
-                self.frames['profiles']['records_all_stations_mod_stats'].loc[(\
-                    self.frames['profiles']['STNID'], \
-                    self.frames['profiles']['current_record_chunk'], \
-                    self.frames['profiles']['current_record_index'])]
-        self.frames['profiles']['current_record_obs_afternoon_stats'] = \
-                self.frames['profiles']['records_all_stations_obs_afternoon_stats'].loc[(\
-                    self.frames['profiles']['STNID'],\
-                    self.frames['profiles']['current_record_chunk'],\
-                    self.frames['profiles']['current_record_index'])]
+            self.frames['profiles']['current_record_mod_stats'] = \
+                    self.frames['profiles']['records_all_stations_mod_stats'].loc[(\
+                        self.frames['profiles']['STNID'], \
+                        self.frames['profiles']['current_record_chunk'], \
+                        self.frames['profiles']['current_record_index'])]
+            self.frames['profiles']['current_record_obs_afternoon_stats'] = \
+                    self.frames['profiles']['records_all_stations_obs_afternoon_stats'].loc[(\
+                        self.frames['profiles']['STNID'],\
+                        self.frames['profiles']['current_record_chunk'],\
+                        self.frames['profiles']['current_record_index'])]
         self.frames['profiles']['current_record_ini_pct'] = \
                 self.frames['profiles']['records_all_stations_ini_pct'].loc[(\
                     self.frames['profiles']['STNID'],\
@@ -430,17 +441,18 @@ class c4gl_interface_soundings(object):
                record_ini.index_end,
                 mode='ini')
 
-        record_afternoon = self.frames['profiles']['records_all_stations_obs_afternoon'].loc[
-                       (self.frames['stats']['STNID'] , \
-                        self.frames['stats']['current_record_chunk'] , \
-                        self.frames['stats']['current_record_index'])]
+        if self.path_obs is not None:
+            record_afternoon = self.frames['profiles']['records_all_stations_obs_afternoon'].loc[
+                           (self.frames['stats']['STNID'] , \
+                            self.frames['stats']['current_record_chunk'] , \
+                            self.frames['stats']['current_record_index'])]
 
-        self.frames['profiles']['record_yaml_obs_afternoon'] = \
-           get_record_yaml(
-               self.frames['profiles']['current_station_file_afternoon'], \
-               record_afternoon.index_start,
-               record_afternoon.index_end,
-                mode='ini')
+            self.frames['profiles']['record_yaml_obs_afternoon'] = \
+               get_record_yaml(
+                   self.frames['profiles']['current_station_file_afternoon'], \
+                   record_afternoon.index_start,
+                   record_afternoon.index_end,
+                    mode='ini')
 
 
         key = self.frames['worldmap']['inputkey']
@@ -481,20 +493,22 @@ class c4gl_interface_soundings(object):
         btns = {} #buttons
 
         # frames, which sets attributes for a group of axes, buttens, 
-        for ikey,key in enumerate(list(self.frames['stats']['records_all_stations_mod_stats'].columns)):
-            label = 'stats_'+str(key)
-            axes[label] = fig.add_subplot(\
-                            len(self.frames['stats']['viewkeys']),\
-                            5,\
-                            5*ikey+1,label=label)
-            # Actually, the axes should be a part of the frame!
-            #self.frames['stats']['axes'] = axes[
+        if self.path_obs is not None:
 
-            # pointer to the axes' point data
-            axes[label].data = {}
+            for ikey,key in enumerate(list(self.frames['stats']['records_all_stations_mod_stats'].columns)):
+                label = 'stats_'+str(key)
+                axes[label] = fig.add_subplot(\
+                                len(self.frames['stats']['viewkeys']),\
+                                5,\
+                                5*ikey+1,label=label)
+                # Actually, the axes should be a part of the frame!
+                #self.frames['stats']['axes'] = axes[
 
-            # pointer to the axes' color fields
-            axes[label].fields = {}
+                # pointer to the axes' point data
+                axes[label].data = {}
+
+                # pointer to the axes' color fields
+                axes[label].fields = {}
 
 
         fig.tight_layout()
@@ -906,7 +920,8 @@ class c4gl_interface_soundings(object):
             # #self.cont_map = self.axmap.contourf(x,y,field.T,cmap=gmapcm)
             # self.cont_map = self.axmap.pcolormesh(x,y,field.T,cmap=gmapcm)
 
-        if (only is None) or ('stats' in only) or ('stats_lightupdate' in only):
+        if (self.path_obs is not None) and \
+           ((only is None) or ('stats' in only) or ('stats_lightupdate' in only)):
 
             statskeys_out = list(self.frames['stats']['records_all_stations_mod_stats'].columns)
             store_xlim = {}
@@ -1192,23 +1207,21 @@ class c4gl_interface_soundings(object):
             #print(self.frames['profiles']['record_yaml_obs_afternoon'].pars.h)
             #print(self.frames['profiles']['record_yaml_mod'].out['h'].values[-1])
             hmax = np.nanmax([self.frames['profiles']['record_yaml_ini'].pars.h,\
-                           self.frames['profiles']['record_yaml_obs_afternoon'].pars.h,
-                           self.frames['profiles']['record_yaml_mod'].out.h[-1]
-                          ])#self.morning_sounding.c4gl.out.h[-1],self.evening_sounding.fit.PARAMS.T.h.value])
-            #print('r13')
-            # 
+                           self.frames['profiles']['record_yaml_mod'].out.h[-1]])
+            if self.path_obs is not None:
+                hmax = np.nanmax([hmax,self.frames['profiles']['record_yaml_obs_afternoon'].pars.h])
 
 
-            zidxmax = int(np.where((self.frames['profiles']['record_yaml_ini'].air_balloon.z.values
-                                < 2.*hmax))[0][-1])+2
-            zidxmax = np.min((zidxmax,len(self.frames['profiles']['record_yaml_ini'].air_balloon.z.values)))
-            zco = range(zidxmax)
+                zidxmax = int(np.where((self.frames['profiles']['record_yaml_ini'].air_balloon.z.values
+                                    < 2.*hmax))[0][-1])+2
+                zidxmax = np.min((zidxmax,len(self.frames['profiles']['record_yaml_ini'].air_balloon.z.values)))
+                zco = range(zidxmax)
 
-            axes[label].plot(self.frames['profiles']['record_yaml_ini'].air_balloon.theta.values[zco], \
-                             self.frames['profiles']['record_yaml_ini'].air_balloon.z.values[zco],"b*", \
-                             label="obs "+\
-                             self.frames['profiles']['record_yaml_ini'].pars.ldatetime.strftime("%H:%M")\
-                             +'LT')
+                axes[label].plot(self.frames['profiles']['record_yaml_ini'].air_balloon.theta.values[zco], \
+                                 self.frames['profiles']['record_yaml_ini'].air_balloon.z.values[zco],"b*", \
+                                 label="obs "+\
+                                 self.frames['profiles']['record_yaml_ini'].pars.ldatetime.strftime("%H:%M")\
+                                 +'LT')
             #print('r14')
             zidxmax = int(np.where((self.frames['profiles']['record_yaml_ini'].air_ap.z.values
                                 < 2.*hmax))[0][-1])+2
@@ -1223,29 +1236,30 @@ class c4gl_interface_soundings(object):
 
 
             #print('r15')
-            zidxmax = int(np.where((self.frames['profiles']['record_yaml_obs_afternoon'].air_balloon.z.values
-                                < 2.*hmax))[0][-1])+2
-            zidxmax = np.min((zidxmax,len(self.frames['profiles']['record_yaml_obs_afternoon'].air_balloon.z.values)))
-            zco = range(zidxmax)
+            if self.path_obs is not None:
+                zidxmax = int(np.where((self.frames['profiles']['record_yaml_obs_afternoon'].air_balloon.z.values
+                                    < 2.*hmax))[0][-1])+2
+                zidxmax = np.min((zidxmax,len(self.frames['profiles']['record_yaml_obs_afternoon'].air_balloon.z.values)))
+                zco = range(zidxmax)
 
-                          
-            axes[label].plot(self.frames['profiles']['record_yaml_obs_afternoon'].air_balloon.theta.values[zco], \
-                             self.frames['profiles']['record_yaml_obs_afternoon'].air_balloon.z.values[zco],"r*", \
-                             label="obs "+\
-                             self.frames['profiles']['record_yaml_obs_afternoon'].pars.ldatetime.strftime("%H:%M")\
-                             +'LT')
+                              
+                axes[label].plot(self.frames['profiles']['record_yaml_obs_afternoon'].air_balloon.theta.values[zco], \
+                                 self.frames['profiles']['record_yaml_obs_afternoon'].air_balloon.z.values[zco],"r*", \
+                                 label="obs "+\
+                                 self.frames['profiles']['record_yaml_obs_afternoon'].pars.ldatetime.strftime("%H:%M")\
+                                 +'LT')
 
-            #print('r16')
+                #print('r16')
 
-            zidxmax = int(np.where((self.frames['profiles']['record_yaml_obs_afternoon'].air_ap.z.values < 2.*hmax))[0][-1])+2
-            zidxmax = np.min((zidxmax,len(self.frames['profiles']['record_yaml_obs_afternoon'].air_ap.z.values)))
-            zco = range(zidxmax)
+                zidxmax = int(np.where((self.frames['profiles']['record_yaml_obs_afternoon'].air_ap.z.values < 2.*hmax))[0][-1])+2
+                zidxmax = np.min((zidxmax,len(self.frames['profiles']['record_yaml_obs_afternoon'].air_ap.z.values)))
+                zco = range(zidxmax)
 
-            axes[label].plot(self.frames['profiles']['record_yaml_obs_afternoon'].air_ap.theta.values[zco], \
-                             self.frames['profiles']['record_yaml_obs_afternoon'].air_ap.z.values[zco],"r:", \
-                             label="fit "+\
-                             self.frames['profiles']['record_yaml_obs_afternoon'].pars.ldatetime.strftime("%H:%M")\
-                             +'LT')
+                axes[label].plot(self.frames['profiles']['record_yaml_obs_afternoon'].air_ap.theta.values[zco], \
+                                 self.frames['profiles']['record_yaml_obs_afternoon'].air_ap.z.values[zco],"r:", \
+                                 label="fit "+\
+                                 self.frames['profiles']['record_yaml_obs_afternoon'].pars.ldatetime.strftime("%H:%M")\
+                                 +'LT')
 
             #print('r17')
             print(self.frames['profiles']['record_yaml_mod'].air_ap.z)
@@ -1260,7 +1274,8 @@ class c4gl_interface_soundings(object):
                 axes[label].plot(self.frames['profiles']['record_yaml_mod'].air_ap.theta.values[zco], \
                                  self.frames['profiles']['record_yaml_mod'].air_ap.z.values[zco],"r-", \
                                  label="mod "+\
-                                 self.frames['profiles']['record_yaml_obs_afternoon'].pars.ldatetime.strftime("%H:%M")\
+                                 (self.frames['profiles']['record_yaml_ini'].pars.ldatetime
+                                 +dt.timedelta(seconds=self.frames['profiles']['record_yaml_ini'].pars.runtime)).strftime("%H:%M")\
                                  +'LT')
 
             #print('r18')
@@ -1272,7 +1287,11 @@ class c4gl_interface_soundings(object):
             axes[label].clear()
 
             tbox['datetime'].set_text(\
-                self.frames['profiles']['record_yaml_obs_afternoon'].pars.datetime.strftime("%Y/%m/%d %H:%M")) #+self.evening_sounding.datetime.strftime("%Y/%m/%d %H:%M")+ "UTC")
+                 (self.frames['profiles']['record_yaml_ini'].pars.datetime_daylight+\
+                  dt.timedelta(seconds=self.frames['profiles']['record_yaml_ini'].pars.runtime)).strftime("%Y/%m/%d %H:%M")
+                )
+            
+            #+self.evening_sounding.datetime.strftime("%Y/%m/%d %H:%M")+ "UTC")
             # 
 
             #print('r19')
@@ -1280,27 +1299,26 @@ class c4gl_interface_soundings(object):
             # #axes[label].set_title(self.morning_sounding.datetime.strftime("%Y/%m/%d %H:%M") + ' -> '+self.evening_sounding.datetime.strftime("%Y/%m/%d %H:%M"))
             # 
             if valid_mod:
-                hmax = np.max([self.frames['profiles']['record_yaml_ini'].pars.h,\
-                               self.frames['profiles']['record_yaml_obs_afternoon'].pars.h,
-                               self.frames['profiles']['record_yaml_mod'].out.h[-1]
-                              ])#self.morning_sounding.c4gl.out.h[-1],self.evening_sounding.fit.PARAMS.T.h.value])
+                hmax = np.nanmax([self.frames['profiles']['record_yaml_ini'].pars.h,\
+                               self.frames['profiles']['record_yaml_mod'].out.h[-1]])
             else:
-                hmax = np.max([self.frames['profiles']['record_yaml_ini'].pars.h,\
-                               self.frames['profiles']['record_yaml_obs_afternoon'].pars.h,
-                              ])#self.morning_sounding.c4gl.out.h[-1],self.evening_sounding.fit.PARAMS.T.h.value])
+                hmax = self.frames['profiles']['record_yaml_ini'].pars.h
+
+            if self.path_obs is not None:
+                hmax = np.nanmax([hmax,self.frames['profiles']['record_yaml_obs_afternoon'].pars.h])
             # 
             #print('r20')
 
-            zidxmax = int(np.where((self.frames['profiles']['record_yaml_ini'].air_balloon.z.values < 2.*hmax))[0][-1])+2
-            zidxmax = np.min((zidxmax,len(self.frames['profiles']['record_yaml_ini'].air_balloon.z.values)))
-            zco = range(zidxmax)
+                zidxmax = int(np.where((self.frames['profiles']['record_yaml_ini'].air_balloon.z.values < 2.*hmax))[0][-1])+2
+                zidxmax = np.min((zidxmax,len(self.frames['profiles']['record_yaml_ini'].air_balloon.z.values)))
+                zco = range(zidxmax)
 
-            axes[label].plot(self.frames['profiles']['record_yaml_ini'].air_balloon.q.values[zco], \
-                             self.frames['profiles']['record_yaml_ini'].air_balloon.z.values[zco],"b*", \
-                             label="obs "+\
-                             self.frames['profiles']['record_yaml_ini'].pars.ldatetime.strftime("%H:%M")\
-                             +'LT')
-            #print('r21')
+                axes[label].plot(self.frames['profiles']['record_yaml_ini'].air_balloon.q.values[zco], \
+                                 self.frames['profiles']['record_yaml_ini'].air_balloon.z.values[zco],"b*", \
+                                 label="obs "+\
+                                 self.frames['profiles']['record_yaml_ini'].pars.ldatetime.strftime("%H:%M")\
+                                 +'LT')
+                #print('r21')
 
 
             zidxmax = int(np.where((self.frames['profiles']['record_yaml_ini'].air_ap.z.values < 2.*hmax))[0][-1])+2
@@ -1313,27 +1331,28 @@ class c4gl_interface_soundings(object):
                              self.frames['profiles']['record_yaml_ini'].pars.ldatetime.strftime("%H:%M")\
                              +'LT')
 
-            zidxmax = int(np.where((self.frames['profiles']['record_yaml_obs_afternoon'].air_balloon.z.values < 2.*hmax))[0][-1])+2
-            zidxmax = np.min((zidxmax,len(self.frames['profiles']['record_yaml_obs_afternoon'].air_balloon.z.values)))
-            zco = range(zidxmax)
+            if self.path_obs is not None:
+                zidxmax = int(np.where((self.frames['profiles']['record_yaml_obs_afternoon'].air_balloon.z.values < 2.*hmax))[0][-1])+2
+                zidxmax = np.min((zidxmax,len(self.frames['profiles']['record_yaml_obs_afternoon'].air_balloon.z.values)))
+                zco = range(zidxmax)
 
 
-            axes[label].plot(self.frames['profiles']['record_yaml_obs_afternoon'].air_balloon.q.values[zco], \
-                             self.frames['profiles']['record_yaml_obs_afternoon'].air_balloon.z.values[zco],"r*", \
-                             label="obs "+\
-                             self.frames['profiles']['record_yaml_obs_afternoon'].pars.ldatetime.strftime("%H:%M")\
-                             +'LT')
+                axes[label].plot(self.frames['profiles']['record_yaml_obs_afternoon'].air_balloon.q.values[zco], \
+                                 self.frames['profiles']['record_yaml_obs_afternoon'].air_balloon.z.values[zco],"r*", \
+                                 label="obs "+\
+                                 self.frames['profiles']['record_yaml_obs_afternoon'].pars.ldatetime.strftime("%H:%M")\
+                                 +'LT')
 
-            zidxmax = int(np.where((self.frames['profiles']['record_yaml_obs_afternoon'].air_ap.z.values < 2.*hmax))[0][-1])+2
-            zidxmax = np.min((zidxmax,len(self.frames['profiles']['record_yaml_obs_afternoon'].air_ap.z.values)))
-            zco = range(zidxmax)
+                zidxmax = int(np.where((self.frames['profiles']['record_yaml_obs_afternoon'].air_ap.z.values < 2.*hmax))[0][-1])+2
+                zidxmax = np.min((zidxmax,len(self.frames['profiles']['record_yaml_obs_afternoon'].air_ap.z.values)))
+                zco = range(zidxmax)
 
-            #print('r23')
-            axes[label].plot(self.frames['profiles']['record_yaml_obs_afternoon'].air_ap.q.values[zco], \
-                             self.frames['profiles']['record_yaml_obs_afternoon'].air_ap.z.values[zco],"r:", \
-                             label="fit "+\
-                             self.frames['profiles']['record_yaml_obs_afternoon'].pars.ldatetime.strftime("%H:%M")\
-                             +'LT')
+                #print('r23')
+                axes[label].plot(self.frames['profiles']['record_yaml_obs_afternoon'].air_ap.q.values[zco], \
+                                 self.frames['profiles']['record_yaml_obs_afternoon'].air_ap.z.values[zco],"r:", \
+                                 label="fit "+\
+                                 self.frames['profiles']['record_yaml_obs_afternoon'].pars.ldatetime.strftime("%H:%M")\
+                                 +'LT')
 
             #print('r24')
             if valid_mod:
@@ -1550,10 +1569,11 @@ class c4gl_interface_soundings(object):
                         self.frames['profiles']['current_station_file_mod'].close()
                     self.frames['profiles']['current_station_file_mod'] = \
                         open(self.path_exp+'/'+format(STNID,"05d")+'_'+str(chunk)+'_mod.yaml','r')
-                    if 'current_station_file_afternoon' in self.frames['profiles'].keys():
-                        self.frames['profiles']['current_station_file_afternoon'].close()
-                    self.frames['profiles']['current_station_file_afternoon'] = \
-                        open(self.path_obs+'/'+format(STNID,"05d")+'_afternoon.yaml','r')
+                    if self.path_obs is not None:
+                        if 'current_station_file_afternoon' in self.frames['profiles'].keys():
+                            self.frames['profiles']['current_station_file_afternoon'].close()
+                        self.frames['profiles']['current_station_file_afternoon'] = \
+                            open(self.path_obs+'/'+format(STNID,"05d")+'_afternoon.yaml','r')
 
                     # go to hovered record of current station
                     self.frames['profiles']['records_iterator'] = \
@@ -1642,22 +1662,22 @@ class c4gl_interface_soundings(object):
                         # records_mod = self.frames['stats']['records_current_station_mod'][selkey]
                         # records_obs = self.frames['stats']['records_current_station_obs_afternoon'][selkey]
                         
-
-                        if label[:5] == 'stats':
-                            records_mod_stats = self.frames['stats']['records_all_stations_mod_stats']
-                            records_obs_stats = self.frames['stats']['records_all_stations_obs_afternoon_stats']
-                            (self.frames['stats']['STNID'] ,
-                             self.frames['stats']['current_record_chunk'], 
-                             self.frames['stats']['current_record_index']) = \
-                                records_mod_stats[(records_obs_stats[selkey] == pos[0]) & (records_mod_stats[selkey] == pos[1])].index[0]
-                        # elif label[:5] == 'stats':
-                        #     # records_mod_stats = self.frames['stats']['records_all_stations_mod_stats']
-                        #     records_obs_stats = self.frames['stats']['records_all_stations_obs_afternoon_stats']
-                        #     records_datetimes = self.frames['stats']['records_all_stations_ini']
-                        #     (self.frames['stats']['STNID'] ,
-                        #      self.frames['stats']['current_record_chunk'], 
-                        #      self.frames['stats']['current_record_index']) = \
-                        #         records_mod_stats[(records_obs_stats[selkey] == pos[0]) & (records_mod_stats[selkey] == pos[1])].index[0]
+                        if self.path_obs is not None:
+                            if label[:5] == 'stats':
+                                records_mod_stats = self.frames['stats']['records_all_stations_mod_stats']
+                                records_obs_stats = self.frames['stats']['records_all_stations_obs_afternoon_stats']
+                                (self.frames['stats']['STNID'] ,
+                                 self.frames['stats']['current_record_chunk'], 
+                                 self.frames['stats']['current_record_index']) = \
+                                    records_mod_stats[(records_obs_stats[selkey] == pos[0]) & (records_mod_stats[selkey] == pos[1])].index[0]
+                            # elif label[:5] == 'stats':
+                            #     # records_mod_stats = self.frames['stats']['records_all_stations_mod_stats']
+                            #     records_obs_stats = self.frames['stats']['records_all_stations_obs_afternoon_stats']
+                            #     records_datetimes = self.frames['stats']['records_all_stations_ini']
+                            #     (self.frames['stats']['STNID'] ,
+                            #      self.frames['stats']['current_record_chunk'], 
+                            #      self.frames['stats']['current_record_index']) = \
+                            #         records_mod_stats[(records_obs_stats[selkey] == pos[0]) & (records_mod_stats[selkey] == pos[1])].index[0]
 
 
                         self.frames['stats']['stations_iterator'] = stations_iterator(self.frames['worldmap']['stations']) 
@@ -1699,7 +1719,11 @@ class c4gl_interface_soundings(object):
 
 
                         tab_suffixes = \
-                                ['_mod','_ini','_obs_afternoon','_mod_stats','_obs_afternoon_stats','_ini_pct']
+                                ['_mod','_ini','_ini_pct']
+                        if self.path_obs is not None:
+                            tab_suffixes += \
+                                ['_mod_stats','_obs_afternoon','_obs_afternoon_stats']
+                            
                         for tab_suffix in tab_suffixes:
                             self.frames['stats']['records_current_station'+tab_suffix] = \
                                 self.frames['stats']['records_all_stations'+tab_suffix].iloc[self.frames['stats']['records_current_station_index']]
@@ -1735,7 +1759,10 @@ class c4gl_interface_soundings(object):
 
                         #print(self.frames['stats']['STNID'],self.frames['stats']['current_record_index'])
                         tab_suffixes = \
-                                ['_ini','_obs_afternoon','_mod_stats','_obs_afternoon_stats','_ini_pct']
+                                ['_ini','_ini_pct']
+                        if self.path_obs is not None:
+                            tab_suffixes += \
+                                ['_mod_stats','_obs_afternoon','_obs_afternoon_stats']
                         for tab_suffix in tab_suffixes:
                             #print(tab_suffix)
                             #print(self.frames['stats']['records_current_station'+tab_suffix])
@@ -1833,9 +1860,12 @@ class c4gl_interface_soundings(object):
                                      == \
                                      self.frames['stats']['current_station'].name)
 
-
                             tab_suffixes = \
-                                    ['_mod','_ini','_obs_afternoon','_mod_stats','_obs_afternoon_stats','_ini_pct']
+                                    ['_mod','_ini','_ini_pct']
+                            if self.path_obs is not None:
+                                tab_suffixes += \
+                                    ['_mod_stats','_obs_afternoon','_obs_afternoon_stats']
+
                             for tab_suffix in tab_suffixes:
                                 self.frames['stats']['records_current_station'+tab_suffix] = \
                                     self.frames['stats']['records_all_stations'+tab_suffix].iloc[self.frames['stats']['records_current_station_index']]
@@ -1858,13 +1888,12 @@ class c4gl_interface_soundings(object):
                             self.frames['stats']['current_record_mod'] = \
                                 self.frames['stats']['records_iterator'].__next__()
                         
-
-
-
-                            #print('h10')
-                            # cash the current record
                             tab_suffixes = \
-                                    ['_ini','_obs_afternoon','_mod_stats','_obs_afternoon_stats','_ini_pct']
+                                    ['_ini','_ini_pct']
+                            if self.path_obs is not None:
+                                tab_suffixes += \
+                                    ['_mod_stats','_obs_afternoon','_obs_afternoon_stats']
+
                             for tab_suffix in tab_suffixes:
                                 self.frames['stats']['current_record'+tab_suffix] =  \
                                     self.frames['stats']['records_current_station'+tab_suffix].loc[\
@@ -1959,18 +1988,18 @@ class c4gl_interface_soundings(object):
                          == \
                          self.frames['stats']['current_station'].name)
 
-
+                
                 tab_suffixes = \
-                        ['_ini','_obs_afternoon','_mod_stats','_obs_afternoon_stats','_ini_pct']
+                        ['_ini','_ini_pct']
+                if self.path_obs is not None:
+                    tab_suffixes += \
+                        ['_mod_stats','_obs_afternoon','_obs_afternoon_stats']
+
                 for tab_suffix in tab_suffixes:
                     self.frames['stats']['records_current_station'+tab_suffix] = \
                         self.frames['stats']['records_all_stations'+tab_suffix].iloc[self.frames['stats']['records_current_station_index']]
 
-                
 
-                # cash the records of the current stations
-                tab_suffixes = \
-                        ['_ini','_obs_afternoon','_mod_stats','_obs_afternoon_stats','_ini_pct']
                 for tab_suffix in tab_suffixes:
                     self.frames['stats']['current_record'+tab_suffix] =  \
                         self.frames['stats']['records_current_station'+tab_suffix].loc[\

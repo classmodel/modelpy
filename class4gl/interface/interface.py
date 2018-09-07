@@ -118,7 +118,7 @@ for key in args.experiments.strip(' ').split(' '):
     
     c4gldata[key] = c4gl_interface_soundings( \
                       args.path_experiments+'/'+key+'/',\
-                      args.path_forcing+'/',\
+                      args.path_forcing,\
                       globaldata,\
                       refetch_records=False
                     )

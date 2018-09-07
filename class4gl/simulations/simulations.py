@@ -58,6 +58,7 @@ from class4gl import blh,class4gl_input
 
 EXP_DEFS  =\
 {
+  'ERA_NOAC':    {'sw_ac' : [],'sw_ap': True,'sw_lit': False},
   'NOAC':    {'sw_ac' : [],'sw_ap': True,'sw_lit': False},
   'ADV':{'sw_ac' : ['adv',],'sw_ap': True,'sw_lit': False},
   'W':  {'sw_ac' : ['w',],'sw_ap': True,'sw_lit': False},
@@ -76,14 +77,22 @@ EXP_DEFS  =\
 # #SET = 'GLOBAL'
 # SET = args.dataset
 
+# ========================
+print("getting a list of stations")
+# ========================
 
-print("getting stations")
 # these are all the stations that are found in the input dataset
-all_stations = stations(args.path_forcing,suffix=args.subset_forcing,refetch_stations=False)
+all_stations = stations(args.path_forcing,suffix=args.subset_forcing,refetch_stations=True)
 
+# ====================================
 print('defining all_stations_select')
+# ====================================
+
 # these are all the stations that are supposed to run by the whole batch (all
 # chunks). We narrow it down according to the station(s) specified.
+
+
+
 if args.station_id is not None:
     print("Selecting station by ID")
     stations_iter = stations_iterator(all_stations)
@@ -99,6 +108,7 @@ else:
 print("station numbers included in the whole batch "+\
       "(all chunks):",list(all_stations_select.index))
 
+print(all_stations_select)
 print("getting all records of the whole batch")
 all_records_morning_select = get_records(all_stations_select,\
                                          args.path_forcing,\
@@ -181,8 +191,8 @@ if args.runtime == 'from_afternoon_profile':
     print(len(records_morning))
 
     print("aligning morning and afternoon records")
-    records_morning['dates'] = records_morning.ldatetime.dt.date
-    records_afternoon['dates'] = records_afternoon.ldatetime.dt.date
+    records_morning['dates'] = records_morning['ldatetime'].dt.date
+    records_afternoon['dates'] = records_afternoon['ldatetime'].dt.date
     records_afternoon.set_index(['STNID','dates'],inplace=True)
     ini_index_dates = records_morning.set_index(['STNID','dates']).index
     records_afternoon = records_afternoon.loc[ini_index_dates]
@@ -200,8 +210,17 @@ for expname in experiments:
             print("warning: outside of profile number range for station "+\
                   str(current_station)+". Skipping chunk number for this station.")
         else:
-            file_morning = open(args.path_forcing+'/'+format(current_station.name,'05d')+'_morning.yaml')
-            file_afternoon = open(args.path_forcing+'/'+format(current_station.name,'05d')+'_afternoon.yaml')
+            fn_morning = args.path_forcing+'/'+format(current_station.name,'05d')+'_'+args.subset_forcing+'.yaml'
+            if os.path.isfile(fn_morning):
+                file_morning = open(fn_morning)
+            else:
+                fn_morning = \
+                     args.path_forcing+'/'+format(current_station.name,'05d')+\
+                     '_'+str(run_station_chunk)+'_'+args.subset_forcing+'.yaml'
+                file_morning = open(fn_morning)
+
+            if args.runtime == 'from_afternoon_profile':
+                file_afternoon = open(args.path_forcing+'/'+format(current_station.name,'05d')+'_afternoon.yaml')
             fn_ini = path_exp+'/'+format(current_station.name,'05d')+'_'+\
                      str(int(run_station_chunk))+'_ini.yaml'
             fn_mod = path_exp+'/'+format(current_station.name,'05d')+'_'+\
@@ -239,6 +258,8 @@ for expname in experiments:
                                                         mode='ini')
                         runtime = int((c4gli_afternoon.pars.datetime_daylight - 
                                              c4gli_morning.pars.datetime_daylight).total_seconds())
+                    elif args.runtime == 'from_input':
+                        runtime = c4gli_morning.pars.runtime
                     else:
                         runtime = int(args.runtime)
 
@@ -287,7 +308,8 @@ for expname in experiments:
             file_ini.close()
             file_mod.close()
             file_morning.close()
-            file_afternoon.close()
+            if args.runtime == 'from_afternoon_profile':
+                file_afternoon.close()
     
             if onerun:
                 records_ini = get_records(pd.DataFrame([current_station]),\
