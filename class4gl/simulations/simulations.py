@@ -82,7 +82,7 @@ print("getting a list of stations")
 # ========================
 
 # these are all the stations that are found in the input dataset
-all_stations = stations(args.path_forcing,suffix=args.subset_forcing,refetch_stations=True)
+all_stations = stations(args.path_forcing,suffix=args.subset_forcing,refetch_stations=False)
 
 # ====================================
 print('defining all_stations_select')

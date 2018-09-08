@@ -108,7 +108,7 @@ globaldata.load_datasets(recalc=0)
 # ===============================
 print("getting a list of stations")
 # ===============================
-all_stations = stations(args.path_forcing,suffix=args.subset_forcing,refetch_stations=True)
+all_stations = stations(args.path_forcing,suffix=args.subset_forcing,refetch_stations=False)
 
 
 # # ===============================
