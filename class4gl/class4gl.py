@@ -41,8 +41,16 @@ spam_loader = importlib.find_loader('Pysolar')
 found = spam_loader is not None
 if found:
     import Pysolar
+    import Pysolar.util as Pysolarutil
+    GetSunriseSunset = Pysolarutil.GetSunriseSunset
+    GetAzimuth = Pysolarutil.GetAzimuth
+    GetAltitude = Pysolarutil.GetAltitude
 else:
     import pysolar as Pysolar
+    Pysolarutil = Pysolar.util
+    GetSunriseSunset = Pysolarutil.get_sunrise_sunset
+    GetAzimuth = Pysolar.solar.get_azimuth
+    GetAltitude = Pysolar.solar.get_altitude
 import yaml
 import logging
 import warnings
@@ -621,9 +629,6 @@ class class4gl_input(object):
         if np.isnan(dpars['h']):
             dpars['Ps'] = np.nan
 
-
-
-
         if ~np.isnan(dpars['h']):
             # determine mixed-layer properties (moisture, potential temperature...) from profile
             
@@ -652,9 +657,6 @@ class class4gl_input(object):
             dpars['u'] = np.nan
             dpars['v'] = np.nan
             
-
-
-
         # First 3 data points of the mixed-layer fit. We create a empty head
         # first
         air_ap_head = air_balloon[0:0] #pd.DataFrame(columns = air_balloon.columns)
@@ -761,22 +763,25 @@ class class4gl_input(object):
                             dt.timedelta(minutes=int(dpars['longitude']/360.*24.*60.))
         dpars['doy'] = dpars['datetime'].timetuple().tm_yday
         dpars['SolarAltitude'] = \
-                                Pysolar.GetAltitude(\
+                                GetAltitude(\
                                     dpars['latitude'],\
                                     dpars['longitude'],\
                                     dpars['datetime']\
                                 )
-        dpars['SolarAzimuth'] =  Pysolar.GetAzimuth(\
+        dpars['SolarAzimuth'] =  GetAzimuth(\
                                     dpars['latitude'],\
                                     dpars['longitude'],\
                                     dpars['datetime']\
                                 )
         dpars['lSunrise'], dpars['lSunset'] \
-        =  Pysolar.util.GetSunriseSunset(dpars['latitude'],
+        =  GetSunriseSunset(dpars['latitude'],
                                          0.,
-                                         dpars['ldatetime'],0.)
-        dpars['lSunrise'] = pytz.utc.localize(dpars['lSunrise'])
-        dpars['lSunset'] = pytz.utc.localize(dpars['lSunset'])
+                                         dpars['ldatetime'])
+        #print(dpars['lSunrise'])
+        dpars['lSunrise'] = dpars['lSunrise']
+        dpars['lSunset'] = dpars['lSunset']
+        # dpars['lSunrise'] = pytz.utc.localize(dpars['lSunrise'])
+        # dpars['lSunset'] = pytz.utc.localize(dpars['lSunset'])
         # This is the nearest datetime when the sun is up (for class)
         dpars['ldatetime_daylight'] = \
                                 np.min(\

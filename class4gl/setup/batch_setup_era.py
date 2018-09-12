@@ -1,5 +1,4 @@
 
-
 # -*- coding: utf-8 -*-
 
 import logging
@@ -26,6 +25,8 @@ import argparse
 #if __name__ == '__main__':
 parser = argparse.ArgumentParser()
 #parser.add_argument('--timestamp')
+parser.add_argument('--exec') # chunk simulation script
+parser.add_argument('--pbs_string',default='')#,default='/user/data/gent/gvo000/gvo00090/D2D/data/SOUNDINGS/')
 parser.add_argument('--path_forcing')#,default='/user/data/gent/gvo000/gvo00090/D2D/data/SOUNDINGS/')
 parser.add_argument('--path_experiments')#,default='/user/data/gent/gvo000/gvo00090/D2D/data/C4GL/')
 parser.add_argument('--first_YYYYMMDD',default="19810101")
@@ -157,108 +158,31 @@ DTS = [dtfirst + dt.timedelta(days=iday) for iday in \
                   dtfirst).total_seconds()/3600./24.))]
 
 if args.split_by != -1:
-    totalchunks = len(all_stations_select)*len(DTS)/int(args.split_by)
+    totalchunks = len(all_stations_select)*math.ceil(len(DTS)/int(args.split_by))
 else:
     totalchunks = len(all_stations_select)
 
+print(totalchunks)
 
-if args.global_chunk_number is not None:
-    run_station_chunk = np.mod(int(args.global_chunk_number),len(DTS)/int(args.split_by))
-else:
-    if args.station_chunk_number is not None:
-        run_station_chunk = int(args.station_chunk_number)
-    else:
-        if args.split_by != -1:
-            raise ValueError("Chunks are defined by --split-by, but I don't know which chunk to run. Please provide --global_chunk_number or --station_chunk_number, or leave out --split-by.")
-        run_station_chunk = 0
-        print("stations that are processed.",list(run_stations.index))
+#if args.cleanup_experiments:
+#    os.system("rm -R "+args.path_experiments+'/')
 
-DTS_chunk = DTS[(int(run_station_chunk)*int(args.split_by)):\
-                 (int(run_station_chunk)+1)*int(args.split_by)]
+# C4GLJOB_timestamp="+dt.datetime.now().isoformat()+",
+command = 'qsub '+args.pbs_string+' '+args.c4gl_path_lib+'/setup/batch_setup_era.pbs -t 0-'+\
+            str(totalchunks-1)+" -v "
+# propagate arguments towards the job script
+lfirst = True
+for argkey in args.__dict__.keys():
+    if ((argkey not in ['experiments','pbs_string','cleanup_experiments']) and \
+        # default values are specified in the simulation script, so
+        # excluded here
+        (args.__dict__[argkey] is not None)
+       ):
+        if lfirst:
+            command +=' C4GLJOB_'+argkey+'='+args.__dict__[argkey]
+        else:
+            command +=',C4GLJOB_'+argkey+'='+args.__dict__[argkey]
+        lfirst=False
 
-# for the current implementation we only consider one station. Let's upgrade it
-# later for more stations.
-run_station_chunk = int(args.global_chunk_number)
-
-# ===============================
-print('start looping over chunk')
-# ===============================
-
-os.system('mkdir -p '+args.path_experiments)
-
-
-fn_ini = args.path_experiments+'/'+format(run_station.name,'05d')+'_'+\
-        str(int(run_station_chunk))+'_'+args.subset_experiments+'.yaml'
-file_ini = open(fn_ini,'w');print('Writing to: ',fn_ini)
-
-for iDT,DT in enumerate(DTS_chunk):
-    print(iDT,DT)
-    c4gli = class4gl_input(debug_level=logging.INFO)
-    c4gli.update(source='STNID'+format(STNID,'05d'),\
-                 pars=dict(latitude = float(run_station.latitude), \
-                           longitude = float(run_station.longitude),\
-                           STNID=int(STNID)))
-
-    lSunrise, lSunset = GetSunriseSunset(c4gli.pars.latitude,0.,DT)
-
-    #start simulation at sunrise and stop at one hour before sunset
-    runtime = (lSunset - lSunrise).total_seconds() - 3600.*1.
-    ldatetime = lSunrise
-    datetime = ldatetime - dt.timedelta(hours=c4gli.pars.longitude/360.*24.)
-    datetime_daylight = datetime
-    c4gli.update(source='timeseries',   \
-                 pars=dict(\
-                           lSunrise = lSunrise, \
-                           lSunset = lSunset, \
-                           datetime = datetime, \
-                           ldatetime = ldatetime, \
-                           ldatetime_daylight = ldatetime, \
-                           datetime_daylight = datetime, \
-                           doy = datetime.timetuple().tm_yday,\
-                           runtime = runtime,\
-                          ))
-
-    c4gli.get_global_input(globaldata)
-
-    c4gli.update(source='era-interim',pars={'Ps' : c4gli.pars.sp})
-
-    cp         = 1005.                 # specific heat of dry air [J kg-1 K-1]
-    Rd         = 287.                  # gas constant for dry air [J kg-1 K-1]
-    Rv         = 461.5                 # gas constant for moist air [J kg-1 K-1]
-    R = (Rd*(1.-c4gli.air_ac.q) + Rv*c4gli.air_ac.q)
-    rho = c4gli.air_ac.p/R/c4gli.air_ac.t
-    dz = c4gli.air_ac.delpdgrav/rho
-    z = [dz.iloc[-1]/2.]
-    for idz in list(reversed(range(0,len(dz)-1,1))):
-        z.append(z[-1]+ (dz[idz+1]+dz[idz])/2.)
-    z = list(reversed(z))
-
-    theta = c4gli.air_ac.t * \
-               (c4gli.pars.sp/(c4gli.air_ac.p))**(R/cp)
-    thetav   = theta*(1. + 0.61 * c4gli.air_ac.q)
-
-    
-    c4gli.update(source='era-interim',air_ac=pd.DataFrame({'z':list(z),
-                                                           'theta':list(theta),
-                                                           'thetav':list(thetav),
-                                                          }))
-    air_ap_input = c4gli.air_ac[::-1].reset_index().drop('index',axis=1)
-    air_ap_mode = 'b'
-    air_ap_input_source = c4gli.query_source('air_ac:theta')
-
-
-    c4gli.mixed_layer_fit(air_ap=air_ap_input,
-                         source=air_ap_input_source,
-                         mode=air_ap_mode)
-
-
-    c4gli.dump(file_ini)
-
-file_ini.close()
-all_records_morning = get_records(pd.DataFrame([run_station]),\
-                              args.path_experiments,\
-                              getchunk = int(run_station_chunk),\
-                              subset=args.subset_experiments,
-                              refetch_records=True,
-                              )
-
+print('Submitting array job: '+command)
+os.system(command)
