@@ -88,12 +88,10 @@ print("Initializing global data")
 # ===============================
 globaldata = data_global()
 globaldata.sources = {**globaldata.sources,**{
-    
-        "ERAINT:t"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/t_6hourly/t_19830609-19830808_6hourly.nc",
-        "ERAINT:q"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/q_6hourly/q_19830609-19830808_6hourly.nc",
-        "ERAINT:u"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/u_6hourly/u_19830609-19830808_6hourly.nc",
-        "ERAINT:v"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/v_6hourly/v_19830609-19830808_6hourly.nc",
-    
+        "ERAINT:t"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/t_6hourly/t_????????-????????_6hourly.nc",
+        "ERAINT:q"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/q_6hourly/q_????????-????????_6hourly.nc",
+        "ERAINT:u"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/u_6hourly/u_????????-????????_6hourly.nc",
+        "ERAINT:v"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/v_6hourly/v_????????-????????_6hourly.nc",
 #        "ERAINT:q"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/q_6hourly/q_19830209-19830410_6hourly.nc",
  #       "ERAINT:q"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/q_6hourly/q*_6hourly.nc",
  #       "ERAINT:u"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/u_6hourly/u*_6hourly.nc",

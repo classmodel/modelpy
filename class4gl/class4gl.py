@@ -43,8 +43,8 @@ if found:
     import Pysolar
     import Pysolar.util as Pysolarutil
     GetSunriseSunset = Pysolarutil.GetSunriseSunset
-    GetAzimuth = Pysolarutil.GetAzimuth
-    GetAltitude = Pysolarutil.GetAltitude
+    GetAzimuth = Pysolarutil.solar.GetAzimuth
+    GetAltitude = Pysolarutil.solar.GetAltitude
 else:
     import pysolar as Pysolar
     Pysolarutil = Pysolar.util

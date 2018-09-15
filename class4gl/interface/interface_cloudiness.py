@@ -36,7 +36,6 @@ from scipy.stats import kde
 from scipy.stats import pearsonr                                                
 from taylorDiagram import TaylorDiagram
 from matplotlib import ticker
-import xarray as xr
 # import importlib
 # importlib.reload(mpl); importlib.reload(plt); importlib.reload(sns)
 
@@ -124,146 +123,31 @@ for key in args.experiments.strip(' ').split(' '):
     
     c4gldata[key] = c4gl_interface_soundings( \
                       args.path_experiments+'/'+key+'/',\
-                      args.path_forcing+'/',\
+                      args.path_forcing,\
                       globaldata,\
                       refetch_records=False
                     )
-'''
-key = args.experiments.strip(' ').split(' ')[0]
-xrkoeppen = xr.open_dataset('/user/data/gent/gvo000/gvo00090/EXT/data/KOEPPEN/Koeppen-Geiger.nc')
-koeppenlookuptable = pd.DataFrame()
-koeppenlookuptable['KGCID'] = pd.Series(xrkoeppen['KGCID'])
-
-
-kgccolors = {
-    'Dfa':['navy','white'],
-    'Cfb':['green','white']       ,
-    'BSk':['tan','black']      ,
-    'Csb':['lightgreen','black'] ,     
-    'Cfa':['darkgreen','white']  ,    
-    'BWh':['orange','black']      ,
-    'Aw' :['pink','black'],
-    'Dwc':['rebeccapurple','white'] ,    
-    'Dfb':['darkviolet','white']    , 
-}
-kgcnames = {
-    'Dfa':'snow \n fully humid \n hot summer',
-    'Cfb':'green'       ,
-    'BSk':'4'      ,
-    'Csb':'5'      ,
-    'Cfa':'darkgreen' ,     
-    'BWh':'6'      ,
-    'Aw' :'7'     ,
-    'Dwc':'8'     ,
-    'Dfb':'9'     ,
-    #'Dfa':'',
-}
-for KGCID in list(pd.Series(xrkoeppen['KGCID'])):
-    if KGCID not in kgcnames.keys():
-        kgcnames[KGCID] = KGCID
-    if KGCID not in kgccolors.keys():
-        kgccolors[KGCID] = ['k','k']
-
-
-koeppenlookuptable['color'] = ""
-koeppenlookuptable['textcolor'] = ""
-koeppenlookuptable['name'] = ""
-for ikoeppen,koeppen in koeppenlookuptable.iterrows():
-    print(ikoeppen)
-    print(koeppen.KGCID)
-    print(kgccolors[koeppen.KGCID])
-    koeppenlookuptable['color'].loc[ikoeppen] = kgccolors[koeppen.KGCID][0]
-    koeppenlookuptable['textcolor'].loc[ikoeppen] = kgccolors[koeppen.KGCID][1]
-    koeppenlookuptable['name'].loc[ikoeppen] = kgcnames[koeppen.KGCID]
-
-
-
-c4gldata[key].frames['stats']['records_all_stations_ini']['KGCname'] =  \
-    c4gldata[key].frames['stats']['records_all_stations_ini']['KGC'].map(koeppenlookuptable['KGCID'])
-
-koeppenlookuptable['amount'] = ""
-for ikoeppen,koeppen in koeppenlookuptable.iterrows():
-    print(ikoeppen,':',koeppen)
-    kgc_select = (c4gldata[key].frames['stats']['records_all_stations_ini']['KGCname'] == koeppen['KGCID'])
-    print(np.sum(kgc_select))
-    koeppenlookuptable.iloc[ikoeppen]['amount'] = np.sum(kgc_select)
-
-koeppenlookuptable = koeppenlookuptable.sort_values('amount',ascending=False)
-koeppenlookuptable = koeppenlookuptable[:9]
-koeppenlookuptable = koeppenlookuptable.sort_index()
-
-
+    '''
 if args.make_figures:
     # the lines below activate TaylorPlots but it is disabled for now
-    fig = plt.figure(figsize=(7,5))   #width,height
+    fig = plt.figure(figsize=(10,7))   #width,height
     i = 1                                                                           
     axes = {}         
     axes_taylor = {}         
     
-    colors = ['r','g','b','m','y','purple','orange','sienna','navy']
+    colors = ['r','g','b','m']
     symbols = ['*','x','+']
     dias = {}
-
-
-
-    i = 1
+    
     for varkey in ['h','theta','q']:                                                    
-        dias[varkey] =  TaylorDiagram(1., srange=[0.0,1.7],fig=fig, rect=(230+i+3),label='Reference')
         axes[varkey] = fig.add_subplot(2,3,i)                                       
-
-        for ikey,key in enumerate(args.experiments.strip(' ').split(' ')[:1]):
-            icolor = 0
-            for ikoeppen,koeppen in koeppenlookuptable.iterrows():
-                print(ikoeppen,':',koeppen)
-                kgc_select = (c4gldata[key].frames['stats']['records_all_stations_ini']['KGCname'] == koeppen['KGCID'])
-                
-                koeppen_mod = c4gldata[key].frames['stats']['records_all_stations_mod_stats']['d'+varkey+'dt'][kgc_select]
-                koeppen_obs = c4gldata[key].frames['stats']['records_all_stations_obs_afternoon_stats']['d'+varkey+'dt'][kgc_select]
-    
-                #axes[varkey].scatter(koeppen_obs,koeppen_mod,marker=symbols[ikoeppen],color=colors[ikey])
-                         #  label=key+", "+\
-                         #                    'R = '+str(round(PR[0],3))+', '+\
-                         #                    'RMSE = '+str(round(RMSE,5))+', '+\
-                         #                    'BIAS = '+str(round(BIAS,5)),s=1.,color=colors[ikey])
-    
-    
-    
-            # # pl.scatter(obs,mod,label=key+", "+\
-            # #                              'R = '+str(round(PR[0],3))+', '+\
-            # #                              'RMSE = '+str(round(RMSE,5))+', '+\
-            # #                              'BIAS = '+str(round(BIAS,5)),s=1.,color=colors[ikey])
-                
-                print('hellobla')
-                print(koeppen.KGCID)
-                print(koeppen.color)
-                dias[varkey].add_sample(koeppen_mod.std()/koeppen_obs.std(),
-                               pearsonr(koeppen_mod,koeppen_obs)[0],
-                               annotate=koeppen.KGCID, color=koeppen.textcolor,weight='bold',fontsize=5.,\
-                               bbox={'edgecolor':'black','boxstyle':'circle','fc':koeppen.color,'alpha':0.7}
-                               )
-                icolor += 1
-    
-            latex = {}
-            latex['dthetadt'] =  r'$d \theta / dt $'
-            latex['dqdt'] =      r'$d q / dt $'
-            latex['dhdt'] =      r'$d h / dt $'
-    
-            axes[varkey].set_xlabel('observations')     
-            axes[varkey].set_title(latex['d'+varkey+'dt']+' ['+units['d'+varkey+'dt']+']')                                     
-        if i==1:                                    
-            axes[varkey].set_ylabel('model')                                            
-        abline(1,0,axis=axes[varkey])
-        i +=1
-
-    
-    i = 0
-    for varkey in ['h','theta','q']:                                                    
         #axes_taylor[varkey] = fig.add_subplot(2,3,i+3)                                       
     
         #print(obs.std())
-        if i == 1:
+        dias[varkey] =  TaylorDiagram(1., srange=[0.0,1.7],fig=fig, rect=(230+i+3),label='Reference')
+        if i == 0:
             dias[varkey]._ax.axis["left"].label.set_text(\
-                "standard deviation (model) / standard deviation (observations)")
+                "Standard deviation (model) / Standard deviation (observations)")
             # dias[varkey]._ax.axis["left"].axis.set_ticks(np.arange(0.,2.,0.25))
             # dias[varkey]._ax.axis["left"].axis.set_major_locator(np.arange(0.,2.,0.25))
         #dias[varkey]._ax.axis["left"].axis.set_ticks(np.arange(0.,2.,0.25))
@@ -280,8 +164,7 @@ if args.make_figures:
         #dia.ax.plot(x99,y99,color='k')
     
         
-        #for ikey,key in enumerate(args.experiments.strip(' ').split(' ')):
-        for ikey,key in enumerate(args.experiments.strip(' ').split(' ')[:1]):
+        for ikey,key in enumerate(args.experiments.strip(' ').split(' ')):
             # cc = c4gldata[key].frames['stats']['records_all_stations_ini']['cc']
             # clearsky = (cc < 0.05)
             # mod = c4gldata[key].frames['stats']['records_all_stations_mod_stats'].loc[clearsky]['d'+varkey+'dt']
@@ -309,10 +192,11 @@ if args.make_figures:
             
             # print(STD)
             # print(PR)
-            dias[varkey].add_sample(STD/STD_OBS, PR,\
-                               annotate='All', zorder=100,color='black',weight='bold',fontsize=5.,\
-                                    bbox={'edgecolor':'black','boxstyle':'circle','fc':'lightgrey','alpha':0.6}\
-                            )
+            dias[varkey].add_sample(STD/STD_OBS, PR,
+                           marker='o', ms=5, ls='',
+                           #mfc='k', mec='k', # B&W
+                           mfc=colors[ikey], mec=colors[ikey], # Colors
+                           label=keylabels[ikey])
     
         # put ticker position, see
         # https://matplotlib.org/examples/ticks_and_spines/tick-locators.html 
@@ -321,7 +205,6 @@ if args.make_figures:
         # dia.ax.axis['left'].
     
         i += 1
-
     
     i = 0
     for varkey in ['h','theta','q']:                                                    
@@ -371,39 +254,20 @@ if args.make_figures:
         latex['dhdt'] =      r'$d h / dt $'
     
         axes[varkey].set_xlabel('observations')     
-
-        if varkey == 'q':
-            axes[varkey].set_title(latex['d'+varkey+'dt']+' ['+r'$10^{-3} \times $'+units['d'+varkey+'dt']+']')        
-        else:
-            axes[varkey].set_title(latex['d'+varkey+'dt']+' ['+units['d'+varkey+'dt']+']')     
-       #  c4gldata[key].frames['stats']['records_all_stations_ini']['KGCname']
-
+        axes[varkey].set_title(latex['d'+varkey+'dt']+' ['+units['d'+varkey+'dt']+']')                                     
+    
         PR = pearsonr(mod,obs)[0]
         RMSE = rmse(obs,mod)                                               
         BIAS = np.mean(mod) - np.mean(obs)
         STD = mod.std()
     
-        axes[varkey].scatter(obs,mod, label='All',s=0.1,alpha=0.14,color='k')
-
-
-
-        #axes[varkey].legend(fontsize=5)
-
-        #trans = ax.get_xaxis_transform() # x in data untis, y in axes fraction
-
-        if varkey == 'q':
-            annotate_text = 'PC = '+str(round(PR,3))+'\n'+\
-                           'RMSE = '+str(round(RMSE*1000.,5))+r'$10^{-3} \times $'+ units['d'+varkey+'dt']+'\n'+\
-                           'BIAS = '+str(round(BIAS*1000.,5))+r'$10^{-3} \times $'+units['d'+varkey+'dt'] 
-        else:
-            annotate_text = 'PC = '+str(round(PR,3))+'\n'+\
-                           'RMSE = '+str(round(RMSE,5))+units['d'+varkey+'dt']+'\n'+\
-                           'BIAS = '+str(round(BIAS,5))+units['d'+varkey+'dt'] 
-
-
-        ann = axes[varkey].annotate(annotate_text, xy=(0.05, .95 ), xycoords='axes fraction',fontsize=7,
-       horizontalalignment='left', verticalalignment='top' 
-        )
+        axes[varkey].scatter(obs,mod, label='(only) '+keylabel+", "+\
+                                      'R = '+str(round(PR,3))+', '+\
+                                      'RMSE = '+str(round(RMSE,5))+units['d'+varkey+'dt']+', '+\
+                                      'BIAS = '+str(round(BIAS,5))+units['d'+varkey+'dt'] ,\
+                             s=0.1,alpha=0.14,color='k')
+        axes[varkey].legend(fontsize=5)
+        
 
 
 
@@ -412,37 +276,19 @@ if args.make_figures:
             axes[varkey].set_ylabel('model')                                            
         abline(1,0,axis=axes[varkey])
         i +=1
-
-        #axes[varkey].axis('equal')
-        axes[varkey].set_aspect('equal')
-
-        # To specify the number of ticks on both or any single axes
-        # plt.locator_params(axis='x', nbins=6)
-        #plt.locator_params( nbins=10)
-        axes[varkey].xaxis.set_major_locator(ticker.MaxNLocator(4))
-        axes[varkey].yaxis.set_major_locator(ticker.MaxNLocator(4))
-        # axes[varkey].xaxis.set_major_locator(ticker.MultipleLocator(5))
-        # axes[varkey].yaxis.set_major_locator(ticker.MultipleLocator(5))
-
-        if varkey == 'q':
-            ticks = ticker.FuncFormatter(lambda x, pos:
-                                         '{0:g}'.format(x*1000.))
-            axes[varkey].xaxis.set_major_formatter(ticks)
-            axes[varkey].yaxis.set_major_formatter(ticks)
-
-        #     # axes[varkey].set_xticklabels(labels=ax.get_xticklabels()*1000.)
-        #     # axes[varkey].set_yticklabels(labels=ax.get_yticklabels()*1000.)
     
     
-    # # legend for different forcing simulations (colors)
-    # ax = fig.add_axes([0.05,0.00,0.15,0.15]) #[*left*, *bottom*, *width*,    *height*]
-    # leg = []
-    # for ikey,key in enumerate(args.experiments.strip().split(' ')):
-    #     leg1, = ax.plot([],colors[ikey]+'o' ,markersize=10)
-    #     leg.append(leg1)
-    # ax.axis('off')
-    # #leg1 =
-    # ax.legend(leg,list(args.experiments.strip().split(' ')),loc=2,fontsize=10)
+    
+    # legend for different forcing simulations (colors)
+    ax = fig.add_axes([0.05,0.00,0.15,0.15]) #[*left*, *bottom*, *width*,    *height*]
+    leg = []
+    for ikey,key in enumerate(args.experiments.strip().split(' ')):
+        
+        leg1, = ax.plot([],colors[ikey]+'o' ,markersize=10)
+        leg.append(leg1)
+    ax.axis('off')
+    #leg1 =
+    ax.legend(leg,list(args.experiments.strip().split(' ')),loc=2,fontsize=10)
     
     
     # # legend for different stations (symbols)
@@ -457,13 +303,13 @@ if args.make_figures:
     # # symbol for all stations
     # leg1, = ax.plot([],'ko',markersize=10)
     # leg.append(leg1)
-    7
+    
     
     # ax.axis('off')
     # ax.legend(leg,['HUMPPA','BLLAST','GOAMAZON','All'],loc=2,fontsize=10)
     
     
-    fig.subplots_adjust(top=0.95,bottom=0.09,left=0.08,right=0.94,hspace=0.35,wspace=0.29)
+    fig.subplots_adjust(top=0.95,bottom=0.20,left=0.08,right=0.94,hspace=0.28,wspace=0.29)
     
     
     #pl.legend(leglist,('EMI:WOC','EMI:MED','EMI:BEC'),loc=2,fontsize=16,prop={'family':
@@ -471,7 +317,7 @@ if args.make_figures:
     # fig.savefig(figfn,dpi=200); print("Image file written to:", figfn)
     
     if args.figure_filename is not None:
-        fig.savefig(args.figure_filename,dpi=250); print("Image file written to:",args.figure_filename)
+        fig.savefig(args.figure_filename,dpi=200); print("Image file written to:",args.figure_filename)
     fig.show()  
 
     if bool(args.show_control_parameters):
@@ -523,22 +369,22 @@ if args.make_figures:
         data_all = pd.DataFrame()
 
         tempdatamodstats = pd.DataFrame(c4gldata[key].frames['stats']['records_all_stations_obs_afternoon_stats'].copy())
-        tempdatamodstats["source"] = "soundings"
-        tempdatamodstats["source_index"] = "soundings"
+        tempdatamodstats["source"] = "Soundings"
+        tempdatamodstats["source_index"] = "Soundings"
 
         ini_ref = pd.DataFrame(c4gldata[key].frames['stats']['records_all_stations_ini'].copy())
         tempdataini_this = pd.DataFrame(ini_ref.copy())
 
         tempdatamodstats['dates']= tempdataini_this.ldatetime.dt.date
         tempdatamodstats['STNID']= tempdataini_this.STNID
-        tempdatamodstats['source']= "soundings"
-        tempdatamodstats['source_index']= "soundings"
+        tempdatamodstats['source']= "Soundings"
+        tempdatamodstats['source_index']= "Soundings"
         tempdatamodstats.set_index(['source_index','STNID','dates'],inplace=True)
         #print('hello')
 
         tempdataini = pd.DataFrame(ini_ref)
-        tempdataini["source"] = "soundings"
-        tempdataini["source_index"] = "soundings"
+        tempdataini["source"] = "Soundings"
+        tempdataini["source_index"] = "Soundings"
         tempdataini = tempdataini.set_index(['source_index','STNID','dates'])
         #print('hello2')
 
@@ -550,6 +396,7 @@ if args.make_figures:
 
             
         for ikey,key in enumerate(list(args.experiments.strip().split(' '))):
+            #keylabels=args.experimts.strip().split(' ')
             keylabel = keylabels[ikey]
 
             tempdatamodstats = pd.DataFrame(c4gldata[key].frames['stats']['records_all_stations_mod_stats'].copy())
@@ -589,99 +436,98 @@ if args.make_figures:
         for varkey in ['h','theta','q']:
             varkey_full = 'd'+varkey+'dt ['+units[varkey]+'/h]'
             data_all = data_all.rename(columns={'d'+varkey+'dt':varkey_full})
-            data_all['KGCname'] = data_input['KGCname']
             #print(data_input.shape)
             #print(data_all.shape)
-        # xrkoeppen = xr.open_dataset('/user/data/gent/gvo000/gvo00090/EXT/data/KOEPPEN/Koeppen-Geiger.nc')
-        # lookuptable = pd.Series(xrkoeppen['KGCID'])
-        # data_all['KGCname'] = data_input['KGC'].map(lookuptable)
         #print('hello6')
         #print(data_all.columns)
         #print('hello7')
         for varkey in ['h','theta','q']:
-            #input_keys =['wg','cc']
-            #for input_key in input_keys:
-            varkey_full = 'd'+varkey+'dt ['+units[varkey]+'/h]'
+            input_keys =['cc']
+            for input_key in input_keys:
+                varkey_full = 'd'+varkey+'dt ['+units[varkey]+'/h]'
 
-            #print('hello8')
-            #print(data_input.shape)
-            #print(data_all.shape)
-            #input_key_full = input_key + "["+units[input_key]+"]"
-            #print('hello9')
-            #print(data_input.shape)
-            #print(data_all.shape)
-            qvalmax = data_all[varkey_full].quantile(0.999)
-            qvalmin = data_all[varkey_full].quantile(0.001)
-            select_data = (data_all[varkey_full] >= qvalmin) & (data_all[varkey_full] < qvalmax)
-            #print('hello11')
-            data_all = data_all[select_data]
-            #print('hello12')
-            data_input = data_input[select_data.values]
-            #print('hello13')
-            #print(data_input.shape)
-            #print(data_all.shape)
-            #print('hello10')
-            
+                #print('hello8')
+                #print(data_input.shape)
+                #print(data_all.shape)
+                input_key_full = input_key + "["+units[input_key]+"]"
+                data_all[input_key_full] = pd.cut(x=data_input[input_key].values,bins=8,precision=2)
+                data_input[input_key_full] = pd.cut(x=data_input[input_key].values,bins=8,precision=2,)
+                #print('hello9')
+                #print(data_input.shape)
+                #print(data_all.shape)
+                
+                qvalmax = data_all[varkey_full].quantile(0.999)
+                qvalmin = data_all[varkey_full].quantile(0.001)
+                select_data = (data_all[varkey_full] >= qvalmin) & (data_all[varkey_full] < qvalmax)
+                #print('hello11')
+                data_all = data_all[select_data]
+                #print('hello12')
+                data_input = data_input[select_data.values]
+                #print('hello13')
+                #print(data_input.shape)
+                #print(data_all.shape)
+                #print('hello10')
+                
+                sns.set(style="ticks", palette="pastel")
+                ax = fig.add_subplot(3,len(input_keys),i)
+                #sns.violinplot(x=input_key_full,y=varkey_full,data=data_all,hue='source',linewidth=2.,palette="muted",split=True,inner='quart') #,label=key+", R = "+str(round(PR[0],3)),data=data)       
+                
+                #ax.set_title(input_key_full)
+                sb = sns.boxplot(x=input_key_full, y=varkey_full, hue="source",
+                                 palette=pkmn_type_colors,
+                                # palette=["m", "g",'r','b'],
+                                 linewidth=1.2, data=data_all,sym='')
+                if i ==1:
+                     plt.legend(loc='upper right',fontsize=7.,frameon=True,framealpha=0.7)
+                else:
+                     ax.get_legend().set_visible(False)
+                #     plt.legend('off')
+                if i >= 3:
+                    ax.set_xticklabels(labels=['['+str(i)+','+str(i+1)+'[' for i in list(range(0,7))]+['[7,8]'])
+                    ax.set_xlabel('Cloudiness [okta]')
+                else:
+                    ax.set_xticklabels([])
+                    ax.set_xlabel('')
 
-            sns.set(style="ticks", palette="pastel")
-            ax = fig.add_subplot(3,1,i)
-            #sns.violinplot(x='KGC',y=varkey_full,data=data_all,hue='source',linewidth=2.,palette="muted",split=True,inner='quart') #,label=key+", R = "+str(round(PR[0],3)),data=data)       
-            
-            #ax.set_title(input_key_full)
-            sb = sns.boxplot(x='KGCname', y=varkey_full, hue="source",
-                             palette=pkmn_type_colors,
-                            # palette=["m", "g",'r','b'],
-                             linewidth=1.2, data=data_all,sym='')
-            if i ==1:
-                 plt.legend(loc='upper right',fontsize=7.,frameon=True,framealpha=0.7)
-            else:
-                 ax.get_legend().set_visible(False)
-            #     plt.legend('off')
-            if i >= 3:
-                ax.set_xticklabels(labels=ax.get_xticklabels())
-                ax.set_xlabel('Köppen climate class')
-            else:
-                ax.set_xticklabels([])
-                ax.set_xlabel('')
+                if np.mod(i,len(input_keys)) != 0:
+                    ax.set_yticklabels([])
+                    ax.set_ylabel('')
 
-            # ax.set_yticklabels([])
-            # ax.set_ylabel('')
+                for j,artist in enumerate(ax.artists):
+                    if np.mod(j,len(list(args.experiments.strip().split(' ')))+1) !=0:
+                        # Set the linecolor on the artist to the facecolor, and set the facecolor to None
+                        #print(j,artist)
+                        col = artist.get_facecolor()
+                        #print(j,artist)
+                        artist.set_edgecolor(col)
+                        #print(j,artist)
+                        artist.set_facecolor('None')
+                
+                        # Each box has 6 associated Line2D objects (to make the whiskers, fliers, etc.)
+                        # Loop over them here, and use the same colour as above
+                        
+                        for k in range(j*5,j*5+5):
+                            line = ax.lines[k]
+                            line.set_color(col)
+                            line.set_mfc(col)
+                            line.set_mec(col)
+                
+                # Also fix the legend
+                j = 0
+                for legpatch in ax.get_legend().get_patches():
+                    if j > 0:
 
-            for j,artist in enumerate(ax.artists):
-                if np.mod(j,len(list(args.experiments.strip().split(' ')))+1) !=0:
-                    # Set the linecolor on the artist to the facecolor, and set the facecolor to None
-                    #print(j,artist)
-                    col = artist.get_facecolor()
-                    #print(j,artist)
-                    artist.set_edgecolor(col)
-                    #print(j,artist)
-                    artist.set_facecolor('None')
-            
-                    # Each box has 6 associated Line2D objects (to make the whiskers, fliers, etc.)
-                    # Loop over them here, and use the same colour as above
-                    
-                    for k in range(j*5,j*5+5):
-                        line = ax.lines[k]
-                        line.set_color(col)
-                        line.set_mfc(col)
-                        line.set_mec(col)
-            
-            # Also fix the legend
-            j = 0
-            for legpatch in ax.get_legend().get_patches():
-                if j > 0:
-
-                    col = legpatch.get_facecolor()
-                    legpatch.set_edgecolor(col)
-                    legpatch.set_facecolor('None')
-                j +=1
+                        col = legpatch.get_facecolor()
+                        legpatch.set_edgecolor(col)
+                        legpatch.set_facecolor('None')
+                    j +=1
 
 
 
 
-            #ax.grid()
-            #sns.despine(offset=10, trim=True)
-            i +=1
+                #ax.grid()
+                #sns.despine(offset=10, trim=True)
+                i +=1
         fig.tight_layout()
         fig.subplots_adjust( bottom=0.12,left=0.15,top=0.99,right=0.99,wspace=0.05,hspace=0.05,)
         if args.figure_filename_2 is not None:
