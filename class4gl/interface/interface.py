@@ -205,11 +205,13 @@ if args.make_figures:
     for varkey in ['h','theta','q']:                                                    
         ikey = 0
         key = list(args.experiments.strip().split(' '))[ikey]
-        cc = c4gldata[key].frames['stats']['records_all_stations_ini']['cc']
-        clearsky = (cc < 0.05)
+        # cc = c4gldata[key].frames['stats']['records_all_stations_ini']['cc']
+        # clearsky = (cc < 0.05)
     
-        mod = c4gldata[key].frames['stats']['records_all_stations_mod_stats'].loc[clearsky]['d'+varkey+'dt']
-        obs = c4gldata[key].frames['stats']['records_all_stations_obs_afternoon_stats'].loc[clearsky]['d'+varkey+'dt']
+        # mod = c4gldata[key].frames['stats']['records_all_stations_mod_stats'].loc[clearsky]['d'+varkey+'dt']
+        # obs = c4gldata[key].frames['stats']['records_all_stations_obs_afternoon_stats'].loc[clearsky]['d'+varkey+'dt']
+        mod = c4gldata[key].frames['stats']['records_all_stations_mod_stats']['d'+varkey+'dt']
+        obs = c4gldata[key].frames['stats']['records_all_stations_obs_afternoon_stats']['d'+varkey+'dt']
     
     
         nbins=40       
@@ -433,7 +435,7 @@ if args.make_figures:
         #print(data_all.columns)
         #print('hello7')
         for varkey in ['h','theta','q']:
-            input_keys =['wg','cc']
+            input_keys =['wg','cc','advt']
             for input_key in input_keys:
                 varkey_full = 'd'+varkey+'dt ['+units[varkey]+'/h]'
 

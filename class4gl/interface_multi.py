@@ -130,7 +130,7 @@ class c4gl_interface_soundings(object):
             self.frames['stats']['records_all_stations_ini'].index 
 
         
-        if len(self.frames['stats']['records_all_stations_ini']):
+        if len(self.frames['stats']['records_all_stations_ini']) ==0:
             raise ValueError('no class records found. Aborting')
 
         self.frames['stats']['records_all_stations_ini']['dates'] = \
@@ -1266,8 +1266,8 @@ class c4gl_interface_soundings(object):
                                  +'LT')
 
             #print('r17')
-            print(self.frames['profiles']['record_yaml_mod'].air_ap.z)
-            print(hmax)
+            #print(self.frames['profiles']['record_yaml_mod'].air_ap.z)
+            #print(hmax)
             valid_mod = len(self.frames['profiles']['record_yaml_mod'].air_ap.z)>= 4
             if valid_mod:
 

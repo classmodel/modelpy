@@ -201,7 +201,7 @@ class stations(object):
                                    station_file in stations_list_files]
             stations_list_files_2 = [station_file[len(self.path+'/?????'):] for \
                                    station_file in stations_list_files]
-            print(stations_list_files_1)
+            #print(stations_list_files_1)
             stations_list_files_new = []
             stations_list_files_skip = []
             for istat,stations_file_1 in  enumerate(stations_list_files_1):
