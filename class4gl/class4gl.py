@@ -116,7 +116,7 @@ class class4gl_input(object):
     #    class4gl_input = type('class4gl_input', (model_input,gl_input,gl_dia), dict(c='c'))
     """
 
-    def __init__(self,set_pars_defaults=True,debug_level=None):
+    def __init__(self,set_pars_defaults=True,debug_level=logging.WARNING):
 
         """ set up logger (see: https://docs.python.org/2/howto/logging.html)
         """
@@ -125,26 +125,26 @@ class class4gl_input(object):
         if debug_level is not None:
             self.logger.setLevel(debug_level)
 
-        # # create logger
-        # self.logger = logging.getLogger('class4gl_input')
-        # self.logger.setLevel(debug_level)
+            # # create logger
+            # #self.logger = logging.getLogger('class4gl_input')
+            # #self.logger.setLevel(debug_level)
 
-        # # create console handler and set level to debug
-        # ch = logging.StreamHandler()
-        # ch.setLevel(debug_level)
+            # # create console handler and set level to debug
+            # ch = logging.StreamHandler()
+            # ch.setLevel(debug_level)
 
-        # # create formatter
-        # formatter = logging.Formatter('%(asctime)s - \
-        #                                %(name)s - \
-        #                                %(levelname)s - \
-        #                                %(message)s')
-        # add formatter to ch
-        # ch.setFormatter(formatter)
+            # # create formatter
+            # formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            # # add formatter to ch
+            # ch.setFormatter(formatter)
      
-        # # add ch to logger
-        # self.logger.addHandler(ch)
+            # # add ch to logger
+            # self.logger.addHandler(ch)
+            # # print("TESTTESTSETSTETETS")
+            # # self.logger.warning("testsetsetsttets")
+            # #stop
 
-        # """ end set up logger """
+            # # """ end set up logger """
 
 
 
@@ -1321,6 +1321,7 @@ class class4gl_input(object):
                     # self.logger.info('Expected key '+datakey+\
                     #                  ' is not in parameter input')                        
                     source_ok = False                                           
+                    print(datakey)
                 elif (checkdata[datakey] is None) or \
                      (pd.isnull(checkdata[datakey]) is True):                    
         
@@ -1328,6 +1329,7 @@ class class4gl_input(object):
                     #                  '" is invalid: ('+ \
                     # str(self.__dict__[section].__dict__[datakey])+')')         
                     source_ok = False
+                    self.logger.warning(datakey+' is invalid: '+ str(checkdata[datakey]))
 
         return source_ok
 
@@ -1346,13 +1348,13 @@ class class4gl_input(object):
         # we only allow non-polar stations
         if not (self.pars.lat <= 60.):
             source_globaldata_ok = False
-            self.logger.info('cveg  is invalid: ('+str(self.pars.cveg)+')')
+            self.logger.warning('cveg  is invalid: ('+str(self.pars.cveg)+')')
         
         # check lat and lon
         if (pd.isnull(self.pars.lat)) or (pd.isnull(self.pars.lon)):
             source_globaldata_ok = False
-            self.logger.info('lat  is invalid: ('+str(self.pars.lat)+')')
-            self.logger.info('or lon  is invalid: ('+str(self.pars.lon)+')')
+            self.logger.warning('lat  is invalid: ('+str(self.pars.lat)+')')
+            self.logger.warning('or lon  is invalid: ('+str(self.pars.lon)+')')
         else:
             # we only check the ground parameter data (pars section). The 
             # profile data (air_ap section) are supposed to be valid in any 

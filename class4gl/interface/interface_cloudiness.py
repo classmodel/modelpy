@@ -127,7 +127,8 @@ for key in args.experiments.strip(' ').split(' '):
                       globaldata,\
                       refetch_records=False
                     )
-    '''
+    
+'''
 if args.make_figures:
     # the lines below activate TaylorPlots but it is disabled for now
     fig = plt.figure(figsize=(10,7))   #width,height
@@ -347,7 +348,7 @@ if args.make_figures:
 
         sns.set_style('whitegrid')
         #sns.set()
-        fig = pl.figure(figsize=(7,5))
+        fig = pl.figure(figsize=(11,7))
         i = 1
         axes = {}
         data_all = pd.DataFrame()
@@ -493,6 +494,17 @@ if args.make_figures:
                     ax.set_yticklabels([])
                     ax.set_ylabel('')
 
+                if varkey == 'q':
+                    ticks = ticker.FuncFormatter(lambda x, pos:
+                                                 '{0:g}'.format(x*1000.))
+                    #ax.xaxis.set_major_formatter(ticks)
+                    ax.yaxis.set_major_formatter(ticks)
+
+                    ax.set_ylabel(latex['d'+varkey+'dt']+' ['+r'$10^{-3} \times $'+units['d'+varkey+'dt']+']')        
+                else:
+                    ax.set_ylabel(latex['d'+varkey+'dt']+' ['+units['d'+varkey+'dt']+']')        
+
+
                 for j,artist in enumerate(ax.artists):
                     if np.mod(j,len(list(args.experiments.strip().split(' ')))+1) !=0:
                         # Set the linecolor on the artist to the facecolor, and set the facecolor to None
@@ -531,7 +543,7 @@ if args.make_figures:
         fig.tight_layout()
         fig.subplots_adjust( bottom=0.12,left=0.15,top=0.99,right=0.99,wspace=0.05,hspace=0.05,)
         if args.figure_filename_2 is not None:
-            fig.savefig(args.figure_filename_2,dpi=250); print("Image file written to:", args.figure_filename_2)
+            fig.savefig(args.figure_filename_2,dpi=200); print("Image file written to:", args.figure_filename_2)
         fig.show()
 
 

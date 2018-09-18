@@ -376,16 +376,23 @@ class model:
                                  layer height needs to be equal to the second \
                                  and third \
                                  level of the vertical profile input!")
-            # initialize q from its profile when available
-            p_old = self.Ps
-            p_new = self.air_ap.p[indexh[0][0]]
-            
-            if ((p_old is not None) & (p_old != p_new)):
-                print("Warning: Ps input was provided ("+str(p_old)+\
-                    "Pa), but it is now overwritten by the first level (index 0) of p_pro which is different ("\
-                    +str(p_new)+"Pa).")
-                                    
-            self.Ps = p_new
+
+            # # initialize q from its profile when available
+            # p_old = self.Ps
+            # p_new = self.air_ap.p[indexh[0][0]]
+            # print(indexh)
+            # #stop
+            # 
+            # if ((p_old is not None) & (p_old != p_new)):
+            #     print("Warning: Ps input was provided ("+str(p_old)+\
+            #         "Pa), but it is now overwritten by the first level (index 0) of p_pro which is different ("\
+            #         +str(p_new)+"Pa).")
+            #                         
+            # self.Ps = p_new
+
+
+
+
             # these variables/namings are more convenient to work with in the code
             # we will update the original variables afterwards
             #self.air_ap['q'] = self.air_ap.QABS/1000.
@@ -1534,7 +1541,11 @@ class model:
         f3 = 1. / np.exp(- self.gD * (self.esat - self.e) / 100.)
         f4 = 1./ (1. - 0.0016 * (298.0-self.theta)**2.)
   
+        #if np.isnan(self.LAI):
+
         self.rs = self.rsmin / self.LAI * f1 * f2 * f3 * f4
+        # print(self.rs,self.LAI,f1,f2,f3,f4)
+        # stop
 
     def factorial(self,k):
         factorial = 1
@@ -1641,8 +1652,8 @@ class model:
           self.ra = (self.Cs * ueff)**-1.
         else:
           self.ra = ueff / max(1.e-3, self.ustar)**2.
+        # print(self.ra,self.Cs,ueff)
 
-        #print('ra',self.ra,self.ustar,ueff)
 
         # first calculate essential thermodynamic variables
         self.esat    = esat(self.theta)
@@ -1677,9 +1688,10 @@ class model:
             / (self.rho * self.cp / self.ra + self.cveg * (1. - self.cliq) * self.rho * self.Lv / (self.ra + self.rs) * self.dqsatdT \
             + (1. - self.cveg) * self.rho * self.Lv / (self.ra + self.rssoil) * self.dqsatdT + self.cveg * self.cliq * self.rho * self.Lv / self.ra * self.dqsatdT + self.Lambda)
 
-        #print('Ts',self.Ts,self.Q,self.rho,self.cp,self.ra,self.theta)
-        #print('Ts',self.cveg, self.cliq,self.Lv,self.Lambda,self.dqsatdT)
-        #print('Ts',self.rs)
+        # print('Ts',self.Ts,self.Q,self.rho,self.cp,self.ra,self.theta)
+        # print('Ts',self.cveg, self.cliq,self.Lv,self.Lambda,self.dqsatdT)
+        # print('Ts',self.rs)
+        #print(self.air_ap.p)
 
         esatsurf      = esat(self.Ts)
         self.qsatsurf = qsat(self.Ts, self.Ps)
@@ -1692,7 +1704,11 @@ class model:
   
         self.LE     = self.LEsoil + self.LEveg + self.LEliq
         self.H      = self.rho * self.cp / self.ra * (self.Ts - self.theta)
-        #print('H',self.ra,self.Ts,self.theta)
+
+        # print('ra',self.ra,self.ustar,ueff)
+        # print(self.Cs)
+        # print('H',self.ra,self.Ts,self.theta)
+
         self.G      = self.Lambda * (self.Ts - self.Tsoil)
         self.LEpot  = (self.dqsatdT * (self.Q - self.G) + self.rho * self.cp / self.ra * (self.qsat - self.q)) / (self.dqsatdT + self.cp / self.Lv)
         self.LEref  = (self.dqsatdT * (self.Q - self.G) + self.rho * self.cp / self.ra * (self.qsat - self.q)) / (self.dqsatdT + self.cp / self.Lv * (1. + self.rsmin / self.LAI / self.ra))

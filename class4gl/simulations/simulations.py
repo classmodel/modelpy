@@ -272,8 +272,14 @@ for expname in experiments:
 
                     if args.error_handling == 'dump_always':
                         try:
-                            c4gl.run()
-                            print('run succesfull')
+                            if c4gli_morning.check_source_globaldata():
+                            
+
+                                c4gl.run()
+                                print('run succesfull')
+                            else:
+                                print('global data not ok')
+                                raise ValueError('global data not ok')
                         except:
                             print('run not succesfull')
                         onerun = True
@@ -289,9 +295,13 @@ for expname in experiments:
                     # in this case, only the file will dumped if the runs were
                     # successful
                     elif args.error_handling == 'dump_on_success':
-                        try:
-                            c4gl.run()
-                            print('run succesfull')
+                       try:
+                            if c4gli_morning.check_source_globaldata():
+                                c4gl.run()
+                                print('run succesfull')
+                            else:
+                                print('global data not ok')
+                                raise ValueError('global data not ok')
                             c4gli_morning.dump(file_ini)
                             
                             
@@ -300,8 +310,8 @@ for expname in experiments:
                                       #timeseries_only=timeseries_only,\
                                      )
                             onerun = True
-                        except:
-                            print('run not succesfull')
+                       except:
+                           print('run not succesfull')
                     isim += 1
 
 

@@ -1,4 +1,4 @@
-'''
+
 import numpy as np
 
 import pandas as pd
@@ -39,7 +39,6 @@ from matplotlib import ticker
 import xarray as xr
 # import importlib
 # importlib.reload(mpl); importlib.reload(plt); importlib.reload(sns)
-
 
 
 if args.experiments_labels is None:
@@ -128,7 +127,8 @@ for key in args.experiments.strip(' ').split(' '):
                       globaldata,\
                       refetch_records=False
                     )
-'''
+
+
 key = args.experiments.strip(' ').split(' ')[0]
 xrkoeppen = xr.open_dataset('/user/data/gent/gvo000/gvo00090/EXT/data/KOEPPEN/Koeppen-Geiger.nc')
 koeppenlookuptable = pd.DataFrame()
@@ -195,7 +195,7 @@ koeppenlookuptable = koeppenlookuptable.sort_index()
 
 if args.make_figures:
     # the lines below activate TaylorPlots but it is disabled for now
-    fig = plt.figure(figsize=(7,5))   #width,height
+    fig = plt.figure(figsize=(11,7))   #width,height
     i = 1                                                                           
     axes = {}         
     axes_taylor = {}         
@@ -401,10 +401,9 @@ if args.make_figures:
                            'BIAS = '+str(round(BIAS,5))+units['d'+varkey+'dt'] 
 
 
-        ann = axes[varkey].annotate(annotate_text, xy=(0.05, .95 ), xycoords='axes fraction',fontsize=7,
+        ann = axes[varkey].annotate(annotate_text, xy=(0.05, .95 ), xycoords='axes fraction',fontsize=8,
        horizontalalignment='left', verticalalignment='top' 
         )
-
 
 
         axes[varkey].set_xlabel('observations')     
@@ -471,7 +470,7 @@ if args.make_figures:
     # fig.savefig(figfn,dpi=200); print("Image file written to:", figfn)
     
     if args.figure_filename is not None:
-        fig.savefig(args.figure_filename,dpi=250); print("Image file written to:",args.figure_filename)
+        fig.savefig(args.figure_filename,dpi=200); print("Image file written to:",args.figure_filename)
     fig.show()  
 
     if bool(args.show_control_parameters):
@@ -501,7 +500,7 @@ if args.make_figures:
 
         sns.set_style('whitegrid')
         #sns.set()
-        fig = pl.figure(figsize=(7,5))
+        fig = pl.figure(figsize=(11,7))
         i = 1
         axes = {}
         data_all = pd.DataFrame()
@@ -617,6 +616,9 @@ if args.make_figures:
             data_all = data_all[select_data]
             #print('hello12')
             data_input = data_input[select_data.values]
+
+            data_input = data_input[data_all.KGCname.isin(list(koeppenlookuptable.KGCID))]
+            data_all = data_all[data_all.KGCname.isin(list(koeppenlookuptable.KGCID))]
             #print('hello13')
             #print(data_input.shape)
             #print(data_all.shape)
@@ -638,7 +640,24 @@ if args.make_figures:
                  ax.get_legend().set_visible(False)
             #     plt.legend('off')
             if i >= 3:
-                ax.set_xticklabels(labels=ax.get_xticklabels())
+                idx = 0
+                for ikoeppen,koeppen in koeppenlookuptable.iterrows():
+
+                    ax.annotate(koeppen.KGCID,
+                                xy=((idx+.5)/len(koeppenlookuptable),-0.00),
+                                color=koeppen.textcolor, 
+                                xycoords='axes fraction',
+                                weight='bold',
+                                fontsize=8.,
+                                horizontalalignment='center',
+                                verticalalignment='center' ,
+                                bbox={'edgecolor':'black',
+                                      'boxstyle':'circle',
+                                      'fc':koeppen.color,
+                                      'alpha':1.0}
+                               )
+                    idx+=1
+                ax.set_xticklabels([])#labels=ax.get_xticklabels())
                 ax.set_xlabel('Köppen climate class')
             else:
                 ax.set_xticklabels([])
@@ -646,6 +665,18 @@ if args.make_figures:
 
             # ax.set_yticklabels([])
             # ax.set_ylabel('')
+            if varkey == 'q':
+                ticks = ticker.FuncFormatter(lambda x, pos:
+                                             '{0:g}'.format(x*1000.))
+                #ax.xaxis.set_major_formatter(ticks)
+                ax.yaxis.set_major_formatter(ticks)
+
+                ax.set_ylabel(latex['d'+varkey+'dt']+' ['+r'$10^{-3} \times $'+units['d'+varkey+'dt']+']')        
+            else:
+                ax.set_ylabel(latex['d'+varkey+'dt']+' ['+units['d'+varkey+'dt']+']')        
+
+
+
 
             for j,artist in enumerate(ax.artists):
                 if np.mod(j,len(list(args.experiments.strip().split(' ')))+1) !=0:
@@ -679,13 +710,14 @@ if args.make_figures:
 
 
 
+
             #ax.grid()
             #sns.despine(offset=10, trim=True)
             i +=1
         fig.tight_layout()
         fig.subplots_adjust( bottom=0.12,left=0.15,top=0.99,right=0.99,wspace=0.05,hspace=0.05,)
         if args.figure_filename_2 is not None:
-            fig.savefig(args.figure_filename_2,dpi=250); print("Image file written to:", args.figure_filename_2)
+            fig.savefig(args.figure_filename_2,dpi=200); print("Image file written to:", args.figure_filename_2)
         fig.show()
 
 

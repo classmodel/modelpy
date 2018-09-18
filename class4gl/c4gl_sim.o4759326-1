@@ -1,0 +1,231 @@
+C4GLJOB_c4gl_path_lib
+C4GLJOB_exec
+C4GLJOB_experiments
+C4GLJOB_path_experiments
+C4GLJOB_path_forcing
+C4GLJOB_runtime
+C4GLJOB_split_by
+C4GLJOB_station_id
+C4GLJOB_subset_forcing
+Executing: python /user/home/gent/vsc422/vsc42247/software/class4gl/class4gl/simulations/simulations.py --global_chunk_number 1 --c4gl_path_lib=/user/home/gent/vsc422/vsc42247/software/class4gl/class4gl --experiments=ERA_NOAC --path_experiments=/user/data/gent/gvo000/gvo00090/vsc42247/data/MY_FIRST_CLASS4GL_EXPERIMENTS/ --path_forcing=/user/data/gent/gvo000/gvo00090/vsc42247/data/MY_FIRST_CLASS4GL_EXPERIMENTS/ERA/ --runtime=from_input --split_by=50 --station_id=74560 --subset_forcing=ini
+getting a list of stations
+defining all_stations_select
+Selecting station by ID
+station numbers included in the whole batch (all chunks): [74560]
+       Unnamed: 0          filename  latitude  longitude
+74560           0  74560_0_ini.yaml     40.15     -89.33
+getting all records of the whole batch
+determining the station and its chunk number according global_chunk_number (1)
+chunks_current_station 8
+station =  [74560]
+station chunk number: 1
+Fetching initial/forcing records
+starting station chunk number: 1(size: 50 soundings)
+starting 1 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.4').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.4 
+Warning: Ps input was provided (99189.77604166667Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (97712.39004166667Pa).
+run not succesfull
+starting 2 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.53735').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.53735 
+Warning: Ps input was provided (98917.74609375Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (96435.03129375Pa).
+run not succesfull
+starting 3 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.107051').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.107051 
+Warning: Ps input was provided (97149.79296875Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (93409.82856875Pa).
+run not succesfull
+starting 4 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.159809').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.159809 
+Warning: Ps input was provided (97484.921875Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (82631.012275Pa).
+run not succesfull
+starting 5 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.210583').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.210583 
+Warning: Ps input was provided (99121.34895833333Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (93010.50375833333Pa).
+run not succesfull
+starting 6 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.262669').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.262669 
+Warning: Ps input was provided (99433.81119791667Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (97557.35439791667Pa).
+run not succesfull
+starting 7 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.315998').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.315998 
+Warning: Ps input was provided (100124.39713541667Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (95708.71993541667Pa).
+run not succesfull
+starting 8 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.368733').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.368733 
+Warning: Ps input was provided (99289.96223958333Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (96497.64383958332Pa).
+run not succesfull
+starting 9 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.422182').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.422182 
+Warning: Ps input was provided (99191.98567708333Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (90040.43287708332Pa).
+run not succesfull
+starting 10 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.473690').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.473690 
+Warning: Ps input was provided (99402.77604166667Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (90833.93724166667Pa).
+run not succesfull
+starting 11 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.525232').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.525232 
+Warning: Ps input was provided (99445.84114583333Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (96549.92914583333Pa).
+run not succesfull
+starting 12 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.578431').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.578431 
+Warning: Ps input was provided (99561.35026041667Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (99443.63026041667Pa).
+run not succesfull
+starting 13 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.633046').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.633046 
+Warning: Ps input was provided (98115.078125Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (97646.552525Pa).
+run not succesfull
+starting 14 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.686127').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.686127 
+Warning: Ps input was provided (98767.19401041667Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (93118.98841041667Pa).
+run not succesfull
+starting 15 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.738483').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.738483 
+Warning: Ps input was provided (99317.18489583333Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (94815.57209583333Pa).
+run not succesfull
+starting 16 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.790644').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.790644 
+Warning: Ps input was provided (100321.02083333333Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (100132.66883333333Pa).
+run not succesfull
+starting 17 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.844792').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.844792 
+Warning: Ps input was provided (100697.07291666667Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (100287.40731666668Pa).
+run not succesfull
+starting 18 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.897654').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.897654 
+Warning: Ps input was provided (100432.74088541667Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (99341.47648541667Pa).
+run not succesfull
+starting 19 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.950524').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.950524 
+Warning: Ps input was provided (100163.28125Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (99861.91805Pa).
+run not succesfull
+starting 20 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.1003819').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.1003819 
+Warning: Ps input was provided (100273.30598958333Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (98120.20718958332Pa).
+run not succesfull
+starting 21 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.1057080').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.1057080 
+Warning: Ps input was provided (99064.4140625Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (91138.3264625Pa).
+run not succesfull
+starting 22 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.1109138').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.1109138 
+Warning: Ps input was provided (99177.81380208333Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (96793.98380208333Pa).
+run not succesfull
+starting 23 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.1162278').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.1162278 
+Warning: Ps input was provided (99862.77734375Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (99573.18614375Pa).
+run not succesfull
+starting 24 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.1216404').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.1216404 
+Warning: Ps input was provided (98215.37630208333Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (88103.22830208333Pa).
+run not succesfull
+starting 25 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.1268030').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.1268030 
+Warning: Ps input was provided (99520.6640625Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (98864.9636625Pa).
+run not succesfull
+starting 26 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.1320921').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.1320921 
+Warning: Ps input was provided (97935.72135416667Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (90289.80735416667Pa).
+run not succesfull
+starting 27 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.1372574').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.1372574 
+Warning: Ps input was provided (98352.68619791667Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (92378.39619791668Pa).
+run not succesfull
+starting 28 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.1424704').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.1424704 
+Warning: Ps input was provided (98539.91276041667Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (92226.58916041667Pa).
+run not succesfull
+starting 29 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.1476503').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.1476503 
+Warning: Ps input was provided (98725.5390625Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (93864.8802625Pa).
+run not succesfull
+starting 30 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.1528706').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.1528706 
+Warning: Ps input was provided (98957.06510416667Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (98042.38070416667Pa).
+run not succesfull
+starting 31 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.1583120').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.1583120 
+Warning: Ps input was provided (99557.94270833333Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (93847.34550833332Pa).
+run not succesfull
+starting 32 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.1635666').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.1635666 
+Warning: Ps input was provided (99887.29296875Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (98538.22176875Pa).
+run not succesfull
+starting 33 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.1689323').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.1689323 
+Warning: Ps input was provided (99869.75911458333Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (98305.26031458333Pa).
+run not succesfull
+starting 34 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.1741836').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.1741836 
+Warning: Ps input was provided (100003.671875Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (98346.174275Pa).
+run not succesfull
+starting 35 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.1795229').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.1795229 
+Warning: Ps input was provided (99218.69921875Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (91785.85841875Pa).
+run not succesfull
+starting 36 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.1847312').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.1847312 
+Warning: Ps input was provided (100100.86328125Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (96563.37728125Pa).
+run not succesfull
+starting 37 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.1900220').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.1900220 /user/home/gent/vsc422/vsc42247/software/class4gl/class4gl/class4gl.py:345: UserWarning: Key 'index' may not be implemented.
+  warnings.warn("Key '"+key+"' may not be implemented.")
+/user/home/gent/vsc422/vsc42247/software/class4gl/class4gl/model.py:1454: RuntimeWarning: divide by zero encountered in double_scalars
+  self.L = zsl/self.zeta
+
+Warning: Ps input was provided (99535.61067708333Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (98012.31387708333Pa).
+run not succesfull
+starting 38 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.1954053').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.1954053 
+Warning: Ps input was provided (98121.40234375Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (86747.29594375Pa).
+run not succesfull
+starting 39 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.2005224').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.2005224 
+Warning: Ps input was provided (98072.640625Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (76835.952625Pa).
+run not succesfull
+starting 40 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.2055085').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.2055085 
+Warning: Ps input was provided (98379.67578125Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (97726.32978125Pa).
+run not succesfull
+starting 41 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.2109238').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.2109238 
+Warning: Ps input was provided (98887.31901041667Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (71017.10901041667Pa).
+run not succesfull
+starting 42 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.2158379').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.2158379 
+Warning: Ps input was provided (99447.98372395833Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (99166.63292395833Pa).
+run not succesfull
+starting 43 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.2213439').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.2213439 
+Warning: Ps input was provided (98189.0390625Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (89527.2014625Pa).
+run not succesfull
+starting 44 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.2265091').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.2265091 
+Warning: Ps input was provided (97722.154296875Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (49966.681896875Pa).
+LCL calculation not converged!!
+RHlcl = -0.000035, zlcl=7775135.081090, theta=296.584021, q=0.004835
+LCL calculation not converged!!
+RHlcl = -0.000035, zlcl=7775135.081090, theta=296.584021, q=0.004835
+run not succesfull
+starting 45 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.2312591').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.2312591 
+Warning: Ps input was provided (99512.51041666667Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (83614.42441666668Pa).
+run not succesfull
+starting 46 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.2363001').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.2363001 
+Warning: Ps input was provided (100458.30859375Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (100280.55139375Pa).
+run not succesfull
+starting 47 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.2417249').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.2417249 
+Warning: Ps input was provided (99404.5234375Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (99218.5258375Pa).
+run not succesfull
+starting 48 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.2472181').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.2472181 
+Warning: Ps input was provided (98729.45247395833Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (90835.14927395833Pa).
+run not succesfull
+starting 49 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.2523821').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.2523821 
+Warning: Ps input was provided (99818.05989583333Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (97451.88789583332Pa).
+run not succesfull
+starting 50 out of 50 (station total:  366 )
+ruby -rjson -ryaml -e "puts YAML.load_file('/local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.yaml.2576934').to_json" > /local/4759326[1].master15.delcatty.gent.vsc/74560_1_ini.yaml.buffer.json.2576934 
+Warning: Ps input was provided (99569.44205729167Pa), but it is now overwritten by the first level (index 0) of p_pro which is different (97954.32365729166Pa).
+run not succesfull
