@@ -192,10 +192,26 @@ class stations(object):
         self.table = self.table.set_index('STNID')
 
     def get_stations(self,suffix):
-        stations_list_files = glob.glob(self.path+'/?????_0_'+suffix+'.yaml')
+        stations_list_files = glob.glob(self.path+'/?????_*_'+suffix+'.yaml')
         if len(stations_list_files) == 0:
             stations_list_files = glob.glob(self.path+'/?????_'+suffix+'.yaml')
+        else:
+            # this weird section retreives the first file of every station
+            stations_list_files_1 = [station_file[:len(self.path+'/?????')] for \
+                                   station_file in stations_list_files]
+            stations_list_files_2 = [station_file[len(self.path+'/?????'):] for \
+                                   station_file in stations_list_files]
+            print(stations_list_files_1)
+            stations_list_files_new = []
+            stations_list_files_skip = []
+            for istat,stations_file_1 in  enumerate(stations_list_files_1):
+                if stations_file_1 not in stations_list_files_skip:
+                    stations_list_files_skip.append(stations_file_1)
+                    stations_list_files_new.append(stations_file_1+stations_list_files_2[istat])
+            stations_list_files = stations_list_files_new
+            
         stations_list_files.sort()
+
         if len(stations_list_files) == 0:
             raise ValueError('no stations found that match "'+self.path+'/?????[_0]_'+suffix+'.yaml'+'"')
         stations_list = []
@@ -379,13 +395,20 @@ def get_records(stations,path_yaml,getchunk='all',subset='morning',refetch_recor
             else:
                 chunk = 0
                 end_of_chunks = False
-                while not end_of_chunks:
-                    fn = format(STNID,'05d')+'_'+str(chunk)+'_'+subset+'.yaml'
-                    if os.path.isfile(path_yaml+'/'+fn):
-                        dictfnchunks.append(dict(fn=fn,chunk=chunk))
-                    else:
-                        end_of_chunks = True
-                    chunk += 1
+                station_list_files = glob.glob(path_yaml+'/'+format(STNID,'05d')+'_*_'+subset+'.yaml')
+                station_list_files.sort()
+                for station_path_file in station_list_files:
+                    fn = station_path_file.split('/')[-1]
+                    chunk = int(fn.split('_')[1])
+                    dictfnchunks.append(dict(fn=fn,chunk=chunk))
+
+                # while not end_of_chunks:
+                #     fn = format(STNID,'05d')+'_'+str(chunk)+'_'+subset+'.yaml'
+                #     if os.path.isfile(path_yaml+'/'+fn):
+                #         dictfnchunks.append(dict(fn=fn,chunk=chunk))
+                #     else:
+                #         end_of_chunks = True
+                #     chunk += 1
 
             # globyamlfilenames = path_yaml+'/'+format(STNID,'05d')+'*_'+subset+'.yaml'
             # yamlfilenames = glob.glob(globyamlfilenames)

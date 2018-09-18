@@ -129,6 +129,10 @@ class c4gl_interface_soundings(object):
         self.frames['stats']['records_all_stations_mod'].index = \
             self.frames['stats']['records_all_stations_ini'].index 
 
+        
+        if len(self.frames['stats']['records_all_stations_ini']):
+            raise ValueError('no class records found. Aborting')
+
         self.frames['stats']['records_all_stations_ini']['dates'] = \
             self.frames['stats']['records_all_stations_ini']['ldatetime'].dt.date
 
