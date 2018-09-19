@@ -272,14 +272,11 @@ for expname in experiments:
 
                     if args.error_handling == 'dump_always':
                         try:
-                            if c4gli_morning.check_source_globaldata():
-                            
-
-                                c4gl.run()
-                                print('run succesfull')
-                            else:
-                                print('global data not ok')
-                                raise ValueError('global data not ok')
+                            print('checking data sources')
+                            if not c4gli_morning.check_source_globaldata():
+                                print('Warning: some input sources appear invalid')
+                            c4gl.run()
+                            print('run succesfull')
                         except:
                             print('run not succesfull')
                         onerun = True
@@ -296,12 +293,11 @@ for expname in experiments:
                     # successful
                     elif args.error_handling == 'dump_on_success':
                        try:
-                            if c4gli_morning.check_source_globaldata():
-                                c4gl.run()
-                                print('run succesfull')
-                            else:
-                                print('global data not ok')
-                                raise ValueError('global data not ok')
+                            print('checking data sources')
+                            if not c4gli_morning.check_source_globaldata():
+                                print('Warning: some input sources appear invalid')
+                            c4gl.run()
+                            print('run succesfull')
                             c4gli_morning.dump(file_ini)
                             
                             

@@ -1285,7 +1285,7 @@ class class4gl_input(object):
             if var in vars_in_source:
                 return source
 
-    def check_source(self,source,check_only_sections=None):
+    def check_source(self,source,check_only_sections=None,ignore_keys=[]):
         """ this procedure checks whether data of a specified source is valid.
 
         INPUT:
@@ -1321,9 +1321,9 @@ class class4gl_input(object):
                     # self.logger.info('Expected key '+datakey+\
                     #                  ' is not in parameter input')                        
                     source_ok = False                                           
-                    print(datakey)
-                elif (checkdata[datakey] is None) or \
-                     (pd.isnull(checkdata[datakey]) is True):                    
+                elif (datakey not in ignore_keys) and \
+                     ((checkdata[datakey] is None) or \
+                     (pd.isnull(checkdata[datakey]) is True)):                    
         
                     # self.logger.info('Key value of "'+datakey+\
                     #                  '" is invalid: ('+ \
@@ -1362,7 +1362,8 @@ class class4gl_input(object):
             source_ok = self.check_source(source='globaldata',\
                                           check_only_sections=['air_ac',\
                                                                'air_ap',\
-                                                               'pars'])
+                                                               'pars'],
+                                         ignore_keys=[])
             if not source_ok:
                 source_globaldata_ok = False
         
