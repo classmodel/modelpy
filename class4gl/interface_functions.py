@@ -397,9 +397,15 @@ def get_records(stations,path_yaml,getchunk='all',subset='morning',refetch_recor
                 end_of_chunks = False
                 station_list_files = glob.glob(path_yaml+'/'+format(STNID,'05d')+'_*_'+subset+'.yaml')
                 station_list_files.sort()
+                chunks = []
                 for station_path_file in station_list_files:
-                    fn = station_path_file.split('/')[-1]
-                    chunk = int(fn.split('_')[1])
+                #    fn = station_path_file.split('/')[-1]
+                    chunks.append(int(fn.split('_')[1]))
+
+                # sort according to chunk number
+                chunks.sort()
+                for chunk in chunks:
+                    fn = glob.glob(path_yaml+'/'+format(STNID,'05d')+'_'+str(chunk)+'_'+subset+'.yaml')
                     dictfnchunks.append(dict(fn=fn,chunk=chunk))
 
                 # while not end_of_chunks:
