@@ -196,7 +196,7 @@ if args.runtime == 'from_afternoon_profile':
     records_afternoon.set_index(['STNID','dates'],inplace=True)
     ini_index_dates = records_morning.set_index(['STNID','dates']).index
     records_afternoon = records_afternoon.loc[ini_index_dates]
-    records_afternoon.index = records_morning.index
+    records_afternoon.index = records_morning.inde= run_station_chunkx
 
 experiments = args.experiments.strip(' ').split(' ')
 for expname in experiments:
@@ -233,7 +233,7 @@ for expname in experiments:
             print('starting station chunk number: '\
                   +str(run_station_chunk)+'(size: '+str(args.split_by)+' soundings)')
 
-            records_morning_station_chunk = records_morning_station[(int(args.split_by)*run_station_chunk):(int(args.split_by)*(run_station_chunk+1))]
+            records_morning_station_chunk = records_morning_station.query('STNID == '+str(current_station.name)+' and chunk == '+str(run_station_chunk)) #  [(int(args.split_by)*run_station_chunk):(int(args.split_by)*(run_station_chunk+1))]
 
             isim = 0
             for (STNID,chunk,index),record_morning in records_morning_station_chunk.iterrows():
