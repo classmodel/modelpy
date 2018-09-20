@@ -7,7 +7,7 @@
 #PBS -m a
 #PBS -N c4gl_setup
 
-module load Python/3.6.4-intel-2018a IPython basemap BeautifulSoup xarray matplotlib Pysolar PyYAML netcdf4-python Ruby
+module load Python/3.6.4-intel-2018a IPython basemap BeautifulSoup xarray Pysolar PyYAML netcdf4-python Ruby
 
 EXEC_ALL="python $C4GLJOB_exec --global_chunk_number $PBS_ARRAYID"
 
