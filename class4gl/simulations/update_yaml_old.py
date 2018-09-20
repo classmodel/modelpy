@@ -94,8 +94,8 @@ if args.global_chunk_number is not None:
         raise ValueError('You need to specify either global-chunk-number or station-chunk-number, not both.')
 
 
-    if not (int(args.split_by) > 0) :
-            raise ValueError("global_chunk_number is specified, but --split-by is not a strict positive number, so I don't know how to split the batch into chunks.")
+    # if not (int(args.split_by) > 0) :
+    #         raise ValueError("global_chunk_number is specified, but --split-by is not a strict positive number, so I don't know how to split the batch into chunks.")
 
     run_station_chunk = None
     print('determining the station and its chunk number according global_chunk_number ('+args.global_chunk_number+')')
@@ -156,9 +156,6 @@ records_forcing = get_records(run_stations,\
 # os.system('mkdir -p "'+backupdir+'"')
 
 
-
-
-
 for istation,current_station in run_stations.iterrows():
     records_forcing_station = records_forcing.query('STNID == ' +\
                                                     str(current_station.name))
@@ -205,15 +202,15 @@ Warning. We are choosing chunk 0 without specifying it in filename.    \
 
             fn_forcing = \
                     args.path_forcing+'/'+format(current_station.name,'05d')+'_'+\
-                    str(run_station_chunk)+'_'+args.subset_forcing+'.yaml'
+                    args.subset_forcing+'.yaml'
             file_forcing = \
                 open(fn_forcing,'r')
             fn_experiment = args.path_experiments+'/'+format(current_station.name,'05d')+'_'+\
-                     args.subset_forcing+'.yaml'
+                     str(run_station_chunk)+'_'+args.subset_forcing+'.yaml'
             file_experiment = \
                 open(fn_experiment,'w')
             fn_forcing_pkl = args.path_forcing+format(current_station.name,'05d')+'_'+\
-                     args.subset_forcing+'.pkl'
+                     str(run_station_chunk)+'_'+args.subset_forcing+'.pkl'
 
             # fn_backup = backupdir+format(current_station.name,'05d')+'_'+\
             #          str(run_station_chunk)+'_'+args.subset_forcing+'.yaml'
@@ -235,11 +232,14 @@ Warning. We are choosing chunk 0 without specifying it in filename.    \
                   str(len(records_forcing_station_chunk) )+\
                   ' (station total: ',str(len(records_forcing_station)),')')  
             
-        
                 c4gli_forcing = get_record_yaml(file_forcing, 
                                                 record_forcing.index_start, 
                                                 record_forcing.index_end,
                                                 mode=args.mode)
+                seltropo = (c4gli_forcing.air_ac.p > c4gli_forcing.air_ac.p.iloc[-1]+ 3000.*(- 1.2 * 9.81 ))
+                profile_tropo = c4gli_forcing.air_ac[seltropo]
+                mean_advt_tropo = np.mean(profile_tropo.advt_x +profile_tropo.advt_y )
+                c4gli_forcing.update(source='era-interim',pars={'advt_tropo':mean_advt_tropo})
                 
                 #print('c4gli_forcing_ldatetime',c4gli_forcing.pars.ldatetime)
                 
@@ -249,8 +249,6 @@ Warning. We are choosing chunk 0 without specifying it in filename.    \
                         globaldata, 
                         only_keys=args.global_keys.strip(' ').split(' ')
                     )
-        
-
 
                 c4gli_forcing.dump(file_experiment)
                     
