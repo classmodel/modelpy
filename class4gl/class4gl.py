@@ -99,6 +99,8 @@ units = {
          'dqdt':'kg/kg/h',
          'BR': '-',
          'EF': '-',
+         'advt_x': 'K/s',
+         'advt_y': 'K/s',
 }
 
 class class4gl_input(object):

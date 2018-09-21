@@ -1,4 +1,3 @@
-
 import numpy as np
 
 import pandas as pd
@@ -18,6 +17,7 @@ parser.add_argument('--make_figures',default=None)
 parser.add_argument('--show_control_parameters',default=True)
 parser.add_argument('--figure_filename',default=None)
 parser.add_argument('--figure_filename_2',default=None)
+parser.add_argument('--experiments_labels',default=None)
 args = parser.parse_args()
 
 print('Adding python library:',args.c4gl_path_lib)
@@ -91,6 +91,10 @@ def rmse(y_actual,y_predicted,z_actual = None, z_predicted = None,filternan_actu
     return np.sqrt(rmse_temp)
 
 
+if args.experiments_labels is None:
+    keylabels = args.experiments.strip().split(' ')
+else:
+    keylabels = args.experiments_labels.strip().split(';')
 
 
 
@@ -134,7 +138,8 @@ if args.make_figures:
     symbols = ['*','x','+']
     dias = {}
     
-    for varkey in ['h','theta','q']:                                                    
+    varkeys = ['h','theta','q']
+    for varkey in varkeys:                                                    
         axes[varkey] = fig.add_subplot(2,3,i)                                       
         #axes_taylor[varkey] = fig.add_subplot(2,3,i+3)                                       
     
@@ -342,7 +347,7 @@ if args.make_figures:
 
         sns.set_style('whitegrid')
         #sns.set()
-        fig = pl.figure(figsize=(12,8))
+        fig = pl.figure(figsize=(11,7))
         i = 1
         axes = {}
         data_all = pd.DataFrame()
@@ -364,22 +369,22 @@ if args.make_figures:
         data_all = pd.DataFrame()
 
         tempdatamodstats = pd.DataFrame(c4gldata[key].frames['stats']['records_all_stations_obs_afternoon_stats'].copy())
-        tempdatamodstats["source"] = "soundings"
-        tempdatamodstats["source_index"] = "soundings"
+        tempdatamodstats["source"] = "Soundings"
+        tempdatamodstats["source_index"] = "Soundings"
 
         ini_ref = pd.DataFrame(c4gldata[key].frames['stats']['records_all_stations_ini'].copy())
         tempdataini_this = pd.DataFrame(ini_ref.copy())
 
         tempdatamodstats['dates']= tempdataini_this.ldatetime.dt.date
         tempdatamodstats['STNID']= tempdataini_this.STNID
-        tempdatamodstats['source']= "soundings"
-        tempdatamodstats['source_index']= "soundings"
+        tempdatamodstats['source']= "Soundings"
+        tempdatamodstats['source_index']= "Soundings"
         tempdatamodstats.set_index(['source_index','STNID','dates'],inplace=True)
         #print('hello')
 
         tempdataini = pd.DataFrame(ini_ref)
-        tempdataini["source"] = "soundings"
-        tempdataini["source_index"] = "soundings"
+        tempdataini["source"] = "Soundings"
+        tempdataini["source_index"] = "Soundings"
         tempdataini = tempdataini.set_index(['source_index','STNID','dates'])
         #print('hello2')
 
@@ -390,21 +395,22 @@ if args.make_figures:
         #print(data_all.shape)
 
             
-        for key in list(args.experiments.strip().split(' ')):
+        for ikey,key in enumerate(list(args.experiments.strip().split(' '))):
+            keylabel = keylabels[ikey]
 
             tempdatamodstats = pd.DataFrame(c4gldata[key].frames['stats']['records_all_stations_mod_stats'].copy())
             tempdataini_this= pd.DataFrame(c4gldata[key].frames['stats']['records_all_stations_ini'].copy())
             tempdatamodstats['dates']= tempdataini_this.ldatetime.dt.date
             tempdatamodstats['STNID']= tempdataini_this.STNID
-            tempdatamodstats['source']= key
-            tempdatamodstats['source_index']= key
+            tempdatamodstats['source']= keylabel
+            tempdatamodstats['source_index']= keylabel
             tempdatamodstats.set_index(['source_index','STNID','dates'],inplace=True)
             #print('hello')
 
 
             tempdataini = pd.DataFrame(ini_ref.copy())
-            tempdataini["source"] = key 
-            tempdataini["source_index"] = key
+            tempdataini["source"] = keylabel
+            tempdataini["source_index"] = keylabel
             tempdataini = tempdataini.set_index(['source_index','STNID','dates'])
     
 
@@ -429,22 +435,25 @@ if args.make_figures:
         for varkey in ['h','theta','q']:
             varkey_full = 'd'+varkey+'dt ['+units[varkey]+'/h]'
             data_all = data_all.rename(columns={'d'+varkey+'dt':varkey_full})
+            data_all['advt_tropo'] = data_input['advt_tropo']
             #print(data_input.shape)
             #print(data_all.shape)
         #print('hello6')
         #print(data_all.columns)
         #print('hello7')
+        i = 1
         for varkey in ['h','theta','q']:
-            input_keys =['wg','cc','advt']
+            input_keys =['wg','advt_tropo']
             for input_key in input_keys:
                 varkey_full = 'd'+varkey+'dt ['+units[varkey]+'/h]'
 
                 #print('hello8')
                 #print(data_input.shape)
                 #print(data_all.shape)
+                units['advt_tropo'] = 'K/s'
                 input_key_full = input_key + "["+units[input_key]+"]"
-                data_all[input_key_full] = pd.cut(x=data_input[input_key].values,bins=10,precision=2)
-                data_input[input_key_full] = pd.cut(x=data_input[input_key].values,bins=10,precision=2,)
+                data_all[input_key_full] = pd.cut(x=data_input[input_key].values,bins=8,precision=2)
+                data_input[input_key_full] = pd.cut(x=data_input[input_key].values,bins=8,precision=2,)
                 #print('hello9')
                 #print(data_input.shape)
                 #print(data_all.shape)
@@ -462,7 +471,7 @@ if args.make_figures:
                 #print('hello10')
                 
                 sns.set(style="ticks", palette="pastel")
-                ax = fig.add_subplot(3,2,i)
+                ax = fig.add_subplot(3,len(input_keys),i)
                 #sns.violinplot(x=input_key_full,y=varkey_full,data=data_all,hue='source',linewidth=2.,palette="muted",split=True,inner='quart') #,label=key+", R = "+str(round(PR[0],3)),data=data)       
                 
                 #ax.set_title(input_key_full)
@@ -476,14 +485,27 @@ if args.make_figures:
                      ax.get_legend().set_visible(False)
                 #     plt.legend('off')
                 if i >= 5:
+                    #ax.set_xticklabels(labels=['['+str(i)+','+str(i+1)+'[' for i in list(range(0,7))]+['[7,8]'])
+
                     ax.set_xticklabels(labels=ax.get_xticklabels(),rotation=45.,ha='right')
                 else:
                     ax.set_xticklabels([])
                     ax.set_xlabel('')
 
-                if np.mod(i,len(input_keys)) == 0:
+                if np.mod(i,len(input_keys)) != 0:
                     ax.set_yticklabels([])
                     ax.set_ylabel('')
+
+                if varkey == 'q':
+                    ticks = ticker.FuncFormatter(lambda x, pos:
+                                                 '{0:g}'.format(x*1000.))
+                    #ax.xaxis.set_major_formatter(ticks)
+                    ax.yaxis.set_major_formatter(ticks)
+
+                    ax.set_ylabel(latex['d'+varkey+'dt']+' ['+r'$10^{-3} \times $'+units['d'+varkey+'dt']+']')        
+                else:
+                    ax.set_ylabel(latex['d'+varkey+'dt']+' ['+units['d'+varkey+'dt']+']')        
+
 
                 for j,artist in enumerate(ax.artists):
                     if np.mod(j,len(list(args.experiments.strip().split(' ')))+1) !=0:
@@ -521,7 +543,7 @@ if args.make_figures:
                 #sns.despine(offset=10, trim=True)
                 i +=1
         fig.tight_layout()
-        fig.subplots_adjust( bottom=0.18,left=0.09,top=0.99,right=0.99,wspace=0.05,hspace=0.05,)
+        fig.subplots_adjust( bottom=0.12,left=0.15,top=0.99,right=0.99,wspace=0.05,hspace=0.05,)
         if args.figure_filename_2 is not None:
             fig.savefig(args.figure_filename_2,dpi=200); print("Image file written to:", args.figure_filename_2)
         fig.show()

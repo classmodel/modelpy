@@ -87,7 +87,6 @@ all_records_morning_select = get_records(all_stations_select,\
                                          refetch_records=False,
                                          )
 
-os.system('mkdir -p '+args.path_experiments)
 # only run a specific chunck from the selection
 if args.global_chunk_number is not None:
     if args.station_chunk_number is not None:
@@ -156,120 +155,122 @@ records_forcing = get_records(run_stations,\
 # os.system('mkdir -p "'+backupdir+'"')
 
 
-for istation,current_station in run_stations.iterrows():
-    records_forcing_station = records_forcing.query('STNID == ' +\
-                                                    str(current_station.name))
-
-    records_forcing_station_chunk = records_forcing.query('STNID == ' +\
-                                                    str(current_station.name)+\
-                                                   '& chunk == '+str(run_station_chunk))
-    print('lenrecords_forcing_station: ',len(records_forcing_station))
-    print('split_by*run_station_chunk',int(args.split_by) * int(run_station_chunk))
-    print('split_by*run_station_chunk+1',int(args.split_by) * int(run_station_chunk+1))
+for EXP in args.experiments.strip().split(" "):
+    os.system('mkdir -p '+args.path_experiments+'/'+EXP+'/')
+    for istation,current_station in run_stations.iterrows():
+        records_forcing_station = records_forcing.query('STNID == ' +\
+                                                        str(current_station.name))
     
-    # if (int(args.split_by) * int(run_station_chunk)) >= (len(records_forcing_station)):
-    #     print("warning: outside of profile number range for station "+\
-    #           str(current_station)+". Skipping chunk number for this station.")
-    if len(records_forcing_station_chunk) == 0:
-        print("warning: outside of profile number range for station "+\
-              str(current_station)+". Skipping chunk number for this station.")
-    else:
-        # normal case
-        if ((int(args.split_by) > 0) or \
-            (os.path.isfile(args.path_forcing+'/'+format(current_station.name,'05d')+'_'+\
-                 str(run_station_chunk)+'_'+args.subset_forcing+'.yaml'))):
-            fn_forcing = \
-                    args.path_forcing+'/'+format(current_station.name,'05d')+'_'+\
-                    str(run_station_chunk)+'_'+args.subset_forcing+'.yaml'
-            file_forcing = \
-                open(fn_forcing,'r')
-            fn_experiment = args.path_experiments+'/'+format(current_station.name,'05d')+'_'+\
-                     str(run_station_chunk)+'_'+args.subset_forcing+'.yaml'
-            file_experiment = \
-                open(fn_experiment,'w')
-            fn_forcing_pkl = args.path_forcing+'/'+format(current_station.name,'05d')+'_'+\
-                     str(run_station_chunk)+'_'+args.subset_forcing+'.pkl'
-
-            # fn_backup = backupdir+format(current_station.name,'05d')+'_'+\
-            #          str(run_station_chunk)+'_'+args.subset_forcing+'.yaml'
-            # fn_backup_pkl = backupdir+format(current_station.name,'05d')+'_'+\
-            #          str(run_station_chunk)+'_'+args.subset_forcing+'.pkl'
+        records_forcing_station_chunk = records_forcing.query('STNID == ' +\
+                                                        str(current_station.name)+\
+                                                       '& chunk == '+str(run_station_chunk))
+        print('lenrecords_forcing_station: ',len(records_forcing_station))
+        print('split_by*run_station_chunk',int(args.split_by) * int(run_station_chunk))
+        print('split_by*run_station_chunk+1',int(args.split_by) * int(run_station_chunk+1))
+        
+        # if (int(args.split_by) * int(run_station_chunk)) >= (len(records_forcing_station)):
+        #     print("warning: outside of profile number range for station "+\
+        #           str(current_station)+". Skipping chunk number for this station.")
+        if len(records_forcing_station_chunk) == 0:
+            print("warning: outside of profile number range for station "+\
+                  str(current_station)+". Skipping chunk number for this station.")
         else:
-            print("\
-Warning. We are choosing chunk 0 without specifying it in filename.    \
- No-chunk naming will be removed in the future."\
-                 )
-
-            fn_forcing = \
-                    args.path_forcing+'/'+format(current_station.name,'05d')+'_'+\
-                    args.subset_forcing+'.yaml'
-            file_forcing = \
-                open(fn_forcing,'r')
-            fn_experiment = args.path_experiments+'/'+format(current_station.name,'05d')+'_'+\
-                     str(run_station_chunk)+'_'+args.subset_forcing+'.yaml'
-            file_experiment = \
-                open(fn_experiment,'w')
-            fn_forcing_pkl = args.path_forcing+format(current_station.name,'05d')+'_'+\
-                     str(run_station_chunk)+'_'+args.subset_forcing+'.pkl'
-
-            # fn_backup = backupdir+format(current_station.name,'05d')+'_'+\
-            #          str(run_station_chunk)+'_'+args.subset_forcing+'.yaml'
-            # fn_backup_pkl = backupdir+format(current_station.name,'05d')+'_'+\
-            #          args.subset_forcing+'.pkl'
-
-        onerun = False
-        print('starting station chunk number: '\
-              +str(run_station_chunk)+'(size: '+str(args.split_by)+' soundings)')
-
-        #records_forcing_station_chunk = records_forcing_station[(int(args.split_by)*run_station_chunk):(int(args.split_by)*(run_station_chunk+1))]
-
-        # records_forcing_station_chunk = records_forcing.query('STNID == ' +\
-        #                                                 str(current_station.name)+\
-        #                                                '& chunk == '+str(run_station_chunk))
-        isim = 0
-        for (STNID,chunk,index),record_forcing in records_forcing_station_chunk.iterrows():
-                print('starting '+str(isim+1)+' out of '+\
-                  str(len(records_forcing_station_chunk) )+\
-                  ' (station total: ',str(len(records_forcing_station)),')')  
-            
-                c4gli_forcing = get_record_yaml(file_forcing, 
-                                                record_forcing.index_start, 
-                                                record_forcing.index_end,
-                                                mode=args.mode)
-                seltropo = (c4gli_forcing.air_ac.p > c4gli_forcing.air_ac.p.iloc[-1]+ 3000.*(- 1.2 * 9.81 ))
-                profile_tropo = c4gli_forcing.air_ac[seltropo]
-                mean_advt_tropo = np.mean(profile_tropo.advt_x +profile_tropo.advt_y )
-                c4gli_forcing.update(source='era-interim',pars={'advt_tropo':mean_advt_tropo})
+            # normal case
+            if ((int(args.split_by) > 0) or \
+                (os.path.isfile(args.path_forcing+'/'+format(current_station.name,'05d')+'_'+\
+                     str(run_station_chunk)+'_'+args.subset_forcing+'.yaml'))):
+                fn_forcing = \
+                        args.path_forcing+'/'+format(current_station.name,'05d')+'_'+\
+                        str(run_station_chunk)+'_'+args.subset_forcing+'.yaml'
+                file_forcing = \
+                    open(fn_forcing,'r')
+                fn_experiment = args.path_experiments+'/'+EXP+'/'+format(current_station.name,'05d')+'_'+\
+                         str(run_station_chunk)+'_'+args.subset_forcing+'.yaml'
+                file_experiment = \
+                    open(fn_experiment,'w')
+                fn_forcing_pkl = args.path_forcing+'/'+format(current_station.name,'05d')+'_'+\
+                         str(run_station_chunk)+'_'+args.subset_forcing+'.pkl'
+    
+                # fn_backup = backupdir+format(current_station.name,'05d')+'_'+\
+                #          str(run_station_chunk)+'_'+args.subset_forcing+'.yaml'
+                # fn_backup_pkl = backupdir+format(current_station.name,'05d')+'_'+\
+                #          str(run_station_chunk)+'_'+args.subset_forcing+'.pkl'
+            else:
+                print("\
+    Warning. We are choosing chunk 0 without specifying it in filename.    \
+     No-chunk naming will be removed in the future."\
+                     )
+    
+                fn_forcing = \
+                        args.path_forcing+'/'+format(current_station.name,'05d')+'_'+\
+                        args.subset_forcing+'.yaml'
+                file_forcing = \
+                    open(fn_forcing,'r')
+                fn_experiment = args.path_experiments+'/'+EXP+'/'+format(current_station.name,'05d')+'_'+\
+                         str(run_station_chunk)+'_'+args.subset_forcing+'.yaml'
+                file_experiment = \
+                    open(fn_experiment,'w')
+                fn_forcing_pkl = args.path_forcing+format(current_station.name,'05d')+'_'+\
+                         str(run_station_chunk)+'_'+args.subset_forcing+'.pkl'
+    
+                # fn_backup = backupdir+format(current_station.name,'05d')+'_'+\
+                #          str(run_station_chunk)+'_'+args.subset_forcing+'.yaml'
+                # fn_backup_pkl = backupdir+format(current_station.name,'05d')+'_'+\
+                #          args.subset_forcing+'.pkl'
+    
+            onerun = False
+            print('starting station chunk number: '\
+                  +str(run_station_chunk)+'(size: '+str(args.split_by)+' soundings)')
+    
+            #records_forcing_station_chunk = records_forcing_station[(int(args.split_by)*run_station_chunk):(int(args.split_by)*(run_station_chunk+1))]
+    
+            # records_forcing_station_chunk = records_forcing.query('STNID == ' +\
+            #                                                 str(current_station.name)+\
+            #                                                '& chunk == '+str(run_station_chunk))
+            isim = 0
+            for (STNID,chunk,index),record_forcing in records_forcing_station_chunk.iterrows():
+                    print('starting '+str(isim+1)+' out of '+\
+                      str(len(records_forcing_station_chunk) )+\
+                      ' (station total: ',str(len(records_forcing_station)),')')  
                 
-                #print('c4gli_forcing_ldatetime',c4gli_forcing.pars.ldatetime)
-                
-                if args.global_keys is not None:
-                    print(args.global_keys.strip(' ').split(' '))
-                    c4gli_forcing.get_global_input(
-                        globaldata, 
-                        only_keys=args.global_keys.strip(' ').split(' ')
-                    )
-
-                c4gli_forcing.dump(file_experiment)
+                    c4gli_forcing = get_record_yaml(file_forcing, 
+                                                    record_forcing.index_start, 
+                                                    record_forcing.index_end,
+                                                    mode=args.mode)
+                    seltropo = (c4gli_forcing.air_ac.p > c4gli_forcing.air_ac.p.iloc[-1]+ 3000.*(- 1.2 * 9.81 ))
+                    profile_tropo = c4gli_forcing.air_ac[seltropo]
+                    mean_advt_tropo = np.mean(profile_tropo.advt_x +profile_tropo.advt_y )
+                    c4gli_forcing.update(source='era-interim',pars={'advt_tropo':mean_advt_tropo})
                     
+                    #print('c4gli_forcing_ldatetime',c4gli_forcing.pars.ldatetime)
                     
-                onerun = True
-                isim += 1
-
-
-        file_forcing.close()
-        file_experiment.close()
-
-        if onerun:
-            # os.system('mv "'+fn_forcing+'" "'+fn_backup+'"')
-            # if os.path.isfile(fn_forcing_pkl):
-            #     os.system('mv "'+fn_forcing_pkl+'" "'+fn_backup_pkl+'"')
-            # os.system('mv "'+fn_experiment+'" "'+fn_forcing+'"')
-            # print('mv "'+fn_experiment+'" "'+fn_forcing+'"')
-            records_forcing_current_cache = get_records(pd.DataFrame([current_station]),\
-                                                       args.path_experiments,\
-                                                       getchunk = int(run_station_chunk),\
-                                                       subset=args.subset_forcing,
-                                                       refetch_records=True,
-                                                       )
-
+                    if args.global_keys is not None:
+                        print(args.global_keys.strip(' ').split(' '))
+                        c4gli_forcing.get_global_input(
+                            globaldata, 
+                            only_keys=args.global_keys.strip(' ').split(' ')
+                        )
+    
+                    c4gli_forcing.dump(file_experiment)
+                        
+                        
+                    onerun = True
+                    isim += 1
+    
+    
+            file_forcing.close()
+            file_experiment.close()
+    
+            if onerun:
+                # os.system('mv "'+fn_forcing+'" "'+fn_backup+'"')
+                # if os.path.isfile(fn_forcing_pkl):
+                #     os.system('mv "'+fn_forcing_pkl+'" "'+fn_backup_pkl+'"')
+                # os.system('mv "'+fn_experiment+'" "'+fn_forcing+'"')
+                # print('mv "'+fn_experiment+'" "'+fn_forcing+'"')
+                records_forcing_current_cache = get_records(pd.DataFrame([current_station]),\
+                                                           args.path_experiments+'/'+EXP+'/',\
+                                                           getchunk = int(run_station_chunk),\
+                                                           subset=args.subset_forcing,
+                                                           refetch_records=True,
+                                                           )
+    

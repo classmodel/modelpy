@@ -364,6 +364,9 @@ class c4gl_interface_soundings(object):
         self.update_record()
 
     def next_record(self,event=None,jump=1):
+        
+        old_chunk =  self.frames['profiles']['current_record_chunk']
+
         with suppress(StopIteration):
             (self.frames['profiles']['STNID'] , \
             self.frames['profiles']['current_record_chunk'] , \
@@ -382,6 +385,25 @@ class c4gl_interface_soundings(object):
 
         for key in self.frames['profiles'].keys():
             self.frames['stats'][key] = self.frames['profiles'][key]
+
+        # chunk file has changed! So we need to open it!
+        if self.frames['profiles']['current_record_chunk'] != old_chunk:
+
+            STNID = self.frames['profiles']['STNID']
+            chunk = self.frames['profiles']['current_record_chunk']
+
+
+
+            if 'current_station_file_ini' in self.frames['profiles'].keys():
+                self.frames['profiles']['current_station_file_ini'].close()
+            self.frames['profiles']['current_station_file_ini'] = \
+                open(self.path_exp+'/'+format(STNID,"05d")+'_'+str(chunk)+'_ini.yaml','r')
+
+            if 'current_station_file_mod' in self.frames['profiles'].keys():
+                self.frames['profiles']['current_station_file_mod'].close()
+            self.frames['profiles']['current_station_file_mod'] = \
+                open(self.path_exp+'/'+format(STNID,"05d")+'_'+str(chunk)+'_mod.yaml','r')
+
         self.update_record()
 
     def prev_record(self,event=None):

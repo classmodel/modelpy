@@ -247,8 +247,13 @@ for expname in experiments:
                                                     record_morning.index_start, 
                                                     record_morning.index_end,
                                                     mode='ini')
-                    
-                    #print('c4gli_morning_ldatetime',c4gli_morning.pars.ldatetime)
+
+                    # add tropospheric parameters on advection and subsidence
+                    seltropo = (c4gli_morning.air_ac.p > c4gli_morning.air_ac.p.iloc[-1]+ 3000.*(- 1.2 * 9.81 ))
+                    profile_tropo = c4gli_morning.air_ac[seltropo]
+                    for var in ['t','q','u','v',]:
+                        mean_adv_tropo = np.mean(profile_tropo['adv'+var+'_x']+profile_tropo['adv'+var+'_y'] )
+                        c4gli_morning.update(source='era-interim',pars={'adv'+var+'_tropo':mean_adv_tropo})
                     
                     
                     if args.runtime == 'from_afternoon_profile':

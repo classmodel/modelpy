@@ -328,11 +328,11 @@ if args.make_figures:
         ikey = 0
         key = list(args.experiments.strip().split(' '))[ikey]
         keylabel = keylabels[ikey]
-        cc = c4gldata[key].frames['stats']['records_all_stations_ini']['cc']
-        clearsky = (cc < 0.05)
+        # cc = c4gldata[key].frames['stats']['records_all_stations_ini']['cc']
+        # clearsky = (cc < 0.05)
     
-        mod = c4gldata[key].frames['stats']['records_all_stations_mod_stats'].loc[clearsky]['d'+varkey+'dt']
-        obs = c4gldata[key].frames['stats']['records_all_stations_obs_afternoon_stats'].loc[clearsky]['d'+varkey+'dt']
+        mod = c4gldata[key].frames['stats']['records_all_stations_mod_stats']['d'+varkey+'dt']
+        obs = c4gldata[key].frames['stats']['records_all_stations_obs_afternoon_stats']['d'+varkey+'dt']
     
     
         nbins=40       
