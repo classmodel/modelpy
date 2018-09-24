@@ -189,8 +189,10 @@ for iDT,DT in enumerate(DTS_chunk):
     print(iDT,DT)
     c4gli = class4gl_input(debug_level=logging.INFO)
     c4gli.update(source='STNID'+format(STNID,'05d'),\
-                 pars=dict(latitude = float(run_station.latitude), \
+                 pars=dict(latitude  = float(run_station.latitude), \
                            longitude = float(run_station.longitude),\
+                           latitude  = float(run_station.latitude), \
+                           lon       = 0.,\
                            STNID=int(STNID)))
 
     lSunrise, lSunset = GetSunriseSunset(c4gli.pars.latitude,0.,DT)
