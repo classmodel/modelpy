@@ -191,9 +191,12 @@ for iDT,DT in enumerate(DTS_chunk):
     c4gli.update(source='STNID'+format(STNID,'05d'),\
                  pars=dict(latitude  = float(run_station.latitude), \
                            longitude = float(run_station.longitude),\
-                           latitude  = float(run_station.latitude), \
+                           lat       = float(run_station.latitude), \
+                           # Note the difference between longitude and lon. The
+                           # lon variable should always be zero because we are
+                           # always working in solar time for running CLASS
                            lon       = 0.,\
-                           STNID=int(STNID)))
+                           STNID     = int(STNID)))
 
     lSunrise, lSunset = GetSunriseSunset(c4gli.pars.latitude,0.,DT)
 
