@@ -172,7 +172,6 @@ records_morning = get_records(run_stations,\
                               subset=args.subset_forcing,
                               refetch_records=False,
                               )
-stop
 
 # note that if runtime is an integer number, we don't need to get the afternoon
 # profiles. 
