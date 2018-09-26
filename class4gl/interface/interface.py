@@ -1,3 +1,4 @@
+
 import numpy as np
 
 import pandas as pd
@@ -435,7 +436,9 @@ if args.make_figures:
         for varkey in ['h','theta','q']:
             varkey_full = 'd'+varkey+'dt ['+units[varkey]+'/h]'
             data_all = data_all.rename(columns={'d'+varkey+'dt':varkey_full})
-            data_all['advt_tropo'] = data_input['advt_tropo']
+            
+        data_input['advt_tropo'] = - data_input['advt_tropo']
+        data_all['advt_tropo'] = data_input['advt_tropo']
             #print(data_input.shape)
             #print(data_all.shape)
         #print('hello6')

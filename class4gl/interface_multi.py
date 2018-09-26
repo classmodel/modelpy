@@ -603,47 +603,77 @@ class c4gl_interface_soundings(object):
 
 
         """ buttons definitions """
+        button_height = 0.055
+        button_hspace = 0.005
+        button_width  = 0.095
+        button_wspace = 0.005
+        buttons_upper = 0.28
+        buttons_left = 0.25
+
+        button_types = ['dataset','datetime','level','station','record']
         
-        label = 'bprev_dataset'
-        axes[label] = fig.add_axes([0.25,0.28,0.10,0.075])
-        btns[label] = Button(axes[label], 'Previous dataset')
-        btns[label].on_clicked(self.prev_dataset)
+        for ibutton_type,button_type in enumerate(button_types):
+            label='bprev'+button_type
+            axes[label] = fig.add_axes([
+                buttons_left,\
+                buttons_upper-ibutton_type*(button_height+button_hspace),\
+                button_width,\
+                button_height\
+                                                     ])
+            btns[label] = Button(axes[label], 'Previous '+button_type)
+            btns[label].on_clicked(getattr(self, 'prev_'+button_type))
 
-        label = 'bnext_dataset'
-        axes[label] = fig.add_axes([0.35,0.28,0.10,0.075])
-        btns[label] = Button(axes[label], 'Next dataset')
-        btns[label].on_clicked(self.next_dataset)
+            label='bnext'+button_type
+            axes[label] = fig.add_axes([
+                buttons_left+button_width+button_wspace,\
+                buttons_upper-ibutton_type*(button_height+button_hspace),\
+                button_width,\
+                button_height\
+                                                     ])
+            btns[label] = Button(axes[label], 'Next '+button_type)
+            btns[label].on_clicked(getattr(self, 'next_'+button_type))
 
-        label = 'bprev_datetime'
-        axes[label] = fig.add_axes([0.25,0.20,0.10,0.075])
-        btns[label] = Button(axes[label], 'Previous datetime')
-        btns[label].on_clicked(self.prev_datetime)
+        
+        # label = 'bprev_dataset'
+        # axes[label] = fig.add_axes([0.25,0.28,0.10,0.075])
+        # btns[label] = Button(axes[label], 'Previous dataset')
+        # btns[label].on_clicked(self.prev_dataset)
 
-        label = 'bnext_datetime'
-        axes[label] = fig.add_axes([0.35,0.20,0.10,0.075])
-        btns[label] = Button(axes[label], 'Next datetime')
-        btns[label].on_clicked(self.next_datetime)
+        # label = 'bnext_dataset'
+        # axes[label] = fig.add_axes([0.35,0.28,0.10,0.075])
+        # btns[label] = Button(axes[label], 'Next dataset')
+        # btns[label].on_clicked(self.next_dataset)
+
+        # label = 'bprev_datetime'
+        # axes[label] = fig.add_axes([0.25,0.20,0.10,0.075])
+        # btns[label] = Button(axes[label], 'Previous datetime')
+        # btns[label].on_clicked(self.prev_datetime)
+
+        # label = 'bnext_datetime'
+        # axes[label] = fig.add_axes([0.35,0.20,0.10,0.075])
+        # btns[label] = Button(axes[label], 'Next datetime')
+        # btns[label].on_clicked(self.next_datetime)
 
 
-        label = 'bprev_station'
-        axes[label] = fig.add_axes([0.25,0.12,0.10,0.075])
-        btns[label] = Button(axes[label], 'Previous station')
-        btns[label].on_clicked(self.prev_station)
+        # label = 'bprev_station'
+        # axes[label] = fig.add_axes([0.25,0.12,0.10,0.075])
+        # btns[label] = Button(axes[label], 'Previous station')
+        # btns[label].on_clicked(self.prev_station)
 
-        label = 'bnext_station'
-        axes[label] = fig.add_axes([0.35,0.12,0.10,0.075])
-        btns[label] = Button(axes[label], 'Next station')
-        btns[label].on_clicked(self.next_station)
+        # label = 'bnext_station'
+        # axes[label] = fig.add_axes([0.35,0.12,0.10,0.075])
+        # btns[label] = Button(axes[label], 'Next station')
+        # btns[label].on_clicked(self.next_station)
 
-        label = 'bprev_record'
-        axes[label] = fig.add_axes([0.25,0.04,0.10,0.075])
-        btns[label] = Button(axes[label], 'Previous record')
-        btns[label].on_clicked(self.prev_record)
+        # label = 'bprev_record'
+        # axes[label] = fig.add_axes([0.25,0.04,0.10,0.075])
+        # btns[label] = Button(axes[label], 'Previous record')
+        # btns[label].on_clicked(self.prev_record)
 
-        label = 'bnext_record'
-        axes[label] = fig.add_axes([0.35,0.04,0.10,0.075])
-        btns[label] = Button(axes[label], 'Next record')
-        btns[label].on_clicked(self.next_record)
+        # label = 'bnext_record'
+        # axes[label] = fig.add_axes([0.35,0.04,0.10,0.075])
+        # btns[label] = Button(axes[label], 'Next record')
+        # btns[label].on_clicked(self.next_record)
 
 
         # self.nstatsview = nstatsview
@@ -831,15 +861,68 @@ class c4gl_interface_soundings(object):
         ikey = (ikey - 1) % len(self.frames['worldmap']['inputkeys'])
         self.sel_dataset(self.frames['worldmap']['inputkeys'][ikey])
 
-
     def sel_dataset(self,inputkey):
         self.frames['worldmap']['inputkey'] = inputkey
         self.frames['stats']['inputkey'] = self.frames['worldmap']['inputkey'] # this is used for showing the percentiles per station in color.
         self.goto_datetime_worldmap(
             self.frames['profiles']['current_record_ini'].datetime.to_pydatetime(),
             'after')# get nearest datetime of the current dataset to the profile
+
+        print('seldata0')
+        if 'level' not in self.frames['worldmap'].keys():
+            levels = self.globaldata.datasets[self.frames['worldmap']['inputkey']].page['lev']
+            self.frames['worldmap']['level'] = np.max(levels)
+            print('seldata1')
+
+            minlev = np.min(levels)
+            maxlev = np.max(levels)
+            curlev = self.frames['worldmap']['level']
+            curlev = np.max([curlev,np.min(levels)])
+            curlev = np.min([curlev,np.max(levels)])
+            print('seldata2')
+
+            self.frames['worldmap']['level'] = curlev
+            print('seldata3')
+
+
+        print('seldata4')
+        self.sel_level(self.frames['worldmap']['level'])
+
+
+
+    def sel_level(self,level):
+
+        if 'lev' not in list(self.globaldata.datasets[self.frames['worldmap']['inputkey']].page.dims):
+            raise ValueError('lev dimension not in dataset '+self.frames['worldmap']['inputkey'])
+
+        print('seldata5')
+
+
+        if level > (np.max(self.globaldata.datasets[self.frames['worldmap']['inputkey']].page['lev'])):
+            raise ValueError('Level '+str(level)+' exceed those of the current dataset: '+str(self.globaldata.datasets[frames['worldmap']['inputkey']].page['lev']))
+        if level < (np.min(self.globaldata.datasets[self.frames['worldmap']['inputkey']].page['lev'])):
+            raise ValueError('Level '+str(level)+' is lower than those of the current dataset: '+str(self.globaldata.datasets[frames['worldmap']['inputkey']].page['lev']))
+        print('seldata6')
+        self.frames['worldmap']['level'] = level
+
+        print(level)
         if "fig" in self.__dict__.keys():
             self.refresh_plot_interface(only=['worldmap','stats_lightupdate','stats_colorbar']) 
+
+        print('seldata7')
+
+    def next_level(self,event=None,jump=1):
+        if 'lev' not in list(self.globaldata.datasets[self.frames['worldmap']['inputkey']].page.dims.keys()):
+            raise ValueError('lev dimension not in dataset'+self.frames['worldmap']['inputkey'])
+        levels =  self.globaldata.datasets[self.frames['worldmap']['inputkey']].page['lev']
+        level = self.frames['worldmap']['level']
+        level =  ((level + jump - min(levels)) % (max(levels)-min(levels))) + min(levels)
+        self.sel_level(level)
+
+    def prev_level(self,event=None):
+        self.next_level(jump=-1)
+
+        #self.frames['worldmap']['level'] = level: 
        
     # def prev_station(self,event=None):
     #     self.istation = (self.istation - 1) % self.stations.shape[0]
@@ -869,11 +952,14 @@ class c4gl_interface_soundings(object):
         if self.globaldata is not None:
             if (only is None) or ('worldmap' in only):
                 globaldata = self.globaldata
+                print('hello0')
                 if 'time' in globaldata.datasets[frames['worldmap']['inputkey']].page.variables[frames['worldmap']['inputkey']].dims:
                     globaldata.datasets[frames['worldmap']['inputkey']].browse_page(time=frames['worldmap']['DT'])
                     datasetxr = globaldata.datasets[frames['worldmap']['inputkey']].page.isel(time = frames['worldmap']['iDT'])
                 else:
                     datasetxr = globaldata.datasets[frames['worldmap']['inputkey']].page
+                if 'lev' in datasetxr.dims:
+                    datasetxr = datasetxr.isel(lev=self.frames['worldmap']['level'])
                 keystotranspose = ['lat','lon']
                 for key in dict(datasetxr.dims).keys():
                     if key not in keystotranspose:
@@ -881,16 +967,18 @@ class c4gl_interface_soundings(object):
 
                 datasetxr = datasetxr.transpose(*keystotranspose)
                 datasetxr = datasetxr.sortby('lat',ascending=False)
+                print('hello1')
 
                 lonleft = datasetxr['lon'].where(datasetxr.lon > 180.,drop=True) 
                 lonleft = lonleft - 360.
+                print('hello2')
                 lonright = datasetxr['lon'].where(datasetxr.lon <= 180.,drop=True) 
                 label = 'worldmap'
                 axes[label].clear()
                 axes[label].lon = xr.concat([lonleft,lonright],'lon').values
                 axes[label].lat = np.sort(globaldata.datasets[frames['worldmap']['inputkey']].page.variables['lat'].values)[::-1] #sortby('lat',ascending=False).values
+                print('hello3')
 
-        if (only is None) or ('worldmap' in only):
             #if 'axmap' not in self.__dict__ :
             #    self.axmap = self.fig.add_axes([0.39,0.5,0.34,0.5])
             #else:
@@ -917,36 +1005,40 @@ class c4gl_interface_soundings(object):
            #if 'time' in list(dict(self.datasets[self.axes['worldmap'].focus['key']].variables[self.axes['worldmap'].focus['key']].dims).keys()):
 
 
-            fieldleft =  datasetxr[frames['worldmap']['inputkey']].where(datasetxr.lon > 180.,drop=True) 
-            fieldright = datasetxr[frames['worldmap']['inputkey']].where(datasetxr.lon <= 180.,drop=True) 
+                fieldleft =  datasetxr[frames['worldmap']['inputkey']].where(datasetxr.lon > 180.,drop=True) 
+                fieldright = datasetxr[frames['worldmap']['inputkey']].where(datasetxr.lon <= 180.,drop=True) 
+                print('hello4')
 
-            field =xr.concat([fieldleft,fieldright],'lon') #.sortby('lat',ascending=False).values
-            if 'lev' in field.dims:
-                field = field.isel(lev=-1)
+                field =xr.concat([fieldleft,fieldright],'lon') #.sortby('lat',ascending=False).values
 
-            #np.concatenate([viewframe.datasets['cc']['cc'].page.isel(time=0).where(viewframe.datasets['cc'].lon > 180).values,viewframe.datasets['cc']['cc'].isel(time=0).where(viewframe.datasets['cc'].lon <= 180).values],axis=1)
-            axes[label].axis('off')
+                #np.concatenate([viewframe.datasets['cc']['cc'].page.isel(time=0).where(viewframe.datasets['cc'].lon > 180).values,viewframe.datasets['cc']['cc'].isel(time=0).where(viewframe.datasets['cc'].lon <= 180).values],axis=1)
+                axes[label].axis('off')
+                print('hello5')
 
-            from matplotlib import cm
-            axes[label].fields[label] = axes[label].imshow(field[:,:],interpolation='none',cmap = cm.viridis )
-            
-            title=frames['worldmap']['inputkey']
-            if globaldata is not None: 
-                if 'time' in globaldata.datasets[frames['worldmap']['inputkey']].page.variables[frames['worldmap']['inputkey']].dims:
-                    title = title+' ['+pd.to_datetime(frames['worldmap']['DT']).strftime("%Y/%m/%d %H:%M") +'UTC]'
-            axes[label].set_title(title)
+                from matplotlib import cm
+                axes[label].fields[label] = axes[label].imshow(field[:,:],interpolation='none',cmap = cm.viridis )
+                
+                print('hello6')
+                title=frames['worldmap']['inputkey']
+                if globaldata is not None: 
+                    if 'time' in globaldata.datasets[frames['worldmap']['inputkey']].page.variables[frames['worldmap']['inputkey']].dims:
+                        title = title+' ['+pd.to_datetime(frames['worldmap']['DT']).strftime("%Y/%m/%d %H:%M") +'UTC]'
+                axes[label].set_title(title)
+                print('hello7')
 
-            label ='worldmap_colorbar'
-            axes[label].clear()
-            axes[label].fields[label] = fig.colorbar(axes['worldmap'].fields['worldmap'],cax=axes[label],orientation='horizontal',label=frames['worldmap']['inputkey']+' ['+self.units[frames['worldmap']['inputkey']]+']')
+                label ='worldmap_colorbar'
+                axes[label].clear()
+                axes[label].fields[label] = fig.colorbar(axes['worldmap'].fields['worldmap'],cax=axes[label],orientation='horizontal',label=frames['worldmap']['inputkey']+' ['+self.units[frames['worldmap']['inputkey']]+']')
 
 
-            # lons, lats = np.meshgrid(axes[label].lon,axes[label].lat)
-            # x,y = self.gmap(lons,lats)
-            # #self.cont_map = self.axmap.contourf(x,y,field.T,cmap=gmapcm)
-            # self.cont_map = self.axmap.pcolormesh(x,y,field.T,cmap=gmapcm)
+                # lons, lats = np.meshgrid(axes[label].lon,axes[label].lat)
+                # x,y = self.gmap(lons,lats)
+                # #self.cont_map = self.axmap.contourf(x,y,field.T,cmap=gmapcm)
+                # self.cont_map = self.axmap.pcolormesh(x,y,field.T,cmap=gmapcm)
 
         if (self.path_obs is not None) and \
+           (self.frames['worldmap']['inputkey'] in self.frames['stats']['records_all_stations_ini_pct'].keys()) and \
+           (self.path_obs is not None) and \
            ((only is None) or ('stats' in only) or ('stats_lightupdate' in only)):
 
             statskeys_out = list(self.frames['stats']['records_all_stations_mod_stats'].columns)

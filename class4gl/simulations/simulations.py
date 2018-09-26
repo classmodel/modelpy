@@ -196,7 +196,7 @@ if args.runtime == 'from_afternoon_profile':
     records_afternoon.set_index(['STNID','dates'],inplace=True)
     ini_index_dates = records_morning.set_index(['STNID','dates']).index
     records_afternoon = records_afternoon.loc[ini_index_dates]
-    records_afternoon.index = records_morning.inde= run_station_chunkx
+    records_afternoon.index = records_morning.index
 
 experiments = args.experiments.strip(' ').split(' ')
 for expname in experiments:
