@@ -20,6 +20,7 @@ parser.add_argument('--first_station_row')
 parser.add_argument('--last_station_row')
 parser.add_argument('--station_id') # run a specific station id
 parser.add_argument('--error_handling',default='dump_on_success')
+parser.add_argument('--diag_tropo',default=None)
 parser.add_argument('--subset_forcing',default='morning') # this tells which yaml subset
                                                       # to initialize with.
                                                       # Most common options are
@@ -248,11 +249,17 @@ for expname in experiments:
                                                     mode='ini')
 
                     # add tropospheric parameters on advection and subsidence
-                    seltropo = (c4gli_morning.air_ac.p > c4gli_morning.air_ac.p.iloc[-1]+ 3000.*(- 1.2 * 9.81 ))
-                    profile_tropo = c4gli_morning.air_ac[seltropo]
-                    for var in ['t','q','u','v',]:
-                        mean_adv_tropo = np.mean(profile_tropo['adv'+var+'_x']+profile_tropo['adv'+var+'_y'] )
-                        c4gli_morning.update(source='era-interim',pars={'adv'+var+'_tropo':mean_adv_tropo})
+                    # (for diagnosis)
+
+                    if args.diag_tropo is not None:
+                        seltropo = (c4gli_morning.air_ac.p > c4gli_morning.air_ac.p.iloc[-1]+ 3000.*(- 1.2 * 9.81 ))
+                        profile_tropo = c4gli_morning.air_ac[seltropo]
+                        for var in diag_tropo:#['t','q','u','v',]:
+                            if var[:3] == 'adv':
+                                mean_adv_tropo = np.mean(profile_tropo[var+'_x']+profile_tropo[var+'_y'] )
+                                c4gli_morning.update(source='era-interim',pars={var+'_tropo':mean_adv_tropo})
+                            else:
+                                print("warning: tropospheric variable "+var+" not recognized")
                     
                     
                     if args.runtime == 'from_afternoon_profile':
