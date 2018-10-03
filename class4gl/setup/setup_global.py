@@ -175,9 +175,14 @@ for iSTN,STN in STNlist:
 
                 logic = dict()
                 logic['morning'] =  (c4gli.pars.ldatetime.hour <= 12.)
+
+                # Sounding should have taken place after 3 hours before sunrise.
+                # Note that the actual simulation only start at sunrise
+                # (specified by ldatetime_daylight), so the ABL cooling af the time
+                # before sunrise is ignored by the simulation.
                 logic['daylight'] = \
-                    ((c4gli.pars.ldatetime_daylight - 
-                      c4gli.pars.ldatetime).total_seconds()/3600. <= 4.)
+                    ((c4gli.pars.ldatetime - 
+                      c4gli.pars.lSunrise).total_seconds()/3600. >= -3.)
                 
                 logic['springsummer'] = (c4gli.pars.theta > 278.)
                 
@@ -245,10 +250,15 @@ for iSTN,STN in STNlist:
 
                         logic_afternoon['afternoon'] = \
                             (c4gli_afternoon.pars.ldatetime.hour >= 12.)
+                        # the sounding should have taken place before 2 hours
+                        # before sunset. This is to minimize the change that a
+                        # stable boundary layer (yielding very low mixed layer
+                        # heights) is formed which can not be represented by
+                        # class.
                         logic_afternoon['daylight'] = \
                           ((c4gli_afternoon.pars.ldatetime - \
-                            c4gli_afternoon.pars.ldatetime_daylight \
-                           ).total_seconds()/3600. <= 0.)
+                            c4gli_afternoon.pars.lSunset \
+                           ).total_seconds()/3600. <= -2.)
 
 
                         le3000_afternoon = \

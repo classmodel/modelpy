@@ -1484,6 +1484,10 @@ class class4gl_input(object):
     def mixed_layer_fit(self,air_ap,source,mode):
         """ 
             Purpose: 
+                make a profile fit and write it to the air_ap section of the
+                class4gl_input object (self).
+            Input:
+                air_ap: input profile
 
 
         """
@@ -1500,18 +1504,18 @@ class class4gl_input(object):
 
 
         # Therefore, determine the sounding that are valid for 'any' column 
-        is_valid = ~np.isnan(air_ap).any(axis=1) & (air_ap.z >= 0)
-        #is_valid = (air_ap.z >= 0)
+        # is_valid = ~np.isnan(air_ap).any(axis=1) & (air_ap.z >= 0)
+        is_valid = (air_ap.z >= 0)
         # # this is an alternative pipe/numpy method
         # (~np.isnan(air_ap).any(axis=1) & (air_ap.z >= 0)).pipe(np.where)[0]
         valid_indices = air_ap.index[is_valid].values
-        #print(valid_indices)
+        print(valid_indices)
 
 
         hvalues = {}
         if len(valid_indices) > 0:
             #calculated mixed-layer height considering the critical Richardson number of the virtual temperature profile
-            hvalues['h_b'] ,hvalues['h_u'],hvalues['h_l']  = blh(air_ap.z,air_ap.thetav,np.sqrt(air_ap.u**2. + air_ap.u**2.))
+            hvalues['h_b'] ,hvalues['h_u'],hvalues['h_l']  = blh(air_ap.z,air_ap.thetav,np.sqrt(air_ap.u**2. + air_ap.v**2.))
             
             hvalues['h_b']  = np.max((hvalues['h_b'] ,10.))
             hvalues['h_u']  = np.max((hvalues['h_u'] ,10.)) #upper limit of mixed layer height
@@ -1526,10 +1530,11 @@ class class4gl_input(object):
             hvalues['h_l']  =np.nan
             hvalues['h_e']  =np.nan
             hvalues['h']    =np.nan
+
         self.update(source='fit_from_'+source,pars=hvalues)
 
         if np.isnan(self.pars.h ):
-            self.pars.Ps  = nan
+            self.pars.Ps  = np.nan
 
         mlvalues = {}
         if ~np.isnan(self.pars.h ):
@@ -1731,78 +1736,6 @@ class gl_dia(object):
 
 
 
-def blh(HAGL,THTV,WSPD,RiBc = 0.31,RiBce = 0.08):
-    """ Calculate mixed-layer height from temperature and wind speed profile
-
-        Input:
-            HAGL: height coordinates [m]
-            THTV: virtual potential temperature profile [K]
-            WSPD: wind speed profile [m/s]
-            RIBc: critical Richardson Number. 
-                According to Zhang et al., 2014 (GMD), it should  equal to 0.24
-                for strongly stable boundary layers, 0.31 for weakly stable
-                boundary layers, and 0.39 for unstable boundary layers. By
-                default, it is set to the average of the three cases and an
-                error RiBce value that comprises all values.
-
-        Output:
-            BLH: best-guess mixed-layer height
-            BLHu: upper limit of mixed-layer height
-            BLHl: lower limit of mixed-layer height
-
-    """
-    
-    #initialize error BLH
-    BLHe = 0.
-    eps = 2.#security limit
-    iTHTV_0 = np.where(~np.isnan(THTV))[0]
-    if len(iTHTV_0) > 0:
-        iTHTV_0 = iTHTV_0[0]
-        THTV_0 = THTV[iTHTV_0]
-    else:
-        THTV_0 = np.nan
-
-    RiB = 9.81/THTV_0 * ( THTV - THTV_0) * HAGL / np.clip(WSPD,a_min=0.1,a_max=None)**2.
-    
-    
-    #RiB = 9.81/THTV_0 * ( THTV[i-1] +  (HGHT[i] - HGHT[i-1])/ - THTV_0) * HAGL / WSPD**2
-    #RiB - RiBc = 0
-    
-    #best guess of BLH
-    
-    #print("RiB: ",RiB)
-    #print("RiBc: ",RiBc)
-    
-    
-    
-    BLHi = np.where(RiB > RiBc)[0]
-    if len(BLHi ) > 0:
-        BLHi = BLHi[0]
-        #print("BLHi: ",BLHi)
-        BLH = (HAGL[BLHi] - HAGL[BLHi-1])/(RiB[BLHi] -RiB[BLHi-1]) * (RiBc - RiB[BLHi-1]) + HAGL[BLHi-1]
-        
-        # possible error is calculated as the difference height levels used for the interpolation
-        BLHu = np.max([BLH,HAGL[BLHi]-eps])
-        BLHl = np.min([BLH,HAGL[BLHi-1]+eps])
-        # calculate an alternative BLH based on another critical Richardson number (RiBce):
-        BLHi =np.where(RiB > RiBce)[0]
-        if len(BLHi ) > 0:    
-            BLHi = BLHi[0]
-                
-            BLHa = (HAGL[BLHi] - HAGL[BLHi-1])/(RiB[BLHi] -RiB[BLHi-1]) * (RiBc - RiB[BLHi-1]) + HAGL[BLHi-1]
-            BLHu = np.max([BLHu,HAGL[BLHi]-eps])
-            BLHl = np.min([BLHl,HAGL[BLHi-1]+eps])
-            
-            BLHu = np.max([BLHu,BLH + abs(BLH-BLHa)])
-            BLHl = np.min([BLHl,BLH - abs(BLH-BLHa)])
-        
-        else:
-            BLH,BLHu,BLHl = np.nan, np.nan,np.nan
-
-    else:
-        BLH,BLHu,BLHl = np.nan, np.nan,np.nan
-        
-    return BLH,BLHu,BLHl
 
 
 
@@ -1890,6 +1823,79 @@ def get_lifted_index(startp,startt,startqv,pres,theta,endp=50000.):
     #print(endtemp)
     return endtempenv - endtemp
 
+def blh(HAGL,THTV,WSPD,RiBc = 0.31,RiBce = 0.08):
+    """ Calculate mixed-layer height from temperature and wind speed profile
+
+        Input:
+            HAGL: height coordinates [m]
+            THTV: virtual potential temperature profile [K]
+            WSPD: wind speed profile [m/s]
+            RIBc: critical Richardson Number. 
+                According to Zhang et al., 2014 (GMD), it should  equal to 0.24
+                for strongly stable boundary layers, 0.31 for weakly stable
+                boundary layers, and 0.39 for unstable boundary layers. By
+                default, it is set to the average of the three cases and an
+                error RiBce value that comprises all values.
+
+        Output:
+            BLH: best-guess mixed-layer height
+            BLHu: upper limit of mixed-layer height
+            BLHl: lower limit of mixed-layer height
+
+    """
+    
+    #initialize error BLH
+    BLHe = 0.
+    eps = 2.#security limit
+    iTHTV_0 = np.where(~np.isnan(THTV))[0]
+    if len(iTHTV_0) > 0:
+        iTHTV_0 = iTHTV_0[0]
+        THTV_0 = THTV[iTHTV_0]
+    else:
+        THTV_0 = np.nan
+
+    RiB = 9.81/THTV_0 * ( THTV - THTV_0) * HAGL / np.clip(WSPD,a_min=0.1,a_max=None)**2.
+
+    
+    
+    #RiB = 9.81/THTV_0 * ( THTV[i-1] +  (HGHT[i] - HGHT[i-1])/ - THTV_0) * HAGL / WSPD**2
+    #RiB - RiBc = 0
+    
+    #best guess of BLH
+    
+    #print("RiB: ",RiB)
+    #print("RiBc: ",RiBc)
+    
+    
+    
+    BLHi = np.where(RiB > RiBc)[0]
+    if len(BLHi ) > 0:
+        BLHi = BLHi[0]
+        #print("BLHi: ",BLHi)
+        BLH = (HAGL[BLHi] - HAGL[BLHi-1])/(RiB[BLHi] -RiB[BLHi-1]) * (RiBc - RiB[BLHi-1]) + HAGL[BLHi-1]
+        
+        # possible error is calculated as the difference height levels used for the interpolation
+        BLHu = np.max([BLH,HAGL[BLHi]-eps])
+        BLHl = np.min([BLH,HAGL[BLHi-1]+eps])
+        # calculate an alternative BLH based on another critical Richardson number (RiBce):
+        BLHi =np.where(RiB > RiBce)[0]
+        if len(BLHi ) > 0:    
+            BLHi = BLHi[0]
+                
+            BLHa = (HAGL[BLHi] - HAGL[BLHi-1])/(RiB[BLHi] -RiB[BLHi-1]) * (RiBc - RiB[BLHi-1]) + HAGL[BLHi-1]
+            BLHu = np.max([BLHu,HAGL[BLHi]-eps])
+            BLHl = np.min([BLHl,HAGL[BLHi-1]+eps])
+            
+            BLHu = np.max([BLHu,BLH + abs(BLH-BLHa)])
+            BLHl = np.min([BLHl,BLH - abs(BLH-BLHa)])
+        
+        else:
+            BLH,BLHu,BLHl = np.nan, np.nan,np.nan
+
+    else:
+        BLH,BLHu,BLHl = np.nan, np.nan,np.nan
+        
+    return BLH,BLHu,BLHl
 
 class class4gl(model):
     """ the extension of the 'class model' class """
