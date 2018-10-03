@@ -1271,6 +1271,104 @@ class class4gl_input(object):
             #             air_ach=pd.DataFrame({'wrho':list(wrho)}))
 
 
+    # def get_idx_in_dataset(self,
+    #                        globaldata,
+    #                        latspan = 0.5):
+    #                        lonspan = 0.5):
+    #     """ 
+    #     purpose:
+    #         get the xarray indices that are representative between the starting and
+    #         stopping time of the class simulations
+
+    #     input:
+    #         self: definition of the class input
+    #         globaldata: book of class4gl global dataset
+    #         key: key variable in the global dataset
+    #         latspan: the span of the lat coordinate
+    #         lonspan: the span of the lon coordinate
+
+
+    #     output:
+    #         itimes: time coordinates during of the class simulatios
+    #         lats: 
+    #         lons:
+    #         """
+
+    #     # first, we browse to the correct file that has the current time
+    #     if 'time' in list(globaldata.datasets[key].page[key].dims):
+    #         globaldata.datasets[key].browse_page(time=classdatetime)
+    #     
+    #     if (globaldata.datasets[key].page is not None):
+    #         # find longitude and latitude coordinates
+    #         ilats = (np.abs(globaldata.datasets[key].page.lat -
+    #                         self.pars.latitude) < latspan)
+    #         # In case we didn't find any latitude in the allowed range, we take the closest one.
+    #         if len(ilats) == 0:
+    #             ilats = np.where(\
+    #                      globaldata.datasets[key].page.lat.isin(
+    #                       globaldata.datasets[key].page.lat.sel(lat=self.pars.latitude)\
+    #                      ))[0]
+    #         ilons = (np.abs(globaldata.datasets[key].page.lon -
+    #                         self.pars.longitude) < lonspan)
+    #         # In case we didn't find any longitude in the allowed range, we take the closest one.
+    #         if len(ilon) == 0:
+    #             ilon = np.where(\
+    #                      globaldata.datasets[key].page.lon.isin(
+    #                       globaldata.datasets[key].page.lon.sel(lon=self.pars.longitude)\
+    #                      ))[0]
+    #         
+    #         # if we have a time dimension, then we look up the required timesteps during the class simulation
+    #         if 'time' in list(globaldata.datasets[key].page[key].dims):
+
+    #             DIST = np.abs((globaldata.datasets[key].page['time'].values - classdatetime))
+    #             
+    #             idatetime = np.where((DIST) == np.min(DIST))[0][0]
+    #             #print('idatetime',idatetime,globaldata.datasets[key].variables['time'].values[idatetime],classdatetime)
+    #             if key not in ['t','u','v','q']:
+    #                 if ((globaldata.datasets[key].page.variables['time'].values[idatetime] < classdatetime) ):
+    #                     idatetime += 1
+    #             
+    #             DIST = np.abs((globaldata.datasets[key].page['time'].values - classdatetime_stop))
+    #             idatetimeend = np.where((DIST) == np.min(DIST))[0][0]
+    #             #print('idatetimeend',idatetimeend,globaldata.datasets[key].variables['time'].values[idatetime],classdatetimeend)
+    #             if ((globaldata.datasets[key].page.variables['time'].values[idatetimeend] > classdatetime_stop)):
+    #                 idatetimeend -= 1
+    #             idatetime = np.min((idatetime,idatetimeend))
+    #             #for gleam, we take the previous day values
+
+    #             # in case of soil temperature, we take the exact
+    #             # timing (which is the morning)
+    #             if key in ['t','u','v','q']:
+    #                 idatetimeend = idatetime
+    #             
+    #             itimes = range(idatetime,idatetimeend+1)
+    #             #print(key,'itimes',itimes)
+
+
+    #             # In case we didn't find any correct time, we take the
+    #             # closest one.
+    #             if len(itimes) == 0:
+
+
+    #                 classdatetimemean = \
+    #                     np.datetime64(self.pars.datetime_daylight + \
+    #                     dt.timedelta(seconds=int(self.pars.runtime/2.)
+    #                                 ))
+
+    #                 dstimes = globaldata.datasets[key].page.time
+    #                 time = dstimes.sel(time=classdatetimemean,method='nearest')
+    #                 itimes = (globaldata.datasets[key].page.time ==
+    #                           time)
+    #                 
+    #         else:
+    #             # we don't have a time coordinate so it doesn't matter
+    #             # what itimes is
+    #             itimes = 0
+
+    #         #multiplication by 1 is a trick to remove the array()-type in case of zero dimensions (single value).
+    #       return itimes,ilats,ilons
+
+
     def query_source(self,var):
         """ 
         purpose:
@@ -1368,16 +1466,17 @@ class class4gl_input(object):
                                          ignore_keys=[])
             if not source_ok:
                 source_globaldata_ok = False
+                self.logger.warning('something was wrong with the profiles')
         
             # Additional check: we exclude desert-like
             if ((self.pars.cveg is None) or pd.isnull(self.pars.cveg)):
                 source_globaldata_ok = False
-                self.logger.info('cveg  is invalid: ('+str(self.pars.cveg)+')')
+                self.logger.warning('cveg  is invalid: ('+str(self.pars.cveg)+')')
             if ((self.pars.LAI is None) or pd.isnull(self.pars.LAI)):
                 source_globaldata_ok = False
-                self.logger.info('LAI  is invalid: ('+str(self.pars.LAI)+')')
+                self.logger.warning('LAI  is invalid: ('+str(self.pars.LAI)+')')
             elif self.pars.cveg < 0.02:
-                self.logger.info('cveg  is too low: ('+str(self.pars.cveg)+')')
+                self.logger.warning('cveg  is too low: ('+str(self.pars.cveg)+')')
                 source_globaldata_ok = False
 
         return source_globaldata_ok
@@ -1632,13 +1731,19 @@ class gl_dia(object):
 
 
 
-def blh(HAGL,THTV,WSPD,RiBc = 0.5,RiBce = 0.25):
+def blh(HAGL,THTV,WSPD,RiBc = 0.31,RiBce = 0.08):
     """ Calculate mixed-layer height from temperature and wind speed profile
 
         Input:
             HAGL: height coordinates [m]
             THTV: virtual potential temperature profile [K]
             WSPD: wind speed profile [m/s]
+            RIBc: critical Richardson Number. 
+                According to Zhang et al., 2014 (GMD), it should  equal to 0.24
+                for strongly stable boundary layers, 0.31 for weakly stable
+                boundary layers, and 0.39 for unstable boundary layers. By
+                default, it is set to the average of the three cases and an
+                error RiBce value that comprises all values.
 
         Output:
             BLH: best-guess mixed-layer height
