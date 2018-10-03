@@ -1505,6 +1505,11 @@ class class4gl_input(object):
 
         # Therefore, determine the sounding that are valid for 'any' column 
         # is_valid = ~np.isnan(air_ap).any(axis=1) & (air_ap.z >= 0)
+        
+        if len(~np.isnan(air_ap).any(axis=1) & (air_ap.z >= 0)) == 0.:
+            self.logger.warning('Warning, not all profile input is valid!  Please check input fields!', air_ap)
+
+
         is_valid = (air_ap.z >= 0)
         # # this is an alternative pipe/numpy method
         # (~np.isnan(air_ap).any(axis=1) & (air_ap.z >= 0)).pipe(np.where)[0]
