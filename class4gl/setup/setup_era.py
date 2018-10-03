@@ -250,6 +250,8 @@ for iDT,DT in enumerate(DTS_chunk):
                          source=air_ap_input_source,
                          mode=air_ap_mode)
 
+    if not c4gli.check_source_globaldata():
+        print('Warning: some input sources appear invalid')
 
     c4gli.dump(file_ini)
 
