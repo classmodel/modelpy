@@ -1,3 +1,4 @@
+'''
 import numpy as np
 
 import pandas as pd
@@ -125,6 +126,7 @@ for key in args.experiments.strip(' ').split(' '):
                       globaldata,\
                       refetch_records=False
                     )
+'''
 
 if bool(args.make_figures):
     fig = plt.figure(figsize=(10,7))   #width,height
@@ -132,7 +134,8 @@ if bool(args.make_figures):
     axes = {}         
     axes_taylor = {}         
     
-    colors = ['r','g','b','m']
+    #colors = ['r','g','b','m']
+    colors = ['k']
     symbols = ['*','x','+']
     dias = {}
     
@@ -144,11 +147,10 @@ if bool(args.make_figures):
         obs = c4gldata[args.experiments.strip().split()[0]].frames['stats']['records_all_stations_obs_afternoon_stats']['d'+varkey+'dt']
         STD_OBS = obs.std()
         dias[varkey] =  TaylorDiagram(1., srange=[0.0,1.7],fig=fig, rect=(230+i+3),label='Reference')
-        if i == 2:
-            dias[varkey]._ax.axis["left"].label.set_text(\
-                "Standard deviation (model) / Standard deviation (observations)")
-            # dias[varkey]._ax.axis["left"].axis.set_ticks(np.arange(0.,2.,0.25))
-            # dias[varkey]._ax.axis["left"].axis.set_major_locator(np.arange(0.,2.,0.25))
+        dias[varkey]._ax.axis["left"].label.set_text(\
+            "Normalized standard deviation")
+        # dias[varkey]._ax.axis["left"].axis.set_ticks(np.arange(0.,2.,0.25))
+        # dias[varkey]._ax.axis["left"].axis.set_major_locator(np.arange(0.,2.,0.25))
         #dias[varkey]._ax.axis["left"].axis.set_ticks(np.arange(0.,2.,0.25))
         # Q95 = obs.quantile(0.95)
         # Q95 = obs.quantile(0.90)
@@ -176,13 +178,72 @@ if bool(args.make_figures):
             STD = mod.std()
             
             fit = np.polyfit(x,y,deg=1)
-            axes[varkey].plot(x, fit[0] * x + fit[1],\
-                              color=colors[ikey],alpha=0.8,lw=2,\
-                              label=key+", "+\
-                                          'R = '+str(round(PR,3))+', '+\
-                                          'RMSE = '+str(round(RMSE,5))+units['d'+varkey+'dt']+', '+\
-                                          'BIAS = '+str(round(BIAS,5))+units['d'+varkey+'dt'] )
-            axes[varkey].legend(fontsize=5)
+
+            if varkey == 'q':
+                axes[varkey].plot(x, fit[0] * x + fit[1],\
+                                  color=colors[ikey],alpha=0.8,lw=2,\
+                                  label=key+", "+\
+                           'RMSE = '+format((RMSE*1000.),'0.2f')+r'$\,  \mathrm{g\,  kg^{-1}\,  h^{-1}}$'+ '\n'+\
+                           'Bias = '+format((BIAS*1000.),'0.2f')+r'$\,  \mathrm{g\,  kg^{-1}\,  h^{-1}}$'+' \n'+\
+                           r'$R$ = '+format(PR,'0.2f') )
+
+
+            elif varkey == 'h':
+                axes[varkey].plot(x, fit[0] * x + fit[1],\
+                                  color=colors[ikey],alpha=0.8,lw=2,\
+                                  label=key+", "+\
+                            'RMSE = '+format(RMSE,'0.1f')+r'$\,  \mathrm{m\, h^{-1}}$'+'\n'+\
+                            'Bias = '+format(BIAS,'0.1f')+r'$\,  \mathrm{m\, h^{-1}}$'+'\n'+\
+                            r'$R$ = '+format(PR,'0.2f'))
+            else: #theta
+                axes[varkey].plot(x, fit[0] * x + fit[1],\
+                                  color=colors[ikey],alpha=0.8,lw=2,\
+                                  label=key+", "+\
+                            'RMSE = '+format(RMSE,'0.3f')+r'$\, \mathrm{K\, h^{-1}}$'+'\n'+\
+                            'Bias = '+format(BIAS,'0.3f')+r'$\, \mathrm{K\, h^{-1}}$'+'\n'+\
+                            r'$R$ = '+format(PR,'0.2f'))
+
+            if varkey == 'q':
+                annotate_text = \
+                               'RMSE = '+format((RMSE*1000.),'0.2f')+r'$\,  \mathrm{g\,  kg^{-1}\,  h^{-1}}$'+ '\n'+\
+                               'Bias = '+format((BIAS*1000.),'0.2f')+r'$\,  \mathrm{g\,  kg^{-1}\,  h^{-1}}$'+' \n'+\
+                               r'$R$ = '+format(PR,'0.2f')
+                ann = axes[varkey].annotate(annotate_text, xy=(0.95, .05 ), xycoords='axes fraction',fontsize=9,
+       horizontalalignment='right', verticalalignment='bottom' ,
+        bbox={'edgecolor':'black',
+                          'fc':'white',  
+                              'boxstyle':'square',
+                              'alpha':0.8}
+                                       )
+            elif varkey == 'h':
+                annotate_text = \
+                                'RMSE = '+format(RMSE,'0.1f')+r'$\,  \mathrm{m\, h^{-1}}$'+'\n'+\
+                                'Bias = '+format(BIAS,'0.1f')+r'$\,  \mathrm{m\, h^{-1}}$'+'\n'+\
+                                r'$R$ = '+format(PR,'0.2f')
+                ann = axes[varkey].annotate(annotate_text, xy=(0.95, .05 ), xycoords='axes fraction',fontsize=9,
+       horizontalalignment='right', verticalalignment='bottom' ,
+        bbox={'edgecolor':'black',
+                          'fc':'white',  
+                              'boxstyle':'square',
+                              'alpha':0.8}
+                                       )
+            else:
+                annotate_text = \
+                                'RMSE = '+format(RMSE,'0.3f')+r'$\, \mathrm{K\, h^{-1}}$'+'\n'+\
+                                'Bias = '+format(BIAS,'0.3f')+r'$\, \mathrm{K\, h^{-1}}$'+'\n'+\
+                                r'$R$ = '+format(PR,'0.2f')
+
+                ann = axes[varkey].annotate(annotate_text, xy=(0.05, .98 ), xycoords='axes fraction',fontsize=9,
+       horizontalalignment='left', verticalalignment='top' ,
+        bbox={'edgecolor':'black',
+                          'fc':'white',  
+                              'boxstyle':'square',
+                              'alpha':0.8}
+                                       )
+
+
+
+
             
             # print(STD)
             # print(PR)
@@ -223,16 +284,22 @@ if bool(args.make_figures):
             # #                              'BIAS = '+str(round(BIAS,5)),s=1.,color=colors[ikey])
                 
                 dias[varkey].add_sample(station_mod.std()/station_obs.std(),
-                               pearsonr(station_mod,station_obs)[0],annotate=symbols[istation],
+                               pearsonr(station_mod,station_obs)[0],#annotate=symbols[istation],
                                marker=symbols[istation], ms=5, ls='',
-                               #mfc='k', mec='k', # B&W
-                               mfc=colors[ikey], mec=colors[ikey], # Colors
+                               mfc='k', mec='k', # B&W
+                               #mfc=colors[ikey], mec=colors[ikey], # Colors
                                label=key)
                 istation += 1
     
+            if varkey == 'q':
+                units_final = r'[$g\, kg^{-1}\, h^{-1}$]'
+            elif varkey == 'theta':
+                units_final = r'[$K\, h^{-1}$]'
+            elif varkey == 'h':
+                units_final = r'[$m\, h^{-1}$]'
     
             axes[varkey].set_xlabel('observations')     
-            axes[varkey].set_title(latex['d'+varkey+'dt']+' ['+units['d'+varkey+'dt']+']')                                     
+            axes[varkey].set_title(latex['d'+varkey+'dt']+' '+units_final,fontsize=12)                                     
         if i==0:                                    
             axes[varkey].set_ylabel('model')                                            
         abline(1,0,axis=axes[varkey])
@@ -240,19 +307,19 @@ if bool(args.make_figures):
     
     
     
-    # legend for different forcing simulations (colors)
-    ax = fig.add_axes([0.05,0.00,0.15,0.15]) #[*left*, *bottom*, *width*,    *height*]
-    leg = []
-    for ikey,key in enumerate(args.experiments.strip(' ').split(' ')):
-        leg1, = ax.plot([],colors[ikey]+'s' ,markersize=10)
-        leg.append(leg1)
-    ax.axis('off')
-    #leg1 =
-    ax.legend(leg,list(args.experiments.strip(' ').split(' ')),loc=2,fontsize=10)
+    # # legend for different forcing simulations (colors)
+    # ax = fig.add_axes([0.05,0.00,0.15,0.15]) #[*left*, *bottom*, *width*,    *height*]
+    # leg = []
+    # for ikey,key in enumerate(args.experiments.strip(' ').split(' ')):
+    #     leg1, = ax.plot([],colors[ikey]+'s' ,markersize=10)
+    #     leg.append(leg1)
+    # ax.axis('off')
+    # #leg1 =
+    # ax.legend(leg,list(args.experiments.strip(' ').split(' ')),loc=2,fontsize=10)
     
     
     # legend for different stations (symbols)
-    ax = fig.add_axes([0.25,0.00,0.15,0.15]) #[*left*, *bottom*, *width*,    *height*]
+    ax = fig.add_axes([0.05,0.00,0.15,0.15]) #[*left*, *bottom*, *width*,    *height*]
     leg = []
     isymbol = 0
     for icurrent_station,current_station in c4gldata[key].frames['worldmap']['stations'].table.iterrows():

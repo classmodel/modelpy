@@ -131,10 +131,10 @@ df_stations = pd.read_fwf(fn_stations,names=['Country code',\
 if args.station_id is not None:
     df_stations = df_stations[df_stations.ID == int(args.station_id)]
 else:
-    if args.first_station_row is not None:
-        df_stations = df_stations[int(args.first_station_row):]
     if args.last_station_row is not None:
         df_stations = df_stations[:(int(args.last_station_row)+1)]
+    if args.first_station_row is not None:
+        df_stations = df_stations[int(args.first_station_row):]
 
 STNlist = list(df_stations.iterrows())
 

@@ -20,6 +20,7 @@ parser.add_argument('--first_station_row')
 parser.add_argument('--last_station_row')
 parser.add_argument('--station_id') # run a specific station id
 parser.add_argument('--error_handling',default='dump_on_success')
+parser.add_argument('--diag_tropo',default=['advt','advq','advu','advv'])
 parser.add_argument('--subset_forcing',default='morning') # this tells which yaml subset
                                                       # to initialize with.
                                                       # Most common options are
@@ -62,22 +63,28 @@ EXP_DEFS  =\
   'GLOBAL_NOAC_WILT':    {'sw_ac' : [],'sw_ap': True,'sw_lit': False},
   'GLOBAL_NOAC_FC':    {'sw_ac' : [],'sw_ap': True,'sw_lit': False},
   'GLOBAL_ADV':{'sw_ac' : ['adv',],'sw_ap': True,'sw_lit': False},
+  'GLOBAL_ADV_WILT':    {'sw_ac' : ['adv'],'sw_ap': True,'sw_lit': False},
+  'GLOBAL_ADV_FC':    {'sw_ac' : ['adv'],'sw_ap': True,'sw_lit': False},
   'GLOBAL_W':  {'sw_ac' : ['w',],'sw_ap': True,'sw_lit': False},
   'GLOBAL_AC': {'sw_ac' : ['adv','w'],'sw_ap': True,'sw_lit': False},
 }
 
+# ========================
+print("getting a list of stations")
+# ========================
 
-# #SET = 'GLOBAL'
-# SET = args.dataset
-
-
-print("getting stations")
 # these are all the stations that are found in the input dataset
 all_stations = stations(args.path_forcing,suffix=args.subset_forcing,refetch_stations=False)
 
+# ====================================
 print('defining all_stations_select')
+# ====================================
+
 # these are all the stations that are supposed to run by the whole batch (all
 # chunks). We narrow it down according to the station(s) specified.
+
+
+
 if args.station_id is not None:
     print("Selecting station by ID")
     stations_iter = stations_iterator(all_stations)
@@ -93,6 +100,7 @@ else:
 print("station numbers included in the whole batch "+\
       "(all chunks):",list(all_stations_select.index))
 
+print(all_stations_select)
 print("getting all records of the whole batch")
 all_records_morning_select = get_records(all_stations_select,\
                                          args.path_forcing,\
@@ -175,8 +183,8 @@ if args.runtime == 'from_afternoon_profile':
     print(len(records_morning))
 
     print("aligning morning and afternoon records")
-    records_morning['dates'] = records_morning.ldatetime.dt.date
-    records_afternoon['dates'] = records_afternoon.ldatetime.dt.date
+    records_morning['dates'] = records_morning['ldatetime'].dt.date
+    records_afternoon['dates'] = records_afternoon['ldatetime'].dt.date
     records_afternoon.set_index(['STNID','dates'],inplace=True)
     ini_index_dates = records_morning.set_index(['STNID','dates']).index
     records_afternoon = records_afternoon.loc[ini_index_dates]
@@ -189,13 +197,23 @@ for expname in experiments:
 
     os.system('mkdir -p '+path_exp)
     for istation,current_station in run_stations.iterrows():
+        print(istation,current_station)
         records_morning_station = records_morning.query('STNID == '+str(current_station.name))
         if (int(args.split_by) * int(run_station_chunk)) >= (len(records_morning_station)):
             print("warning: outside of profile number range for station "+\
                   str(current_station)+". Skipping chunk number for this station.")
         else:
-            file_morning = open(args.path_forcing+'/'+format(current_station.name,'05d')+'_morning.yaml')
-            file_afternoon = open(args.path_forcing+'/'+format(current_station.name,'05d')+'_afternoon.yaml')
+            fn_morning = args.path_forcing+'/'+format(current_station.name,'05d')+'_'+args.subset_forcing+'.yaml'
+            if os.path.isfile(fn_morning):
+                file_morning = open(fn_morning)
+            else:
+                fn_morning = \
+                     args.path_forcing+'/'+format(current_station.name,'05d')+\
+                     '_'+str(run_station_chunk)+'_'+args.subset_forcing+'.yaml'
+                file_morning = open(fn_morning)
+
+            if args.runtime == 'from_afternoon_profile':
+                file_afternoon = open(args.path_forcing+'/'+format(current_station.name,'05d')+'_afternoon.yaml')
             fn_ini = path_exp+'/'+format(current_station.name,'05d')+'_'+\
                      str(int(run_station_chunk))+'_ini.yaml'
             fn_mod = path_exp+'/'+format(current_station.name,'05d')+'_'+\
@@ -208,7 +226,7 @@ for expname in experiments:
             print('starting station chunk number: '\
                   +str(run_station_chunk)+'(size: '+str(args.split_by)+' soundings)')
 
-            records_morning_station_chunk = records_morning_station[(int(args.split_by)*run_station_chunk):(int(args.split_by)*(run_station_chunk+1))]
+            records_morning_station_chunk = records_morning_station.iloc[((run_station_chunk)*int(args.split_by)):((run_station_chunk+1)*int(args.split_by))] #  [(int(args.split_by)*run_station_chunk):(int(args.split_by)*(run_station_chunk+1))]
 
             isim = 0
             for (STNID,chunk,index),record_morning in records_morning_station_chunk.iterrows():
@@ -221,8 +239,16 @@ for expname in experiments:
                                                     record_morning.index_start, 
                                                     record_morning.index_end,
                                                     mode='ini')
-                    
-                    #print('c4gli_morning_ldatetime',c4gli_morning.pars.ldatetime)
+                    if args.diag_tropo is not None:
+                        print('add tropospheric parameters on advection and subsidence (for diagnosis)')
+                        seltropo = (c4gli_morning.air_ac.p > c4gli_morning.air_ac.p.iloc[-1]+ 3000.*(- 1.2 * 9.81 ))
+                        profile_tropo = c4gli_morning.air_ac[seltropo]
+                        for var in args.diag_tropo:#['t','q','u','v',]:
+                            if var[:3] == 'adv':
+                                mean_adv_tropo = np.mean(profile_tropo[var+'_x']+profile_tropo[var+'_y'] )
+                                c4gli_morning.update(source='era-interim',pars={var+'_tropo':mean_adv_tropo})
+                            else:
+                                print("warning: tropospheric variable "+var+" not recognized")
                     
                     
                     if args.runtime == 'from_afternoon_profile':
@@ -233,6 +259,8 @@ for expname in experiments:
                                                         mode='ini')
                         runtime = int((c4gli_afternoon.pars.datetime_daylight - 
                                              c4gli_morning.pars.datetime_daylight).total_seconds())
+                    elif args.runtime == 'from_input':
+                        runtime = c4gli_morning.pars.runtime
                     else:
                         runtime = int(args.runtime)
 
@@ -240,12 +268,12 @@ for expname in experiments:
                     c4gli_morning.update(source='pairs',pars={'runtime' : \
                                         runtime})
                     c4gli_morning.update(source=expname, pars=exp)
-                    if expname == 'GLOBAL_NOAC_WILT':
+                    if expname[-5:] == '_WILT':
                         c4gli_morning.update(source=expname, pars=\
                                              {'wg':c4gli_morning.pars.wwilt,\
                                               'w2':c4gli_morning.pars.wwilt}\
                                             )
-                    if expname == 'GLOBAL_NOAC_FC':
+                    if expname[-3:] == '_FC':
                         c4gli_morning.update(source=expname, pars=\
                                              {'wg':c4gli_morning.pars.wfc,\
                                               'w2':c4gli_morning.pars.wfc}\
@@ -255,10 +283,13 @@ for expname in experiments:
 
                     if args.error_handling == 'dump_always':
                         try:
+                            print('checking data sources')
+                            if not c4gli_morning.check_source_globaldata():
+                                print('Warning: some input sources appear invalid')
                             c4gl.run()
-                            print('run successful')
+                            print('run succesful')
                         except:
-                            print('run not successful')
+                            print('run not succesful')
                         onerun = True
 
                         c4gli_morning.dump(file_ini)
@@ -272,7 +303,10 @@ for expname in experiments:
                     # in this case, only the file will dumped if the runs were
                     # successful
                     elif args.error_handling == 'dump_on_success':
-                        try:
+                       try:
+                            print('checking data sources')
+                            if not c4gli_morning.check_source_globaldata():
+                                print('Warning: some input sources appear invalid')
                             c4gl.run()
                             print('run succesfull')
                             c4gli_morning.dump(file_ini)
@@ -283,15 +317,16 @@ for expname in experiments:
                                       #timeseries_only=timeseries_only,\
                                      )
                             onerun = True
-                        except:
-                            print('run not succesfull')
+                       except:
+                           print('run not succesfull')
                     isim += 1
 
 
             file_ini.close()
             file_mod.close()
             file_morning.close()
-            file_afternoon.close()
+            if args.runtime == 'from_afternoon_profile':
+                file_afternoon.close()
     
             if onerun:
                 records_ini = get_records(pd.DataFrame([current_station]),\

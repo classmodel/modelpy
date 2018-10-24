@@ -1,4 +1,3 @@
-
 import numpy as np
 
 import pandas as pd
@@ -128,24 +127,48 @@ for key in args.experiments.strip(' ').split(' '):
                       refetch_records=False
                     )
 
-
 key = args.experiments.strip(' ').split(' ')[0]
 xrkoeppen = xr.open_dataset('/user/data/gent/gvo000/gvo00090/EXT/data/KOEPPEN/Koeppen-Geiger.nc')
 koeppenlookuptable = pd.DataFrame()
 koeppenlookuptable['KGCID'] = pd.Series(xrkoeppen['KGCID'])
 
 
-kgccolors = {
-    'Dfa':['navy','white'],
-    'Cfb':['green','white']       ,
-    'BSk':['tan','black']      ,
-    'Csb':['lightgreen','black'] ,     
-    'Cfa':['darkgreen','white']  ,    
-    'BWh':['orange','black']      ,
-    'Aw' :['pink','black'],
-    'Dwc':['rebeccapurple','white'] ,    
-    'Dfb':['darkviolet','white']    , 
-}
+
+
+KGCID=    ['Af', 'Am', 'As', 'Aw', 'BSh', 'BSk', 'BWh', 'BWk', 'Cfa', 'Cfb','Cfc', 'Csa', 'Csb', 'Csc', 'Cwa','Cwb', 'Cwc', 'Dfa', 'Dfb', 'Dfc','Dfd', 'Dsa', 'Dsb', 'Dsc', 'Dsd','Dwa', 'Dwb', 'Dwc', 'Dwd', 'EF','ET', 'Ocean'] 
+KGCcolors=["#960000", "#FF0000", "#FF6E6E", "#FFCCCC", "#CC8D14", "#CCAA54", "#FFCC00", "#FFFF64", "#007800", "#005000", "#003200", "#96FF00", "#00D700", "#00AA00", "#BEBE00", "#8C8C00", "#5A5A00", "#550055", "#820082", "#C800C8", "#FF6EFF", "#646464", "#8C8C8C", "#BEBEBE", "#E6E6E6", "#6E28B4", "#B464FA", "#C89BFA", "#C8C8FF", "#6496FF", "#64FFFF", "#F5FFFF"]
+
+def brightness(rrggbb):
+    """ W3C brightness definition
+        input:
+            hexadecimal color in the format:
+            #RRGGBB
+        output: value between 0 and 1
+    """
+    print(rrggbb)
+    rr = int(rrggbb[1:3],16)/int('FF',16)
+    gg = int(rrggbb[3:5],16)/int('FF',16)
+    bb = int(rrggbb[5:7],16)/int('FF',16)
+    #rr = math.floor(rrggbb/10000.)
+    #gg = math.floor((rrggbb - rr*10000.)/100.)
+    #bb = rrggbb - rr*10000 - gg*100
+    return (rr * 299. + gg * 587. + bb * 114.) / 1000.
+
+kgccolors = {}
+for iKGC,KGCname in enumerate(KGCID):
+    kgccolors[KGCname] = [KGCcolors[iKGC],'white' if (brightness(KGCcolors[iKGC])<0.5) else 'black']
+
+# kgccolors = {
+#     'Dfa':['navy','white'],
+#     'Cfb':['green','white']       ,
+#     'BSk':['tan','black']      ,
+#     'Csb':['lightgreen','black'] ,     
+#     'Cfa':['darkgreen','white']  ,    
+#     'BWh':['orange','black']      ,
+#     'Aw' :['pink','black'],
+#     'Dwc':['rebeccapurple','white'] ,    
+#     'Dfb':['darkviolet','white']    , 
+# }
 kgcnames = {
     'Dfa':'snow \n fully humid \n hot summer',
     'Cfb':'green'       ,
@@ -181,12 +204,20 @@ for ikoeppen,koeppen in koeppenlookuptable.iterrows():
 c4gldata[key].frames['stats']['records_all_stations_ini']['KGCname'] =  \
     c4gldata[key].frames['stats']['records_all_stations_ini']['KGC'].map(koeppenlookuptable['KGCID'])
 
+print('sort the climate classes according to the amount ')
 koeppenlookuptable['amount'] = ""
+
+exclude_koeppen = ['Dfc','Cwb']
+
 for ikoeppen,koeppen in koeppenlookuptable.iterrows():
-    print(ikoeppen,':',koeppen)
-    kgc_select = (c4gldata[key].frames['stats']['records_all_stations_ini']['KGCname'] == koeppen['KGCID'])
-    print(np.sum(kgc_select))
-    koeppenlookuptable.iloc[ikoeppen]['amount'] = np.sum(kgc_select)
+
+    if koeppen['KGCID'] not in exclude_koeppen:
+        print(ikoeppen,':',koeppen)
+        kgc_select = (c4gldata[key].frames['stats']['records_all_stations_ini']['KGCname'] == koeppen['KGCID'])
+        print(np.sum(kgc_select))
+        koeppenlookuptable.iloc[ikoeppen]['amount'] = np.sum(kgc_select)
+    else:
+        koeppenlookuptable.iloc[ikoeppen]['amount'] = 0
 
 koeppenlookuptable = koeppenlookuptable.sort_values('amount',ascending=False)
 koeppenlookuptable = koeppenlookuptable[:9]
@@ -288,6 +319,11 @@ if args.make_figures:
             # obs = c4gldata[key].frames['stats']['records_all_stations_obs_afternoon_stats'].loc[clearsky]['d'+varkey+'dt']
             mod = c4gldata[key].frames['stats']['records_all_stations_mod_stats']['d'+varkey+'dt']
             obs = c4gldata[key].frames['stats']['records_all_stations_obs_afternoon_stats']['d'+varkey+'dt']
+
+            print ('filtering classes (showing bad performance)', exclude_koeppen,' from results!')
+            filter_classes = ~(c4gldata[key].frames['stats']['records_all_stations_ini'].KGCname.isin(exclude_koeppen))
+            mod = mod.loc[filter_classes]
+            obs = obs.loc[filter_classes]
             x, y = obs.values,mod.values
             print(key,len(obs.values))
     
@@ -331,9 +367,15 @@ if args.make_figures:
         # cc = c4gldata[key].frames['stats']['records_all_stations_ini']['cc']
         # clearsky = (cc < 0.05)
     
+        # mod = c4gldata[key].frames['stats']['records_all_stations_mod_stats'].loc[clearsky]['d'+varkey+'dt']
+        # obs = c4gldata[key].frames['stats']['records_all_stations_obs_afternoon_stats'].loc[clearsky]['d'+varkey+'dt']
+    
         mod = c4gldata[key].frames['stats']['records_all_stations_mod_stats']['d'+varkey+'dt']
         obs = c4gldata[key].frames['stats']['records_all_stations_obs_afternoon_stats']['d'+varkey+'dt']
-    
+        print ('filtering classes (showing bad performance)', exclude_koeppen,' from results!')
+        filter_classess = ~(c4gldata[key].frames['stats']['records_all_stations_ini'].KGCname.isin(exclude_koeppen))
+        mod = mod.loc[filter_classes]
+        obs = obs.loc[filter_classes]
     
         nbins=40       
         x, y = obs.values,mod.values
@@ -522,6 +564,8 @@ if args.make_figures:
         data_all = pd.DataFrame()
 
         tempdatamodstats = pd.DataFrame(c4gldata[key].frames['stats']['records_all_stations_obs_afternoon_stats'].copy())
+        
+
         tempdatamodstats["source"] = "soundings"
         tempdatamodstats["source_index"] = "soundings"
 
@@ -553,6 +597,7 @@ if args.make_figures:
 
             tempdatamodstats = pd.DataFrame(c4gldata[key].frames['stats']['records_all_stations_mod_stats'].copy())
             tempdataini_this= pd.DataFrame(c4gldata[key].frames['stats']['records_all_stations_ini'].copy())
+
             tempdatamodstats['dates']= tempdataini_this.ldatetime.dt.date
             tempdatamodstats['STNID']= tempdataini_this.STNID
             tempdatamodstats['source']= keylabel
@@ -577,6 +622,7 @@ if args.make_figures:
             #print('hello5')
 
 
+            print ('filtering classes (showing bad performance)', exclude_koeppen,' from results!')
             # data[varkey] = tempdatamodstats['d'+varkey+'dt']
             data_all = pd.concat([data_all,tempdatamodstats],axis=0)
             data_input = pd.concat([data_input, tempdataini],axis=0)
@@ -589,6 +635,10 @@ if args.make_figures:
             varkey_full = 'd'+varkey+'dt ['+units[varkey]+'/h]'
             data_all = data_all.rename(columns={'d'+varkey+'dt':varkey_full})
             data_all['KGCname'] = data_input['KGCname']
+
+
+
+
             #print(data_input.shape)
             #print(data_all.shape)
         # xrkoeppen = xr.open_dataset('/user/data/gent/gvo000/gvo00090/EXT/data/KOEPPEN/Koeppen-Geiger.nc')
@@ -609,6 +659,7 @@ if args.make_figures:
             #print('hello9')
             #print(data_input.shape)
             #print(data_all.shape)
+            print ('Excluding extreme values from the classes plots')
             qvalmax = data_all[varkey_full].quantile(0.999)
             qvalmin = data_all[varkey_full].quantile(0.001)
             select_data = (data_all[varkey_full] >= qvalmin) & (data_all[varkey_full] < qvalmax)

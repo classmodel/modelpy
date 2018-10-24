@@ -913,7 +913,6 @@ class class4gl_input(object):
         # without lev argument), so that we can check afterwards whether the
         # data is well-fetched or not.
 
-
         for key in keys:
             if not ((key in globaldata.datasets) and \
                 (globaldata.datasets[key].page is not None) and \
@@ -967,7 +966,7 @@ class class4gl_input(object):
                             idatetime = np.min((idatetime,idatetimeend))
                             #for gleam, we take the previous day values
 
-                            # in case of soil temperature, we take the exact
+                            # in case of soil temperature or profile temperature, we take the exact
                             # timing (which is the morning)
                             if key in ['t','u','v','q']:
                                 idatetimeend = idatetime

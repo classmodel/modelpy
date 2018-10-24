@@ -135,8 +135,8 @@ if args.make_figures:
     axes = {}         
     axes_taylor = {}         
     
-    colors = ['r','g','b','m']
-    symbols = ['*','x','+']
+    colors = ['r','g','b','m','y','c']
+    symbols = ['*','x','+','o']
     dias = {}
     
     varkeys = ['h','theta','q']
@@ -437,7 +437,7 @@ if args.make_figures:
             varkey_full = 'd'+varkey+'dt ['+units[varkey]+'/h]'
             data_all = data_all.rename(columns={'d'+varkey+'dt':varkey_full})
             
-        data_input['advt_tropo'] = - data_input['advt_tropo']
+        data_input['advt_tropo'] = data_input['advt_tropo'] * 3600.
         data_all['advt_tropo'] = data_input['advt_tropo']
             #print(data_input.shape)
             #print(data_all.shape)
@@ -453,7 +453,7 @@ if args.make_figures:
                 #print('hello8')
                 #print(data_input.shape)
                 #print(data_all.shape)
-                units['advt_tropo'] = 'K/s'
+                units['advt_tropo'] = 'K/h'
                 input_key_full = input_key + "["+units[input_key]+"]"
                 data_all[input_key_full] = pd.cut(x=data_input[input_key].values,bins=8,precision=2)
                 data_input[input_key_full] = pd.cut(x=data_input[input_key].values,bins=8,precision=2,)

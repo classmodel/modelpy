@@ -220,15 +220,37 @@ class c4gl_interface_soundings(object):
             # investigated. In the meantime, we filter them
 
             if self.path_obs is not None:
-                valid = ((self.frames['stats']['records_all_stations_obs_afternoon_stats'].dthetadt > - 0.0020) & 
-                        ~np.isnan(self.frames['stats']['records_all_stations_mod_stats'].dthetadt) & 
-                        ~np.isnan(self.frames['stats']['records_all_stations_obs_afternoon_stats'].dthetadt))
+                print('exclude exceptional observations')
+                print('exclude unrealistic model output -> should be investigated!')
+                valid = (\
+                         (self.frames['stats']['records_all_stations_obs_afternoon_stats'].dthetadt >  0.250) & 
+                         #(self.frames['stats']['records_all_stations_mod_stats'].dthetadt >  0.25000) & 
+                         #(self.frames['stats']['records_all_stations_mod_stats'].dthetadt <  1.8000) & 
+                         (self.frames['stats']['records_all_stations_obs_afternoon_stats'].dthetadt <  1.8000) & 
+                         #(self.frames['stats']['records_all_stations_mod_stats'].dhdt >  50.0000) & 
+                         (self.frames['stats']['records_all_stations_obs_afternoon_stats'].dhdt >  40.0000) & 
+                         #(self.frames['stats']['records_all_stations_mod_stats'].dhdt <  350.) & 
+                         (self.frames['stats']['records_all_stations_obs_afternoon_stats'].dhdt <  350.) & 
+                         (self.frames['stats']['records_all_stations_obs_afternoon_stats'].dqdt >  -.00055) & 
+                         #(self.frames['stats']['records_all_stations_mod_stats'].dqdt >  -.00055) & 
+                         (self.frames['stats']['records_all_stations_obs_afternoon_stats'].dqdt <  .0003) & 
+
+                         # filter 'extreme' model output -> should be investigated!
+                         (self.frames['stats']['records_all_stations_mod_stats'].dqdt <  .0006) & 
+                         (self.frames['stats']['records_all_stations_mod_stats'].dqdt >  -.0006) & 
+                         (self.frames['stats']['records_all_stations_mod_stats'].dthetadt >  .2) & 
+                         (self.frames['stats']['records_all_stations_mod_stats'].dthetadt <  2.) & 
+                         # (self.frames['stats']['records_all_stations_mod_stats'].dqdt <  .0003) & 
+                         # (self.frames['stats']['records_all_stations_ini'].KGC != 'Cwb') & 
+                         # (self.frames['stats']['records_all_stations_ini'].KGC != 'Dfc') & 
+                         ~np.isnan(self.frames['stats']['records_all_stations_mod_stats'].dthetadt) & 
+                         ~np.isnan(self.frames['stats']['records_all_stations_obs_afternoon_stats'].dthetadt))
 
                 for key in self.frames['stats'].keys():
                     if (type(self.frames['stats'][key]) == pd.DataFrame) and \
                        (self.frames['stats'][key].index.names == indextype):
                         self.frames['stats'][key] = self.frames['stats'][key][valid]
-                print(str(len(valid) - np.sum(valid))+' soundings are filtered')
+                print("WARNING WARNING!: "+ str(len(valid) - np.sum(valid))+' soundings are filtered')
 
         self.frames['stats']['records_all_stations_index'] = self.frames['stats']['records_all_stations_mod'].index
 
@@ -404,6 +426,12 @@ class c4gl_interface_soundings(object):
             self.frames['profiles']['current_station_file_mod'] = \
                 open(self.path_exp+'/'+format(STNID,"05d")+'_'+str(chunk)+'_mod.yaml','r')
 
+            if self.path_obs is not None:
+                if 'current_station_file_afternoon' in self.frames['profiles'].keys():
+                    self.frames['profiles']['current_station_file_afternoon'].close()
+                self.frames['profiles']['current_station_file_afternoon'] = \
+                    open(self.path_exp+'/'+format(STNID,"05d")+'_'+str(chunk)+'_afternoon.yaml','r')
+
         self.update_record()
 
     def prev_record(self,event=None):
@@ -572,7 +600,7 @@ class c4gl_interface_soundings(object):
 
         label = 'times'
                
-        axes[label] = fig.add_axes([0.30,0.90,0.30,0.10]) #[*left*, *bottom*, *width*,    *height*]
+        axes[label] = fig.add_axes([0.30,0.87,0.30,0.10]) #[*left*, *bottom*, *width*,    *height*]
         # add pointers to the data of the axes
         axes[label].data = {}
         # add pointers to color fields (for maps and colorbars) in the axes
@@ -697,13 +725,13 @@ class c4gl_interface_soundings(object):
         self.axes[label] = fig.add_axes([0.86,0.44,0.12,0.50], label=label)
 
         label = 'out:h'
-        self.axes[label] = fig.add_axes([0.50,0.27,0.22,0.10], label=label)
+        self.axes[label] = fig.add_axes([0.50,0.27,0.22,0.09], label=label)
 
         label = 'out:theta'
-        self.axes[label] = fig.add_axes([0.50,0.17,0.22,0.10], label=label)
+        self.axes[label] = fig.add_axes([0.50,0.17,0.22,0.09], label=label)
 
         label = 'out:q'
-        self.axes[label] = fig.add_axes([0.50,0.07,0.22,0.10], label=label)
+        self.axes[label] = fig.add_axes([0.50,0.07,0.22,0.09], label=label)
 
         label = 'SEB'
         self.axes[label] = fig.add_axes([0.77,0.07,0.22,0.30], label=label)
@@ -1142,9 +1170,9 @@ class c4gl_interface_soundings(object):
                                                xy=(x,y),\
                                                xytext=(0.05,0.05),\
                                                textcoords='axes fraction',\
-                                               bbox=dict(boxstyle="round",fc=self.statsviewcmap(z)),\
+                                               bbox=dict(boxstyle="round",fc=self.statsviewcmap(z),edgecolor='black'),\
                                                color='white',\
-                                               arrowprops=dict(arrowstyle="->",linewidth=1.1))
+                                               arrowprops=dict(arrowstyle="->",linewidth=1.1,color='black'))
                 # self.axes['stats_'+key].data[key+'_current_record'] = \
                 #        self.axes['stats_'+key].scatter(x,y, c=z,\
                 #                 cmap=self.statsviewcmap,\
@@ -1273,9 +1301,9 @@ class c4gl_interface_soundings(object):
                                          xytext=(0.05,0.05),
                                          textcoords='axes fraction', 
                                          bbox=dict(boxstyle="round",
-                                         fc = cm.viridis(colorstation)),
+                                         fc = cm.viridis(colorstation),edgecolor='black'),
                                          arrowprops=dict(arrowstyle="->",
-                                                         linewidth=1.1),
+                                                         linewidth=1.1,color='black'),
                                          color='white' if colorstation < 0.5 else 'black')
                     #print('r9')
 

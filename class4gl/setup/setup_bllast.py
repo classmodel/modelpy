@@ -12,9 +12,9 @@ import datetime as dt
 import Pysolar
 import sys
 import pytz
-sys.path.insert(0, '/user/data/gent/gvo000/gvo00090/D2D/software/CLASS/class4gl/')
+sys.path.insert(0,'/user/home/gent/vsc422/vsc42247/software/class4gl/class4gl/')
 from class4gl import class4gl_input, data_global,class4gl
-from interface_humppa import stations,stations_iterator, records_iterator,get_record_yaml,get_records
+from interface_multi import stations,stations_iterator, records_iterator,get_record_yaml,get_records
 
 
 globaldata = data_global()

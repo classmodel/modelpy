@@ -189,6 +189,7 @@ class stations(object):
             self.table = self.get_stations(suffix=suffix)
             self.table.to_csv(self.file)
         
+        print(self.table.columns)
         self.table = self.table.set_index('STNID')
 
     def get_stations(self,suffix):
@@ -378,10 +379,11 @@ class records_iterator(object):
 
 
 def get_records(stations,path_yaml,getchunk='all',subset='morning',refetch_records=False):
-
+    print(stations)
     records = pd.DataFrame()
     for STNID,station in stations.iterrows():
         dictfnchunks = []
+        pklchunks = []
         if getchunk is 'all':
 
             # we try the old single-chunk filename format first (usually for
@@ -390,6 +392,7 @@ def get_records(stations,path_yaml,getchunk='all',subset='morning',refetch_recor
             if os.path.isfile(path_yaml+'/'+fn):
                 chunk = 0
                 dictfnchunks.append(dict(fn=fn,chunk=chunk))
+                pklchunks.append(fn.replace('.yaml','.pkl'))
 
             # otherwise, we use the new multi-chunk filename format
             else:
@@ -407,6 +410,7 @@ def get_records(stations,path_yaml,getchunk='all',subset='morning',refetch_recor
                 for chunk in chunks:
                     fn = format(STNID,'05d')+'_'+str(chunk)+'_'+subset+'.yaml'
                     dictfnchunks.append(dict(fn=fn,chunk=chunk))
+                    pklchunks.append(fn.replace('.yaml','.pkl'))
 
                 # while not end_of_chunks:
                 #     fn = format(STNID,'05d')+'_'+str(chunk)+'_'+subset+'.yaml'
@@ -422,113 +426,146 @@ def get_records(stations,path_yaml,getchunk='all',subset='morning',refetch_recor
         else:
             fn = format(STNID,'05d')+'_'+str(getchunk)+'_'+subset+'.yaml'
             dictfnchunks.append(dict(fn=fn,chunk=getchunk))
-            
-        if len(dictfnchunks) > 0:
-            for dictfnchunk in dictfnchunks:
-                yamlfilename = dictfnchunk['fn']
-                chunk = dictfnchunk['chunk']
 
-                #pklfilename = path_yaml+'/'+format(STNID,'05d')+'_'+subset+'.pkl'
-                pklfilename = yamlfilename.replace('.yaml','.pkl')
+        if (len(dictfnchunks) > 0):
+            load_from_unified_pkl = False    
+            pklfilename_unified = format(STNID,'05d')+'_'+subset+'.pkl'
+            if (getchunk is 'all') and (os.path.isfile(path_yaml+'/'+pklfilename_unified)):
+                load_from_unified_pkl = True
+                for dictfnchunk in dictfnchunks:
+                    yamlfilename = dictfnchunk['fn']
+                    chunk = dictfnchunk['chunk']
+                    pklfilename = yamlfilename.replace('.yaml','.pkl')
 
-                #print(yamlfilename+": "+str(os.path.getmtime(yamlfilename)))
-                #print(pklfilename+": "+str(os.path.getmtime(pklfilename)))
-                generate_pkl = False
-                if not os.path.isfile(path_yaml+'/'+pklfilename): 
-                    print('pkl file does not exist. I generate "'+\
-                          path_yaml+'/'+pklfilename+'" from "'+path_yaml+'/'+yamlfilename+'"...')
-                    generate_pkl = True
-                elif not (os.path.getmtime(path_yaml+'/'+yamlfilename) <  \
-                    os.path.getmtime(path_yaml+'/'+pklfilename)):
-                    print('pkl file older than yaml file, so I regenerate "'+\
-                          path_yaml+'/'+pklfilename+'" from "'+path_yaml+'/'+yamlfilename+'"...')
-                    generate_pkl = True
 
-                if refetch_records:
-                    print('refetch_records flag is True. I regenerate "'+\
-                          path_yaml+'/'+pklfilename+'" from "'+path_yaml+'/'+yamlfilename+'"...')
-                    generate_pkl = True
-                if not generate_pkl:
-                    records = pd.concat([records,pd.read_pickle(path_yaml+'/'+pklfilename)])
-                   # irecord = 0
-                else:
-                    with open(path_yaml+'/'+yamlfilename) as yaml_file:
+                    if \
+                       (pklfilename_unified in pklchunks) or \
+                       (not os.path.isfile(path_yaml+'/'+pklfilename)) or \
+                       (os.path.getmtime(path_yaml+'/'+yamlfilename) > os.path.getmtime(path_yaml+'/'+pklfilename_unified)) or\
+                       (os.path.getmtime(path_yaml+'/'+pklfilename) > os.path.getmtime(path_yaml+'/'+pklfilename_unified)):
+                        load_from_unified_pkl = False
 
-                        dictout = {}
+            if load_from_unified_pkl:
+                pklfilename_unified = format(STNID,'05d')+'_'+subset+'.pkl'
+                print('reading unified table file ('+path_yaml+'/'+pklfilename_unified+') for station '\
+                              +str(STNID))
 
-                        next_record_found = False
-                        end_of_file = False
-                        while (not next_record_found) and (not end_of_file):
-                            linebuffer = yaml_file.readline()
-                            next_record_found = (linebuffer == '---\n')
-                            end_of_file = (linebuffer == '')
-                        next_tell = yaml_file.tell()
-                        
-                        while not end_of_file:
+                records_station = pd.read_pickle(path_yaml+'/'+pklfilename_unified)
+            else:
+                records_station = pd.DataFrame()
+                for dictfnchunk in dictfnchunks:
+                    yamlfilename = dictfnchunk['fn']
+                    chunk = dictfnchunk['chunk']
 
-                            print(' next record:',next_tell)
-                            current_tell = next_tell
+                    #pklfilename = path_yaml+'/'+format(STNID,'05d')+'_'+subset+'.pkl'
+                    pklfilename = yamlfilename.replace('.yaml','.pkl')
+
+                    #print(yamlfilename+": "+str(os.path.getmtime(yamlfilename)))
+                    #print(pklfilename+": "+str(os.path.getmtime(pklfilename)))
+                    generate_pkl = False
+                    if not os.path.isfile(path_yaml+'/'+pklfilename): 
+                        print('pkl file does not exist. I generate "'+\
+                              path_yaml+'/'+pklfilename+'" from "'+path_yaml+'/'+yamlfilename+'"...')
+                        generate_pkl = True
+                    elif not (os.path.getmtime(path_yaml+'/'+yamlfilename) <  \
+                        os.path.getmtime(path_yaml+'/'+pklfilename)):
+                        print('pkl file older than yaml file, so I regenerate "'+\
+                              path_yaml+'/'+pklfilename+'" from "'+path_yaml+'/'+yamlfilename+'"...')
+                        generate_pkl = True
+
+                    if refetch_records:
+                        print('refetch_records flag is True. I regenerate "'+\
+                              path_yaml+'/'+pklfilename+'" from "'+path_yaml+'/'+yamlfilename+'"...')
+                        generate_pkl = True
+                    if not generate_pkl:
+                        records_station_chunk = pd.read_pickle(path_yaml+'/'+pklfilename)
+                        records_station = pd.concat([records_station,records_station_chunk])
+                       # irecord = 0
+                    else:
+                        with open(path_yaml+'/'+yamlfilename) as yaml_file:
+
+                            dictout = {}
+
                             next_record_found = False
-                            yaml_file.seek(current_tell)
-                            os.system('mkdir -p '+TEMPDIR)
-                            filebuffer = open(TEMPDIR+'/'+yamlfilename+'.buffer.yaml.'+str(current_tell),'w')
-                            linebuffer = ''
-                            while ( (not next_record_found) and (not end_of_file)):
-                                filebuffer.write(linebuffer.replace('inf','0').replace('nan','0'))
+                            end_of_file = False
+                            while (not next_record_found) and (not end_of_file):
                                 linebuffer = yaml_file.readline()
                                 next_record_found = (linebuffer == '---\n')
                                 end_of_file = (linebuffer == '')
-                            filebuffer.close()
-                            
                             next_tell = yaml_file.tell()
-                            index_start = current_tell
-                            index_end = next_tell
+                            
+                            while not end_of_file:
 
-                            
-                            if which('ruby') is None:
-                                raise RuntimeError ('ruby is not found. Aborting...')
-                            #if ((irecord >= start) and (np.mod(irecord - start,2) == 0.) :
-                            command = 'ruby -rjson -ryaml -e "'+"puts YAML.load_file('"+TEMPDIR+'/'+yamlfilename+".buffer.yaml."+str(current_tell)+"').to_json"+'" > '+TEMPDIR+'/'+yamlfilename+'.buffer.json.'+str(current_tell)+' ' 
-                            print(command)
-                            
-                            os.system(command)
-                            #jsonoutput = subprocess.check_output(command,shell=True) 
-                            #print(jsonoutput)
-                            #jsonstream = io.StringIO(jsonoutput)
-                            jsonstream = open(TEMPDIR+'/'+yamlfilename+'.buffer.json.'+str(current_tell))
-                            record = json.load(jsonstream)
-                            dictouttemp = {}
-                            for key,value in record['pars'].items():
-                                # we don't want the key with columns that have none values
-                                if value is not None: 
-                                   regular_numeric_types =[ type(x) for x in[0,False,0.0]]
-                                   if (type(value) in regular_numeric_types):
-                                        dictouttemp[key] = value
-                                   elif key in ['lSunrise','lSunset','datetime','ldatetime','datetime_daylight','datetime_daylight','ldatetime_daylight','ldatetime_daylight']:#(type(value) == str):
-                                       #print (key,value) # dictouttemp[key] = dt.datetime.strptime(value[:-6],"%Y-%m-%d %H:%M:%S")
-                                       dictouttemp[key] = dt.datetime.strptime(value,"%Y-%m-%d %H:%M:%S %z")
-                                       # Workaround. Unfortunately, Ruby puts it in local time of the computer. Turn it back to UTC (note that UTC means actually local time)!!!
-                                       dictouttemp[key] = dictouttemp[key].astimezone(pytz.UTC)
-                            recordindex = record['index']
-                            dictouttemp['chunk'] = chunk
-                            dictouttemp['index_start'] = index_start
-                            dictouttemp['index_end'] = index_end
-                            os.system('rm '+TEMPDIR+'/'+yamlfilename+'.buffer.json.'+str(current_tell))
-                            for key,value in dictouttemp.items():
-                                if key not in dictout.keys():
-                                    dictout[key] = {}
-                                dictout[key][(STNID,chunk,recordindex)] = dictouttemp[key]
-                            print(' obs record registered')
-                            jsonstream.close()
-                            os.system('rm '+TEMPDIR+'/'+yamlfilename+'.buffer.yaml.'+str(current_tell))
-                    records_station = pd.DataFrame.from_dict(dictout)
-                    records_station.index.set_names(('STNID','chunk','index'),inplace=True)
-                    print('writing table file ('+path_yaml+'/'+pklfilename+') for station '\
-                          +str(STNID))
-                    records_station.to_pickle(path_yaml+'/'+pklfilename)
-                    # else:
-                    #     os.system('rm '+pklfilename)
-                    records = pd.concat([records,records_station])
+                                print(' next record:',next_tell)
+                                current_tell = next_tell
+                                next_record_found = False
+                                yaml_file.seek(current_tell)
+                                os.system('mkdir -p '+TEMPDIR)
+                                filebuffer = open(TEMPDIR+'/'+yamlfilename+'.buffer.yaml.'+str(current_tell),'w')
+                                linebuffer = ''
+                                while ( (not next_record_found) and (not end_of_file)):
+                                    filebuffer.write(linebuffer.replace('inf','0').replace('nan','0'))
+                                    linebuffer = yaml_file.readline()
+                                    next_record_found = (linebuffer == '---\n')
+                                    end_of_file = (linebuffer == '')
+                                filebuffer.close()
+                                
+                                next_tell = yaml_file.tell()
+                                index_start = current_tell
+                                index_end = next_tell
+
+                                
+                                if which('ruby') is None:
+                                    raise RuntimeError ('ruby is not found. Aborting...')
+                                #if ((irecord >= start) and (np.mod(irecord - start,2) == 0.) :
+                                command = 'ruby -rjson -ryaml -e "'+"puts YAML.load_file('"+TEMPDIR+'/'+yamlfilename+".buffer.yaml."+str(current_tell)+"').to_json"+'" > '+TEMPDIR+'/'+yamlfilename+'.buffer.json.'+str(current_tell)+' ' 
+                                print(command)
+                                
+                                os.system(command)
+                                #jsonoutput = subprocess.check_output(command,shell=True) 
+                                #print(jsonoutput)
+                                #jsonstream = io.StringIO(jsonoutput)
+                                jsonstream = open(TEMPDIR+'/'+yamlfilename+'.buffer.json.'+str(current_tell))
+                                record = json.load(jsonstream)
+                                dictouttemp = {}
+                                for key,value in record['pars'].items():
+                                    # we don't want the key with columns that have none values
+                                    if value is not None: 
+                                       regular_numeric_types =[ type(x) for x in[0,False,0.0]]
+                                       if (type(value) in regular_numeric_types):
+                                            dictouttemp[key] = value
+                                       elif key in ['lSunrise','lSunset','datetime','ldatetime','datetime_daylight','datetime_daylight','ldatetime_daylight','ldatetime_daylight']:#(type(value) == str):
+                                           #print (key,value) # dictouttemp[key] = dt.datetime.strptime(value[:-6],"%Y-%m-%d %H:%M:%S")
+                                           dictouttemp[key] = dt.datetime.strptime(value,"%Y-%m-%d %H:%M:%S %z")
+                                           # Workaround. Unfortunately, Ruby puts it in local time of the computer. Turn it back to UTC (note that UTC means actually local time)!!!
+                                           dictouttemp[key] = dictouttemp[key].astimezone(pytz.UTC)
+                                recordindex = record['index']
+                                dictouttemp['chunk'] = chunk
+                                dictouttemp['index_start'] = index_start
+                                dictouttemp['index_end'] = index_end
+                                os.system('rm '+TEMPDIR+'/'+yamlfilename+'.buffer.json.'+str(current_tell))
+                                for key,value in dictouttemp.items():
+                                    if key not in dictout.keys():
+                                        dictout[key] = {}
+                                    dictout[key][(STNID,chunk,recordindex)] = dictouttemp[key]
+                                print(' obs record registered')
+                                jsonstream.close()
+                                os.system('rm '+TEMPDIR+'/'+yamlfilename+'.buffer.yaml.'+str(current_tell))
+                            records_station_chunk = pd.DataFrame.from_dict(dictout)
+                            records_station_chunk.index.set_names(('STNID','chunk','index'),inplace=True)
+                            print('writing table file ('+path_yaml+'/'+pklfilename+') for station '\
+                                  +str(STNID)+', chunk number '+str(chunk))
+                            records_station_chunk.to_pickle(path_yaml+'/'+pklfilename)
+                            records_station = pd.concat([records_station,records_station_chunk])
+                        # else:
+                        #     os.system('rm '+pklfilename)
+                if (getchunk == 'all') and (pklfilename_unified not in pklchunks):
+                    pklfilename_unified = format(STNID,'05d')+'_'+subset+'.pkl'
+                    print('writing unified table file ('+path_yaml+'/'+pklfilename_unified+') for station '\
+                                  +str(STNID))
+                    records_station.to_pickle(path_yaml+'/'+pklfilename_unified)
+
+            records = pd.concat([records,records_station])
     return records
 
 def stdrel(mod,obs,columns):

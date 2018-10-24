@@ -20,7 +20,7 @@ parser.add_argument('--first_station_row')
 parser.add_argument('--last_station_row')
 parser.add_argument('--station_id') # run a specific station id
 parser.add_argument('--error_handling',default='dump_on_success')
-parser.add_argument('--diag_tropo',default=None)
+parser.add_argument('--diag_tropo',default=['advt','advq','advu','advv'])
 parser.add_argument('--subset_forcing',default='morning') # this tells which yaml subset
                                                       # to initialize with.
                                                       # Most common options are
@@ -66,6 +66,7 @@ EXP_DEFS  =\
   'AC': {'sw_ac' : ['adv','w'],'sw_ap': True,'sw_lit': False},
   'GLOBAL_NOAC':    {'sw_ac' : [],'sw_ap': True,'sw_lit': False},
   'GLOBAL_ADV':{'sw_ac' : ['adv',],'sw_ap': True,'sw_lit': False},
+    'GLOBAL_ADV_SHR':{'sw_ac' : ['adv',],'sw_ap': True,'sw_lit': False,'sw_shr':True},
   'GLOBAL_W':  {'sw_ac' : ['w',],'sw_ap': True,'sw_lit': False},
   'GLOBAL_AC': {'sw_ac' : ['adv','w'],'sw_ap': True,'sw_lit': False},
   'IOPS_NOAC':    {'sw_ac' : [],'sw_ap': True,'sw_lit': False},
@@ -73,10 +74,6 @@ EXP_DEFS  =\
   'IOPS_W':  {'sw_ac' : ['w',],'sw_ap': True,'sw_lit': False},
   'IOPS_AC': {'sw_ac' : ['adv','w'],'sw_ap': True,'sw_lit': False},
 }
-
-
-# #SET = 'GLOBAL'
-# SET = args.dataset
 
 # ========================
 print("getting a list of stations")
@@ -206,6 +203,7 @@ for expname in experiments:
 
     os.system('mkdir -p '+path_exp)
     for istation,current_station in run_stations.iterrows():
+        print(istation,current_station)
         records_morning_station = records_morning.query('STNID == '+str(current_station.name))
         if (int(args.split_by) * int(run_station_chunk)) >= (len(records_morning_station)):
             print("warning: outside of profile number range for station "+\
@@ -234,7 +232,7 @@ for expname in experiments:
             print('starting station chunk number: '\
                   +str(run_station_chunk)+'(size: '+str(args.split_by)+' soundings)')
 
-            records_morning_station_chunk = records_morning_station.query('STNID == '+str(current_station.name)+' and chunk == '+str(run_station_chunk)) #  [(int(args.split_by)*run_station_chunk):(int(args.split_by)*(run_station_chunk+1))]
+            records_morning_station_chunk = records_morning_station.iloc[((run_station_chunk)*int(args.split_by)):((run_station_chunk+1)*int(args.split_by))] #  [(int(args.split_by)*run_station_chunk):(int(args.split_by)*(run_station_chunk+1))]
 
             isim = 0
             for (STNID,chunk,index),record_morning in records_morning_station_chunk.iterrows():
@@ -247,14 +245,11 @@ for expname in experiments:
                                                     record_morning.index_start, 
                                                     record_morning.index_end,
                                                     mode='ini')
-
-                    # add tropospheric parameters on advection and subsidence
-                    # (for diagnosis)
-
                     if args.diag_tropo is not None:
+                        print('add tropospheric parameters on advection and subsidence (for diagnosis)')
                         seltropo = (c4gli_morning.air_ac.p > c4gli_morning.air_ac.p.iloc[-1]+ 3000.*(- 1.2 * 9.81 ))
                         profile_tropo = c4gli_morning.air_ac[seltropo]
-                        for var in diag_tropo:#['t','q','u','v',]:
+                        for var in args.diag_tropo:#['t','q','u','v',]:
                             if var[:3] == 'adv':
                                 mean_adv_tropo = np.mean(profile_tropo[var+'_x']+profile_tropo[var+'_y'] )
                                 c4gli_morning.update(source='era-interim',pars={var+'_tropo':mean_adv_tropo})
@@ -288,9 +283,9 @@ for expname in experiments:
                             if not c4gli_morning.check_source_globaldata():
                                 print('Warning: some input sources appear invalid')
                             c4gl.run()
-                            print('run succesfull')
+                            print('run succesful')
                         except:
-                            print('run not succesfull')
+                            print('run not succesful')
                         onerun = True
 
                         c4gli_morning.dump(file_ini)

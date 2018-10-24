@@ -44,6 +44,7 @@ parser.add_argument('--path_input')#,default='/user/data/gent/gvo000/gvo00090/D2
 parser.add_argument('--path_output')#,default='/user/data/gent/gvo000/gvo00090/D2D/data/C4GL/')
 # parser.add_argument('--first_YYYYMMDD',default="19810101")
 # parser.add_argument('--last_YYYYMMDD',default="20180101")
+parser.add_argument('--startyear',default="1981")
 parser.add_argument('--first_station_row')
 parser.add_argument('--last_station_row')
 parser.add_argument('--c4gl_path_lib')#,default='/user/data/gent/gvo000/gvo00090/D2D/software/CLASS/class4gl/lib')
@@ -119,22 +120,31 @@ globaldata.load_datasets(recalc=0)
 # get_valid_stations.py)
 # args.path_input = "/user/data/gent/gvo000/gvo00090/EXT/data/SOUNDINGS/"
 
-df_stations = pd.read_fwf(fn_stations,names=['Country code',\
-                                               'ID',\
-                                               'Name',\
-                                               'latitude',\
-                                               'longitude',\
-                                               'height',\
-                                               'unknown',\
-                                               'startyear',\
-                                               'endyear'])
+# df_stations = pd.read_fwf(fn_stations,names=['Country code',\
+#                                                'ID',\
+#                                                'Name',\
+#                                                'latitude',\
+#                                                'longitude',\
+#                                                'height',\
+#                                                'unknown',\
+#                                                'startyear',\
+#                                                'endyear'])
+# 
+
+# ===============================
+print("getting a list of stations")
+# ===============================
+all_stations = stations(args.path_input,refetch_stations=False)
+df_stations = all_stations.table
+df_stations.columns
+
 if args.station_id is not None:
-    df_stations = df_stations[df_stations.ID == int(args.station_id)]
+    df_stations = df_stations.query('STNID == '+args.station_id)
 else:
-    if args.first_station_row is not None:
-        df_stations = df_stations[int(args.first_station_row):]
     if args.last_station_row is not None:
         df_stations = df_stations[:(int(args.last_station_row)+1)]
+    if args.first_station_row is not None:
+        df_stations = df_stations[int(args.first_station_row):]
 
 STNlist = list(df_stations.iterrows())
 
@@ -143,8 +153,8 @@ for iSTN,STN in STNlist:
     one_run = False
 # for iSTN,STN in STNlist[5:]:  
     
-    fnout = args.path_output+"/"+format(STN['ID'],'05d')+"_morning.yaml"
-    fnout_afternoon = args.path_output+"/"+format(STN['ID'],'05d')+"_afternoon.yaml"
+    fnout = args.path_output+"/"+format(STN.name,'05d')+"_morning.yaml"
+    fnout_afternoon = args.path_output+"/"+format(STN.name,'05d')+"_afternoon.yaml"
     
 
     # c4glfiles = dict([(EXP,odirexperiments[EXP]+'/'+format(STN['ID'],'05d')+'.yaml') \
@@ -152,11 +162,11 @@ for iSTN,STN in STNlist:
         
     with open(fnout,'w') as fileout, \
          open(fnout_afternoon,'w') as fileout_afternoon:
-        wy_strm = wyoming(PATH=args.path_input, STNM=STN['ID'])
-        wy_strm.set_STNM(int(STN['ID']))
+        wy_strm = wyoming(PATH=args.path_input, STNM=STN.name)
+        wy_strm.set_STNM(int(STN.name))
 
         # we consider all soundings from 1981 onwards
-        wy_strm.find_first(year=1981)
+        wy_strm.find_first(year=int(args.startyear))
         #wy_strm.find(dt.datetime(2004,10,19,6))
         
         c4gli = class4gl_input(debug_level=logging.INFO)
@@ -258,7 +268,7 @@ for iSTN,STN in STNlist:
                         logic_afternoon['daylight'] = \
                           ((c4gli_afternoon.pars.ldatetime - \
                             c4gli_afternoon.pars.lSunset \
-                           ).total_seconds()/3600. <= -2.)
+                           ).total_seconds()/3600. <= 1.)
 
 
                         le3000_afternoon = \
@@ -330,7 +340,7 @@ for iSTN,STN in STNlist:
                     print('get profile failed')
                 
     if one_run:
-        STN.name = STN['ID']
+        #STN.name = STN.name
         all_records_morning = get_records(pd.DataFrame([STN]),\
                                       args.path_output,\
                                       subset='morning',

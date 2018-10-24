@@ -59,24 +59,19 @@ from class4gl import blh,class4gl_input
 
 EXP_DEFS  =\
 {
-  'ERA_NOAC_ITER':    {'sw_ac' : [],'sw_ap': True,'sw_lit': False},
-  'NOAC_ITER':    {'sw_ac' : [],'sw_ap': True,'sw_lit': False},
-  'ADV_ITER':{'sw_ac' : ['adv',],'sw_ap': True,'sw_lit': False},
-  'W_ITER':  {'sw_ac' : ['w',],'sw_ap': True,'sw_lit': False},
-  'AC_ITER': {'sw_ac' : ['adv','w'],'sw_ap': True,'sw_lit': False},
-  'GLOBAL_NOAC_ITER':    {'sw_ac' : [],'sw_ap': True,'sw_lit': False},
-  'GLOBAL_ADV_ITER':{'sw_ac' : ['adv',],'sw_ap': True,'sw_lit': False},
-  'GLOBAL_W_ITER':  {'sw_ac' : ['w',],'sw_ap': True,'sw_lit': False},
-  'GLOBAL_AC_ITER': {'sw_ac' : ['adv','w'],'sw_ap': True,'sw_lit': False},
-  'IOPS_NOAC_ITER':    {'sw_ac' : [],'sw_ap': True,'sw_lit': False},
-  'IOPS_ADV_ITER':{'sw_ac' : ['adv',],'sw_ap': True,'sw_lit': False},
-  'IOPS_W_ITER':  {'sw_ac' : ['w',],'sw_ap': True,'sw_lit': False},
-  'IOPS_AC_ITER': {'sw_ac' : ['adv','w'],'sw_ap': True,'sw_lit': False},
+  'GLOBAL_NOAC':    {'sw_ac' : [],'sw_ap': True,'sw_lit': False},
+  'GLOBAL_NOAC_WILT':   {'sw_ac' : [],'sw_ap': True,'sw_lit': False},
+  'GLOBAL_NOAC_FC':     {'sw_ac' : [],'sw_ap': True,'sw_lit': False},
+  'GLOBAL_ADV':         {'sw_ac' : ['adv',],'sw_ap': True,'sw_lit': False},
+  'GLOBAL_ADV_VMIN':    {'sw_ac' : ['adv'],'sw_ap': True,'sw_lit': False},
+  'GLOBAL_ADV_VMAX':    {'sw_ac' : ['adv'],'sw_ap': True,'sw_lit': False},
+  'GLOBAL_ADV_V0':    {'sw_ac' : ['adv'],'sw_ap': True,'sw_lit': False},
+  'GLOBAL_ADV_L025':    {'sw_ac' : ['adv'],'sw_ap': True,'sw_lit': False},
+  'GLOBAL_ADV_L100':    {'sw_ac' : ['adv'],'sw_ap': True,'sw_lit': False},
+  'GLOBAL_ADV_L600':    {'sw_ac' : ['adv'],'sw_ap': True,'sw_lit': False},
+  'GLOBAL_W':  {'sw_ac' : ['w',],'sw_ap': True,'sw_lit': False},
+  'GLOBAL_AC': {'sw_ac' : ['adv','w'],'sw_ap': True,'sw_lit': False},
 }
-
-
-# #SET = 'GLOBAL'
-# SET = args.dataset
 
 # ========================
 print("getting a list of stations")
@@ -205,13 +200,13 @@ for expname in experiments:
     path_exp = args.path_experiments+'/'+expname+'/'
 
     os.system('mkdir -p '+path_exp)
-    records_morning_station = records_morning.query('STNID == '+str(current_station.name))
     for istation,current_station in run_stations.iterrows():
+        print(istation,current_station)
+        records_morning_station = records_morning.query('STNID == '+str(current_station.name))
         if (int(args.split_by) * int(run_station_chunk)) >= (len(records_morning_station)):
             print("warning: outside of profile number range for station "+\
                   str(current_station)+". Skipping chunk number for this station.")
         else:
-
             fn_morning = args.path_forcing+'/'+format(current_station.name,'05d')+'_'+args.subset_forcing+'.yaml'
             if os.path.isfile(fn_morning):
                 file_morning = open(fn_morning)
@@ -235,11 +230,13 @@ for expname in experiments:
             print('starting station chunk number: '\
                   +str(run_station_chunk)+'(size: '+str(args.split_by)+' soundings)')
 
+            records_morning_station_chunk = records_morning_station.iloc[((run_station_chunk)*int(args.split_by)):((run_station_chunk+1)*int(args.split_by))] #  [(int(args.split_by)*run_station_chunk):(int(args.split_by)*(run_station_chunk+1))]
 
             isim = 0
-            records_morning_station_chunk = records_morning_station.iloc[((run_station_chunk)*int(args.split_by)):((run_station_chunk+1)*int(args.split_by))] #  [(int(args.split_by)*run_station_chunk):(int(args.split_by)*(run_station_chunk+1))]
             for (STNID,chunk,index),record_morning in records_morning_station_chunk.iterrows():
-                #if iexp == 11:
+                    print('starting '+str(isim+1)+' out of '+\
+                      str(len(records_morning_station_chunk) )+\
+                      ' (station total: ',str(len(records_morning_station)),')')  
                 
             
                     c4gli_morning = get_record_yaml(file_morning, 
@@ -247,6 +244,7 @@ for expname in experiments:
                                                     record_morning.index_end,
                                                     mode='ini')
                     if args.diag_tropo is not None:
+                        print('add tropospheric parameters on advection and subsidence (for diagnosis)')
                         seltropo = (c4gli_morning.air_ac.p > c4gli_morning.air_ac.p.iloc[-1]+ 3000.*(- 1.2 * 9.81 ))
                         profile_tropo = c4gli_morning.air_ac[seltropo]
                         for var in args.diag_tropo:#['t','q','u','v',]:
@@ -256,171 +254,112 @@ for expname in experiments:
                             else:
                                 print("warning: tropospheric variable "+var+" not recognized")
                     
-                    #print('c4gli_morning_ldatetime',c4gli_morning.pars.ldatetime)
                     
-                    
-                    record_afternoon = records_afternoon.loc[(STNID,chunk,index)]
-                    c4gli_afternoon = get_record_yaml(file_afternoon, 
-                                                      record_afternoon.index_start, 
-                                                      record_afternoon.index_end,
-                                                    mode='ini')
+                    if args.runtime == 'from_afternoon_profile':
+                        record_afternoon = records_afternoon.loc[(STNID,chunk,index)]
+                        c4gli_afternoon = get_record_yaml(file_afternoon, 
+                                                          record_afternoon.index_start, 
+                                                          record_afternoon.index_end,
+                                                        mode='ini')
+                        runtime = int((c4gli_afternoon.pars.datetime_daylight - 
+                                             c4gli_morning.pars.datetime_daylight).total_seconds())
+                    elif args.runtime == 'from_input':
+                        runtime = c4gli_morning.pars.runtime
+                    else:
+                        runtime = int(args.runtime)
+
             
                     c4gli_morning.update(source='pairs',pars={'runtime' : \
-                                        int((c4gli_afternoon.pars.datetime_daylight - 
-                                             c4gli_morning.pars.datetime_daylight).total_seconds())})
+                                        runtime})
                     c4gli_morning.update(source=expname, pars=exp)
+                    if expname[-5:] == '_VMAX':
+                        # ini_sel = ini[ini.cveg > ini.cveg.quantile(0.99)]
+                        # ini = c4gldata['GLOBAL_ADV'].frames['profiles']['records_all_stations_ini']
+                        c4gli_morning.update(source=expname, pars=\
+                                             {'alpha' : 0.19835934815210562,
+                                              'cveg' : 0.9324493037539419,
+                                              'z0m' : 1.287697822716918,
+                                              'z0h' : 0.1287697822716918,
+                                              'LAI' : 2.4429540235782645,
+                                              }\
+                                            )
+                    if expname[-3:] == '_V0':
+                        c4gli_morning.update(source=expname, pars=\
+                                             {'cveg': 0.0,
+                                             'z0m': 0.01,
+                                             'z0h': 0.001,
+                                             }\
+                                            )
+                    if expname[-3:] == '_VMIN':
+                        c4gli_morning.update(source=expname, pars=\
+                                             {'alpha': 0.2868081648656875,
+                                             'cveg': 0.08275966502449594,
+                                             'z0m': 0.05760000169277192,
+                                             'z0h': 0.005760000169277192,
+                                             'LAI': 2.0,
+                                             }\
+                                            )
+                    if expname[-3:] == '_L025':
+                        c4gli_morning.update(source=expname, pars=\
+                                             {'lai':.25}\
+                                            )
+                    if expname[-3:] == '_L100':
+                        c4gli_morning.update(source=expname, pars=\
+                                             {'lai':1.0}\
+                                            )
+                    if expname[-3:] == '_L600':
+                        c4gli_morning.update(source=expname, pars=\
+                                             {'lai':6.0}\
+                                            )
 
                     c4gl = class4gl(c4gli_morning)
-                    
-                    #EFobs = c4gli_morning.pars.BR /(c4gli_morning.pars.BR+1.)
-                    EFobs = c4gli_morning.pars.EF
-                    
-                    b = c4gli_morning.pars.wwilt
-                    c = c4gli_morning.pars.wfc #max(c4gli_morning.pars.wfc,c4gli_morning.pars.wsat-0.01)
-                    
-                    
-                    try:
-                        #fb = f(b)
-                        c4gli_morning.pars.wg = b
-                        c4gli_morning.pars.w2 = b
-                        c4gl = class4gl(c4gli_morning)
-                        c4gl.run()
-                        EFmod = c4gl.out.LE.sum()/(c4gl.out.H.sum() + c4gl.out.LE.sum())
-                        fb = EFmod - EFobs
-                        EFmodb = EFmod
-                        c4glb = c4gl
-                        c4gli_morningb = c4gli_morning
-                        
-                        #fc = f(c)
-                        c4gli_morning.pars.wg = c
-                        c4gli_morning.pars.w2 = c
-                        c4gl = class4gl(c4gli_morning)
-                        c4gl.run()
-                        EFmod = c4gl.out.LE.sum()/(c4gl.out.H.sum() + c4gl.out.LE.sum())
-                        fc = EFmod - EFobs
-                        print (EFmodb,EFobs,fb)
-                        print (EFmod,EFobs,fc)
-                        c4glc = c4gl
-                        c4gli_morningc = c4gli_morning
-                        i=0
-                        
 
-                        if fc*fb > 0.:
-                            if abs(fb) < abs(fc):
-                                c4gl = c4glb
-                                c4gli_morning = c4gli_morningb
-                            else:
-                                c4gl = c4glc
-                                c4gli_morning = c4gli_morningc
-                            print("Warning!!! function value of the boundaries have the same sign, so I will not able to find a root")
-                        
-                        else:
-                            print('starting ITERATION!!!')
-                            cn  = c - fc/(fc-fb)*(c-b)
-                            
-                            
-                            #fcn = f(cn)
-                            c4gli_morning.pars.wg = np.asscalar(cn)
-                            c4gli_morning.pars.w2 = np.asscalar(cn)
-                            c4gl = class4gl(c4gli_morning)
+                    if args.error_handling == 'dump_always':
+                        try:
+                            print('checking data sources')
+                            if not c4gli_morning.check_source_globaldata():
+                                print('Warning: some input sources appear invalid')
                             c4gl.run()
-                            fcn = c4gl.out.LE.sum()/(c4gl.out.H.sum() + c4gl.out.LE.sum()) - EFobs
-                            
-                            tol = 0.02
-                            ftol = 10.
-                            maxiter = 10
-                            
-                            is1=0
-                            is1max=1
-                            while (( abs(cn-c) > tol) or ( abs(fcn) > ftol)) and (fcn != 0) and (i < maxiter):
-                                if fc * fcn > 0:
-                                    temp = c
-                                    c = b
-                                    b = temp
-                                
-                                a = b
-                                fa = fb
-                                b = c
-                                fb = fc
-                                c = cn
-                                fc = fcn
-                                              
-                                print(i,a,b,c,fcn)
-                                
-                                s1 = c - fc/(fc-fb)*(c-b) 
-                                s2 = c - fc/(fc-fa)*(c-a)
-                                
-                                
-                                # take the one that is closest to the border  (opposite to the previous border), making the chance that the border is eliminated is bigger
-                                
-                                
-                                if (abs(s1-b) < abs(s2-b)):
-                                    is1 = 0
-                                else:
-                                    is1 +=1
-                                    
-                                # we prefer s1, but only allow it a few times to not provide the opposite boundary
-                                if is1 < is1max:           
-                                    s = s1
-                                    print('s1')
-                                else:
-                                    is1 = 0
-                                    s = s2
-                                    print('s2')
-                                
-                                if c > b:
-                                    l = b
-                                    r = c
-                                else:
-                                    l = c
-                                    r = b
-                                
-                                m = (b+c)/2.
-                                     
-                                if ((s > l) and (s < r)):# and (abs(m-b) < abs(s - b)):
-                                    cn = s
-                                    print('midpoint')
-                                else:
-                                    cn = m
-                                    print('bissection')
-                                    
-                                
-                                #fcn = f(cn)
-                                c4gli_morning.pars.wg = np.asscalar(cn)
-                                c4gli_morning.pars.w2 = np.asscalar(cn)
-                                c4gl = class4gl(c4gli_morning)
-                                c4gl.run()
-                                fcn = c4gl.out.LE.sum()/(c4gl.out.H.sum() + c4gl.out.LE.sum()) - EFobs
-                                
-                            
-                                i+=1
-                                
-                            if i == maxiter:
-                                raise StopIteration('did not converge')
+                            print('run succesful')
+                        except:
+                            print('run not succesful')
+                        onerun = True
 
-
-
-
-                        #c4gl = class4gl(c4gli_morning)
-                        #c4gl.run()
-
-                        c4gli_morning.pars.itersteps = i
                         c4gli_morning.dump(file_ini)
                         
                         
                         c4gl.dump(file_mod,\
-                                      include_input=False,\
-                                   #   timeseries_only=timeseries_only,\
+                                  include_input=False,\
+                                  #timeseries_only=timeseries_only,\
                                  )
                         onerun = True
-                    except:
-                        print('run not succesfull')
+                    # in this case, only the file will dumped if the runs were
+                    # successful
+                    elif args.error_handling == 'dump_on_success':
+                       try:
+                            print('checking data sources')
+                            if not c4gli_morning.check_source_globaldata():
+                                print('Warning: some input sources appear invalid')
+                            c4gl.run()
+                            print('run succesfull')
+                            c4gli_morning.dump(file_ini)
+                            
+                            
+                            c4gl.dump(file_mod,\
+                                      include_input=False,\
+                                      #timeseries_only=timeseries_only,\
+                                     )
+                            onerun = True
+                       except:
+                           print('run not succesfull')
+                    isim += 1
 
-                #iexp = iexp +1
+
             file_ini.close()
             file_mod.close()
             file_morning.close()
-            file_afternoon.close()
+            if args.runtime == 'from_afternoon_profile':
+                file_afternoon.close()
     
             if onerun:
                 records_ini = get_records(pd.DataFrame([current_station]),\
@@ -454,7 +393,7 @@ for expname in experiments:
     #     with \
     #     open(path_exp+'/'+format(STNID,"05d")+'_ini.yaml','r') as file_station_ini, \
     #     open(path_exp+'/'+format(STNID,"05d")+'_mod.yaml','r') as file_station_mod, \
-    #     open(path_soundings+'/'+format(STNID,"05d")+'_afternoon.yaml','r') as file_station_afternoon:
+    #     open(path_forcing+'/'+format(STNID,"05d")+'_afternoon.yaml','r') as file_station_afternoon:
     #         for (STNID,index),record_ini in records_iterator(records_ini):
     #             c4gli_ini = get_record_yaml(file_station_ini, 
     #                                         record_ini.index_start, 

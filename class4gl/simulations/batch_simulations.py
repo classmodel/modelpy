@@ -16,7 +16,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--exec') # chunk simulation script
 parser.add_argument('--first_station_row')
 parser.add_argument('--last_station_row')
-parser.add_argument('--pbs_string',default=' -l walltime=:2:0:0')
+parser.add_argument('--pbs_string',default=' -l walltime=2:0:0')
 parser.add_argument('--station_id') # run a specific station id
 parser.add_argument('--error_handling')
 parser.add_argument('--subset_forcing',default='morning') 
