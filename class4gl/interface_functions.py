@@ -596,4 +596,11 @@ def tendencies(mod_afternoon,obs_afternoon,obs_morning,keys):
                               (obs_afternoon.ldatetime - \
                                obs_morning.ldatetime).dt.seconds*3600.
     return stats
+def tendencies_new(mod_afternoon,mod_ini,keys):
+    stats = pd.DataFrame()
+    for key in keys: 
+        stats['d'+key+'dt'] = ""
+        stats['d'+key+'dt'] = (mod_afternoon[key] - obs_morning[key])/ \
+                              (mod_ini.runtime)
+    return stats
 
