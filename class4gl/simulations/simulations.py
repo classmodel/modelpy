@@ -66,6 +66,7 @@ EXP_DEFS  =\
   'AC': {'sw_ac' : ['adv','w'],'sw_ap': True,'sw_lit': False},
   'GLOBAL_NOAC':    {'sw_ac' : [],'sw_ap': True,'sw_lit': False},
   'GLOBAL_ADV':{'sw_ac' : ['adv',],'sw_ap': True,'sw_lit': False},
+  'GLOBAL_ADV_ERA_NEW':{'sw_ac' : ['adv',],'sw_ap': True,'sw_lit': False},
     'GLOBAL_ADV_SHR':{'sw_ac' : ['adv',],'sw_ap': True,'sw_lit': False,'sw_shr':True},
   'GLOBAL_W':  {'sw_ac' : ['w',],'sw_ap': True,'sw_lit': False},
   'GLOBAL_AC': {'sw_ac' : ['adv','w'],'sw_ap': True,'sw_lit': False},

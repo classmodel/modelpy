@@ -151,6 +151,7 @@ class model:
                 self.input = cp.deepcopy(model_input)
 
     def load_yaml_dict(self,yaml_dict):
+        dictouttemp = pd.DataFrame()
         for key,data in yaml_dict.items():
             if key == 'pars':
                 for keydata,value in data.items():
@@ -167,10 +168,11 @@ class model:
             #     self.__dict__[key] = data
 
 
-        self.tsteps = len(dictouttemp['h'])
-        self.out = model_output(self.tsteps)
-        for keydictouttemp in dictouttemp.keys():
-            self.out.__dict__[keydictouttemp] = np.array(dictouttemp[keydictouttemp])
+        if len(dictouttemp) > 0:
+            self.tsteps = len(dictouttemp['h'])
+            self.out = model_output(self.tsteps)
+            for keydictouttemp in dictouttemp.keys():
+                self.out.__dict__[keydictouttemp] = np.array(dictouttemp[keydictouttemp])
 
 
   
