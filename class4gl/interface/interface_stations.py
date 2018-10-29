@@ -1,4 +1,3 @@
-'''
 import numpy as np
 
 import pandas as pd
@@ -124,9 +123,10 @@ for key in args.experiments.strip(' ').split(' '):
                       args.path_experiments+'/'+key+'/',\
                       args.path_forcing+'/',\
                       globaldata,\
-                      refetch_records=False
+                      refetch_records=False,
+                      obs_filter = True
+
                     )
-'''
 
 if bool(args.make_figures):
     fig = plt.figure(figsize=(10,7))   #width,height

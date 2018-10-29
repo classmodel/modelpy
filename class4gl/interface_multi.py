@@ -51,13 +51,15 @@ statsviewcmap = LinearSegmentedColormap('statsviewcmap', cdictpres)
 os.system('module load Ruby')
 
 class c4gl_interface_soundings(object):
-    def __init__(self,path_exp,path_obs=None,globaldata=None,refetch_records=False,refetch_stations=True,inputkeys = ['cveg','wg','w2','cc','sp','wwilt','Tsoil','T2','z0m','alpha','LAI',]):
+    def __init__(self,path_exp,path_obs=None,globaldata=None,refetch_records=False,refetch_stations=True,inputkeys = ['cveg','wg','w2','cc','sp','wwilt','Tsoil','T2','z0m','alpha','LAI',],obs_filter=False):
         """ creates an interactive interface for analysing class4gl experiments
 
         INPUT:
             path_exp : path of the experiment output
             path_obs : path of the observations 
             globaldata: global data that is being shown on the map
+            obs_filtering: extra data filter considering observation tendencies
+                           beyond what the model can capture
             refetch_stations: do we need to build the list of the stations again?
         OUTPUT:
             the procedure returns an interface object with interactive plots
@@ -68,6 +70,7 @@ class c4gl_interface_soundings(object):
         self.globaldata = globaldata
 
  
+        self.obs_filter= obs_filter
         self.path_exp = path_exp
         self.path_obs = path_obs
         self.exp_files = glob.glob(self.path_exp+'/?????.yaml')
@@ -219,7 +222,7 @@ class c4gl_interface_soundings(object):
             # some observational sounding still seem problematic, which needs to be
             # investigated. In the meantime, we filter them
 
-            if self.path_obs is not None:
+            if ((self.path_obs is not None) and (self.obs_filter)):
                 print('exclude exceptional observations')
                 print('exclude unrealistic model output -> should be investigated!')
                 valid = (\

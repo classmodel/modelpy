@@ -116,7 +116,9 @@ for key in args.experiments.strip(' ').split(' '):
                       args.path_experiments+'/'+key+'/',\
                       args.path_forcing+'/',\
                       globaldata,\
-                      refetch_records=False
+                      refetch_records=False,
+                      obs_filter = True
+                                            
                     )
 
 sns.reset_orig()
