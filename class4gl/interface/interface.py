@@ -19,6 +19,7 @@ parser.add_argument('--show_control_parameters',default=True)
 parser.add_argument('--figure_filename',default=None)
 parser.add_argument('--figure_filename_2',default=None)
 parser.add_argument('--experiments_labels',default=None)
+parser.add_argument('--tendencies_revised',default=False)
 args = parser.parse_args()
 
 print('Adding python library:',args.c4gl_path_lib)
@@ -125,7 +126,8 @@ for key in args.experiments.strip(' ').split(' '):
                       args.path_experiments+'/'+key+'/',\
                       args.path_forcing,\
                       globaldata,\
-                      refetch_records=False
+                      refetch_records=False,
+                      tendencies_revised = args.tendencies_revised
                     )
 
 if args.make_figures:

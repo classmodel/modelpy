@@ -51,7 +51,7 @@ statsviewcmap = LinearSegmentedColormap('statsviewcmap', cdictpres)
 os.system('module load Ruby')
 
 class c4gl_interface_soundings(object):
-    def __init__(self,path_exp,path_obs=None,globaldata=None,refetch_records=False,refetch_stations=True,inputkeys = ['cveg','wg','w2','cc','sp','wwilt','Tsoil','T2','z0m','alpha','LAI',],obs_filter=False):
+    def __init__(self,path_exp,path_obs=None,globaldata=None,refetch_records=False,refetch_stations=True,inputkeys = ['cveg','wg','w2','cc','sp','wwilt','Tsoil','T2','z0m','alpha','LAI',],obs_filter=False,tendencies_revised=False):
         """ creates an interactive interface for analysing class4gl experiments
 
         INPUT:
@@ -71,6 +71,7 @@ class c4gl_interface_soundings(object):
 
  
         self.obs_filter= obs_filter
+        self.tendencies_revised = tendencies_revised
         self.path_exp = path_exp
         self.path_obs = path_obs
         self.exp_files = glob.glob(self.path_exp+'/?????.yaml')
@@ -156,18 +157,32 @@ class c4gl_interface_soundings(object):
 
             self.frames['stats']['viewkeys'] = ['h','theta','q']
             print('Calculating table statistics')
-            self.frames['stats']['records_all_stations_mod_stats'] = \
-                    tendencies(self.frames['stats']['records_all_stations_mod'],\
-                               self.frames['stats']['records_all_stations_obs_afternoon'],\
-                               self.frames['stats']['records_all_stations_ini'],\
-                               self.frames['stats']['viewkeys']\
-                              )
-            self.frames['stats']['records_all_stations_obs_afternoon_stats'] = \
-                    tendencies(self.frames['stats']['records_all_stations_obs_afternoon'],\
-                               self.frames['stats']['records_all_stations_obs_afternoon'],\
-                               self.frames['stats']['records_all_stations_ini'],\
-                               self.frames['stats']['viewkeys']\
-                              )
+
+            if self.tendencies_revised:
+                self.frames['stats']['records_all_stations_mod_stats'] = \
+                        tendencies_rev(self.frames['stats']['records_all_stations_mod'],\
+                                           self.frames['stats']['records_all_stations_ini'],\
+                                           self.frames['stats']['viewkeys']\
+                                  )
+                self.frames['stats']['records_all_stations_obs_afternoon_stats'] = \
+                        tendencies_rev(self.frames['stats']['records_all_stations_obs_afternoon'],\
+                                           self.frames['stats']['records_all_stations_ini'],\
+                                           self.frames['stats']['viewkeys']\
+                                  )
+
+            else:
+                self.frames['stats']['records_all_stations_mod_stats'] = \
+                        tendencies(self.frames['stats']['records_all_stations_mod'],\
+                                   self.frames['stats']['records_all_stations_obs_afternoon'],\
+                                   self.frames['stats']['records_all_stations_ini'],\
+                                   self.frames['stats']['viewkeys']\
+                                  )
+                self.frames['stats']['records_all_stations_obs_afternoon_stats'] = \
+                        tendencies(self.frames['stats']['records_all_stations_obs_afternoon'],\
+                                   self.frames['stats']['records_all_stations_obs_afternoon'],\
+                                   self.frames['stats']['records_all_stations_ini'],\
+                                   self.frames['stats']['viewkeys']\
+                                  )
 
         self.frames['stats']['inputkeys'] = inputkeys
         

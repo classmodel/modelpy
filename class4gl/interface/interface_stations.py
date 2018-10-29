@@ -15,6 +15,7 @@ parser.add_argument('--c4gl_path_lib')#,default='/user/data/gent/gvo000/gvo00090
 parser.add_argument('--load_globaldata',default=False) # load the data needed for the interface
 parser.add_argument('--make_figures',default=None)
 parser.add_argument('--figure_filename',default=None)
+parser.add_argument('--tendencies_revised',default=False)
 args = parser.parse_args()
 
 print('Adding python library:',args.c4gl_path_lib)
@@ -124,8 +125,8 @@ for key in args.experiments.strip(' ').split(' '):
                       args.path_forcing+'/',\
                       globaldata,\
                       refetch_records=False,
-                      obs_filter = True
-
+                      obs_filter = True,
+                      tendencies_revised = args.tendencies_revised
                     )
 
 if bool(args.make_figures):
