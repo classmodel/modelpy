@@ -20,6 +20,7 @@ parser.add_argument('--figure_filename',default=None)
 parser.add_argument('--figure_filename_2',default=None)
 parser.add_argument('--experiments_labels',default=None)
 parser.add_argument('--tendencies_revised',default=False)
+parser.add_argument('--obs_filter',default='True')
 args = parser.parse_args()
 
 print('Adding python library:',args.c4gl_path_lib)
@@ -128,6 +129,7 @@ for key in args.experiments.strip(' ').split(' '):
                       globaldata,\
                       refetch_records=False,
                       tendencies_revised = args.tendencies_revised
+                      obs_filter = (args.obs_filter == 'True')
                     )
 
 if args.make_figures:
