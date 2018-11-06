@@ -16,6 +16,7 @@ parser.add_argument('--show_control_parameters',default=True)
 parser.add_argument('--figure_filename',default=None)
 parser.add_argument('--figure_filename_2',default=None)
 parser.add_argument('--experiments_labels',default=None)
+parser.add_argument('--obs_filter',default='True')
 args = parser.parse_args()
 
 print('Adding python library:',args.c4gl_path_lib)
@@ -117,10 +118,9 @@ for key in args.experiments.strip(' ').split(' '):
                       args.path_forcing+'/',\
                       globaldata,\
                       refetch_records=False,
-                      obs_filter = True
+                      obs_filter = (args.obs_filter == 'True')
                                             
                     )
-
 sns.reset_orig()
 key = args.experiments.strip(' ').split(' ')[0]
 xrkoeppen = xr.open_dataset('/user/data/gent/gvo000/gvo00090/EXT/data/KOEPPEN/Koeppen-Geiger.nc')
@@ -217,7 +217,7 @@ for ikoeppen,koeppen in koeppenlookuptable.iterrows():
     print(np.sum(kgc_select))
     koeppenlookuptable.iloc[ikoeppen]['amount'] = np.sum(kgc_select)
 
-koeppenlookuptable = koeppenlookuptable[koeppenlookuptable.amount >= 200]
+#koeppenlookuptable = koeppenlookuptable[koeppenlookuptable.amount >= 200]
 koeppenlookuptable = koeppenlookuptable.sort_values('amount',ascending=False)
 # koeppenlookuptable = koeppenlookuptable[:9]
 include_koeppen = list(koeppenlookuptable.KGCID)
@@ -241,9 +241,8 @@ if args.make_figures:
         #axes_taylor[varkey] = fig.add_subplot(2,3,i+3)                                       
     
         #print(obs.std())
-        #if i == 2:
         dias[varkey]._ax.axis["left"].label.set_text(\
-            "Normalized standard deviation")
+             "Normalized root mean square error")
         if i == 1:
             axes[varkey].annotate('Normalized standard deviation',\
                         xy= (0.05,0.27),
@@ -261,9 +260,11 @@ if args.make_figures:
                        )
 
 
+            # ticks = ticker.FuncFormatter(lambda x, pos: '{0:g}'.format(x-1.))
+            # #ax.axis["left"].axis.set_major_formatter(ticks)
 
-            # dias[varkey]._ax.axis["left"].axis.set_ticks(np.arange(0.,2.,0.25))
-            # dias[varkey]._ax.axis["left"].axis.set_major_locator(np.arange(0.,2.,0.25))
+            # # dias[varkey]._ax.axis["left"].axis.set_ticks(np.arange(0.,2.,0.25))
+            # dias[varkey]._ax.axis["left"].axis.set_major_formatter(ticks)
         #dias[varkey]._ax.axis["left"].axis.set_ticks(np.arange(0.,2.,0.25))
         # Q95 = obs.quantile(0.95)
         # Q95 = obs.quantile(0.90)
@@ -317,7 +318,7 @@ if args.make_figures:
             dias[varkey].add_sample(STD/STD_OBS, PR,\
                            marker='o',ls='', mfc='white',mec='black',
                            zorder=-100,
-                           ms=10.*np.sqrt(np.sum(np.array(koeppenlookuptable.amount.values,dtype=np.float)))/\
+                           ms=3.5*np.sqrt(np.sum(np.array(koeppenlookuptable.amount.values,dtype=np.float)))/\
                                 np.mean(np.sqrt(np.array(koeppenlookuptable.amount.values,dtype=np.float)))
                            # annotate=koeppen.KGCID, color=koeppen.textcolor,weight='bold',fontsize=5.,\
                            # bbox={'edgecolor':'black','boxstyle':'circle','fc':koeppen.color,'alpha':0.7}
@@ -325,7 +326,7 @@ if args.make_figures:
             dias[varkey].add_sample(STD/STD_OBS, PR,\
                            marker='o',ls='', mfc='none',mec='black',
                            zorder=700,
-                           ms=10.*np.sqrt(np.sum(np.array(koeppenlookuptable.amount.values,dtype=np.float)))/\
+                           ms=3.5*np.sqrt(np.sum(np.array(koeppenlookuptable.amount.values,dtype=np.float)))/\
                                 np.mean(np.sqrt(np.array(koeppenlookuptable.amount.values,dtype=np.float)))
                            # annotate=koeppen.KGCID, color=koeppen.textcolor,weight='bold',fontsize=5.,\
                            # bbox={'edgecolor':'black','boxstyle':'circle','fc':koeppen.color,'alpha':0.7}
@@ -357,53 +358,54 @@ if args.make_figures:
         for ikey,key in enumerate(args.experiments.strip(' ').split(' ')[:1]):
             icolor = 0
             for ikoeppen,koeppen in koeppenlookuptable.iterrows():
-                print(ikoeppen,':',koeppen)
-                kgc_select = (c4gldata[key].frames['stats']['records_all_stations_ini']['KGCname'] == koeppen['KGCID'])
-                koeppen_mod = c4gldata[key].frames['stats']['records_all_stations_mod_stats']['d'+varkey+'dt'][kgc_select]
-                koeppen_obs = c4gldata[key].frames['stats']['records_all_stations_obs_afternoon_stats']['d'+varkey+'dt'][kgc_select]
+                if koeppen.amount >= 200:
+                    print(ikoeppen,':',koeppen)
+                    kgc_select = (c4gldata[key].frames['stats']['records_all_stations_ini']['KGCname'] == koeppen['KGCID'])
+                    koeppen_mod = c4gldata[key].frames['stats']['records_all_stations_mod_stats']['d'+varkey+'dt'][kgc_select]
+                    koeppen_obs = c4gldata[key].frames['stats']['records_all_stations_obs_afternoon_stats']['d'+varkey+'dt'][kgc_select]
     
-                #axes[varkey].scatter(koeppen_obs,koeppen_mod,marker=symbols[ikoeppen],color=colors[ikey])
-                         #  label=key+", "+\
-                         #                    'R = '+str(round(PR[0],3))+', '+\
-                         #                    'RMSE = '+str(round(RMSE,5))+', '+\
-                         #                    'BIAS = '+str(round(BIAS,5)),s=1.,color=colors[ikey])
+                    #axes[varkey].scatter(koeppen_obs,koeppen_mod,marker=symbols[ikoeppen],color=colors[ikey])
+                             #  label=key+", "+\
+                             #                    'R = '+str(round(PR[0],3))+', '+\
+                             #                    'RMSE = '+str(round(RMSE,5))+', '+\
+                             #                    'BIAS = '+str(round(BIAS,5)),s=1.,color=colors[ikey])
     
     
     
-            # # pl.scatter(obs,mod,label=key+", "+\
-            # #                              'R = '+str(round(PR[0],3))+', '+\
-            # #                              'RMSE = '+str(round(RMSE,5))+', '+\
-            # #                              'BIAS = '+str(round(BIAS,5)),s=1.,color=colors[ikey])
-                
-                dias[varkey].add_sample(koeppen_mod.std()/koeppen_obs.std(),
-                               pearsonr(koeppen_mod,koeppen_obs)[0],
-                               marker='o',linewidth=0.5,
-                                        mfc=koeppen.color,mec='black',#koeppen.color,
-                                        zorder=300+icolor,
-                               ms=10.*np.sqrt(koeppen.amount)/np.mean(np.sqrt(np.array(koeppenlookuptable.amount.values,dtype=np.float)))
-                               # annotate=koeppen.KGCID, color=koeppen.textcolor,weight='bold',fontsize=5.,\
-                               # bbox={'edgecolor':'black','boxstyle':'circle','fc':koeppen.color,'alpha':0.7}
-                               )
-                dias[varkey].add_sample(koeppen_mod.std()/koeppen_obs.std(),
-                               pearsonr(koeppen_mod,koeppen_obs)[0],
-                               marker='o',linewidth=0.5,
-                                        mfc=koeppen.color,mec='black',#koeppen.color,
-                                        zorder=301+icolor, ms=1
-                               # annotate=koeppen.KGCID, color=koeppen.textcolor,weight='bold',fontsize=5.,\
-                               # bbox={'edgecolor':'black','boxstyle':'circle','fc':koeppen.color,'alpha':0.7}
-                               )
+                # # pl.scatter(obs,mod,label=key+", "+\
+                # #                              'R = '+str(round(PR[0],3))+', '+\
+                # #                              'RMSE = '+str(round(RMSE,5))+', '+\
+                # #                              'BIAS = '+str(round(BIAS,5)),s=1.,color=colors[ikey])
+                    
+                    dias[varkey].add_sample(koeppen_mod.std()/koeppen_obs.std(),
+                                   pearsonr(koeppen_mod,koeppen_obs)[0],
+                                   marker='o',linewidth=0.5,
+                                            mfc=koeppen.color,mec='black',#koeppen.color,
+                                            zorder=300+icolor,
+                                   ms=3.5*np.sqrt(koeppen.amount)/np.mean(np.sqrt(np.array(koeppenlookuptable.amount.values,dtype=np.float)))
+                                   # annotate=koeppen.KGCID, color=koeppen.textcolor,weight='bold',fontsize=5.,\
+                                   # bbox={'edgecolor':'black','boxstyle':'circle','fc':koeppen.color,'alpha':0.7}
+                                   )
+                    dias[varkey].add_sample(koeppen_mod.std()/koeppen_obs.std(),
+                                   pearsonr(koeppen_mod,koeppen_obs)[0],
+                                   marker='o',linewidth=0.5,
+                                            mfc=koeppen.color,mec='black',#koeppen.color,
+                                            zorder=301+icolor, ms=1
+                                   # annotate=koeppen.KGCID, color=koeppen.textcolor,weight='bold',fontsize=5.,\
+                                   # bbox={'edgecolor':'black','boxstyle':'circle','fc':koeppen.color,'alpha':0.7}
+                                   )
 
 
-                # dias[varkey].add_sample(koeppen_mod.std()/koeppen_obs.std(),
-                #                pearsonr(koeppen_mod,koeppen_obs)[0],
-                #                         marker='o',linewidth=0.5, mfc='none',mec=str(koeppen.color),
-                #                         zorder=600+icolor,
-                #                ms=10.*np.sqrt(koeppen.amount)/np.mean(np.sqrt(np.array(koeppenlookuptable.amount.values,dtype=np.float)))
-                #                # annotate=koeppen.KGCID, color=koeppen.textcolor,weight='bold',fontsize=5.,\
-                #                # bbox={'edgecolor':'black','boxstyle':'circle','fc':koeppen.color,'alpha':0.7}
-                #                )
+                    # dias[varkey].add_sample(koeppen_mod.std()/koeppen_obs.std(),
+                    #                pearsonr(koeppen_mod,koeppen_obs)[0],
+                    #                         marker='o',linewidth=0.5, mfc='none',mec=str(koeppen.color),
+                    #                         zorder=600+icolor,
+                    #                ms=10.*np.sqrt(koeppen.amount)/np.mean(np.sqrt(np.array(koeppenlookuptable.amount.values,dtype=np.float)))
+                    #                # annotate=koeppen.KGCID, color=koeppen.textcolor,weight='bold',fontsize=5.,\
+                    #                # bbox={'edgecolor':'black','boxstyle':'circle','fc':koeppen.color,'alpha':0.7}
+                    #                )
 
-                icolor += 1
+                    icolor += 1
     
             latex = {}
             latex['dthetadt'] =  r'$d \theta / dt $'
@@ -608,6 +610,7 @@ if args.make_figures:
     
     if args.figure_filename is not None:
         fig.savefig(args.figure_filename,dpi=200); print("Image file written to:",args.figure_filename)
+        fig.savefig(args.figure_filename.replace('png','pdf')); print("Image file written to:", args.figure_filename)
     fig.show()  
 
     koeppenlookuptable = koeppenlookuptable.sort_index()

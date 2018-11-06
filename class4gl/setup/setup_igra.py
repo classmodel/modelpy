@@ -260,8 +260,8 @@ for iSTN,STN in STNlist:
 
                         logic_afternoon['afternoon'] = \
                             (c4gli_afternoon.pars.ldatetime.hour >= 12.)
-                        # the sounding should have taken place before 2 hours
-                        # before sunset. This is to minimize the change that a
+                        # the sounding should have taken place before 1 hours
+                        # before sunset. This is to minimize the chance that a
                         # stable boundary layer (yielding very low mixed layer
                         # heights) is formed which can not be represented by
                         # class.

@@ -179,14 +179,15 @@ def humppa_parser(balloon_file,file_sounding,ldate,lhour,c4gli=None):
         dpars['STNID'] = current_station.name
         
 
-        # there are issues with the lower measurements in the HUMPPA campaign,
-        # for which a steady decrease of potential temperature is found, which
-        # is unrealistic.  Here I filter them away
-        ifirst = 0
-        while  (air_balloon.theta.iloc[ifirst+1] < air_balloon.theta.iloc[ifirst]):
-            ifirst = ifirst+1
-        print ('ifirst:',ifirst)
-        air_balloon = air_balloon.iloc[ifirst:].reset_index().drop(['index'],axis=1)
+        # # there are issues with the lower measurements in the HUMPPA campaign,
+        # # for which a steady decrease of potential temperature is found, which
+        # # is unrealistic.  Here I filter them away
+        # ifirst = 0
+        # while  (air_balloon.theta.iloc[ifirst+1] < air_balloon.theta.iloc[ifirst]):
+        #     ifirst = ifirst+1
+        # print ('ifirst:',ifirst)
+        # air_balloon = air_balloon.iloc[ifirst:].reset_index().drop(['index'],axis=1)
+        air_balloon = air_balloon.iloc[:].reset_index().drop(['index'],axis=1)
         
         is_valid = ~np.isnan(air_balloon).any(axis=1) & (air_balloon.z >= 0)
         valid_indices = air_balloon.index[is_valid].values
@@ -299,29 +300,29 @@ def humppa_parser(balloon_file,file_sounding,ldate,lhour,c4gli=None):
         # make theta increase strong enough to avoid numerical
         # instability
         air_ap_tail_orig = pd.DataFrame(air_ap_tail)
-        air_ap_tail = pd.DataFrame()
-        #air_ap_tail = air_ap_tail.append(air_ap_tail_orig.iloc[0],ignore_index=True)
-        air_ap_tail = air_ap_tail.append(air_ap_tail_orig.iloc[0],ignore_index=True)
-        theta_low = air_ap_head['theta'].iloc[2]
-        z_low = air_ap_head['z'].iloc[2]
-        ibottom = 0
-        for itop in range(0,len(air_ap_tail_orig)):
-            theta_mean = air_ap_tail_orig.theta.iloc[ibottom:(itop+1)].mean()
-            z_mean =     air_ap_tail_orig.z.iloc[ibottom:(itop+1)].mean()
-            if (
-                #(z_mean > z_low) and \
-                (z_mean > (z_low+10.)) and \
-                #(theta_mean > (theta_low+0.2) ) and \
-                #(theta_mean > (theta_low+0.2) ) and \
-                 (((theta_mean - theta_low)/(z_mean - z_low)) > 0.0001)):
+        # air_ap_tail = pd.DataFrame()
+        # #air_ap_tail = air_ap_tail.append(air_ap_tail_orig.iloc[0],ignore_index=True)
+        # air_ap_tail = air_ap_tail.append(air_ap_tail_orig.iloc[0],ignore_index=True)
+        # theta_low = air_ap_head['theta'].iloc[2]
+        # z_low = air_ap_head['z'].iloc[2]
+        # ibottom = 0
+        # for itop in range(0,len(air_ap_tail_orig)):
+        #     theta_mean = air_ap_tail_orig.theta.iloc[ibottom:(itop+1)].mean()
+        #     z_mean =     air_ap_tail_orig.z.iloc[ibottom:(itop+1)].mean()
+        #     if (
+        #         #(z_mean > z_low) and \
+        #         (z_mean > (z_low+10.)) and \
+        #         #(theta_mean > (theta_low+0.2) ) and \
+        #         #(theta_mean > (theta_low+0.2) ) and \
+        #          (((theta_mean - theta_low)/(z_mean - z_low)) > 0.00001)):
 
-                air_ap_tail = air_ap_tail.append(air_ap_tail_orig.iloc[ibottom:(itop+1)].mean(),ignore_index=True)
-                ibottom = itop+1
-                theta_low = air_ap_tail.theta.iloc[-1]
-                z_low =     air_ap_tail.z.iloc[-1]
-            # elif  (itop > len(air_ap_tail_orig)-10):
-            #     air_ap_tail = air_ap_tail.append(air_ap_tail_orig.iloc[itop],ignore_index=True)
-        
+        #         air_ap_tail = air_ap_tail.append(air_ap_tail_orig.iloc[ibottom:(itop+1)].mean(),ignore_index=True)
+        #         ibottom = itop+1
+        #         theta_low = air_ap_tail.theta.iloc[-1]
+        #         z_low =     air_ap_tail.z.iloc[-1]
+        #     # elif  (itop > len(air_ap_tail_orig)-10):
+        #     #     air_ap_tail = air_ap_tail.append(air_ap_tail_orig.iloc[itop],ignore_index=True)
+        # 
         air_ap = \
             pd.concat((air_ap_head,air_ap_tail)).reset_index().drop(['index'],axis=1)
         

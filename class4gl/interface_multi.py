@@ -70,7 +70,8 @@ class c4gl_interface_soundings(object):
         self.globaldata = globaldata
 
  
-        self.obs_filter= obs_filter
+        self.obs_filter = obs_filter
+        print(self.obs_filter)
         self.tendencies_revised = tendencies_revised
         self.path_exp = path_exp
         self.path_obs = path_obs
@@ -237,7 +238,11 @@ class c4gl_interface_soundings(object):
             # some observational sounding still seem problematic, which needs to be
             # investigated. In the meantime, we filter them
 
-            if ((self.path_obs is not None) and (self.obs_filter)):
+            print('hello',self.obs_filter)
+            print ((self.path_obs is not None) and (self.obs_filter))
+            if ((self.path_obs is not None) and (self.obs_filter)) is True:
+                print('hallohallo')
+            if ((self.path_obs is not None) and (self.obs_filter)) is True:
                 print('exclude exceptional observations')
                 print('exclude unrealistic model output -> should be investigated!')
                 valid = (\

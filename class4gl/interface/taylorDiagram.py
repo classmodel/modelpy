@@ -10,6 +10,7 @@ __author__ = "Yannick Copin <yannick.copin@laposte.net>"
 
 import numpy as NP
 import matplotlib.pyplot as PLT
+from matplotlib import ticker
 
 
 class TaylorDiagram(object):
@@ -83,6 +84,12 @@ class TaylorDiagram(object):
         ax.axis["left"].set_axis_direction("bottom")  # "X axis"
         #ax.axis["left"].label.set_text("Standard deviation (model)/ Observed (observations)")
 
+
+        # #ax.axis["left"].axis.set_ticklabels(["1.0","0.8","0.6","0.4","0.2","0.0","0.2","0.4","0.6","0.8","1.0"])
+        # ticks = ticker.FuncFormatter(lambda x, pos: '{0:g}'.format(x-1.))
+        # ax.axis["left"].axis.set_major_formatter(ticks)
+
+        ax.axis["left"].toggle(ticklabels=False, label=False)
         ax.axis["right"].set_axis_direction("top")    # "Y-axis"
         ax.axis["right"].toggle(ticklabels=True)
         ax.axis["right"].major_ticklabels.set_axis_direction(

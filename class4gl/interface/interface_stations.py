@@ -16,6 +16,7 @@ parser.add_argument('--load_globaldata',default=False) # load the data needed fo
 parser.add_argument('--make_figures',default=None)
 parser.add_argument('--figure_filename',default=None)
 parser.add_argument('--tendencies_revised',default=False)
+parser.add_argument('--obs_filter',default="True")
 args = parser.parse_args()
 
 print('Adding python library:',args.c4gl_path_lib)
@@ -125,7 +126,7 @@ for key in args.experiments.strip(' ').split(' '):
                       args.path_forcing+'/',\
                       globaldata,\
                       refetch_records=False,
-                      obs_filter = True,
+                      obs_filter = (args.obs_filter == 'True'),
                       tendencies_revised = args.tendencies_revised
                     )
 
@@ -137,7 +138,7 @@ if bool(args.make_figures):
     
     #colors = ['r','g','b','m']
     colors = ['k']
-    symbols = ['*','x','+']
+    symbols = ['^','x','+']
     dias = {}
     
     for varkey in ['h','theta','q']:                                                    
@@ -150,6 +151,21 @@ if bool(args.make_figures):
         dias[varkey] =  TaylorDiagram(1., srange=[0.0,1.7],fig=fig, rect=(230+i+3),label='Reference')
         dias[varkey]._ax.axis["left"].label.set_text(\
             "Normalized standard deviation")
+        if i == 1:
+            axes[varkey].annotate('Normalized standard deviation',\
+                        xy= (0.05,0.36),
+                        color='black',
+                        rotation=90.,
+                        xycoords='figure fraction',
+                        weight='normal',
+                        fontsize=10.,
+                        horizontalalignment='center',
+                        verticalalignment='center' ,
+                        #bbox={'edgecolor':'black',
+                        #      'boxstyle':'circle',
+                        #      'fc':koeppen.color,
+                        #      'alpha':1.0}
+                       )
         # dias[varkey]._ax.axis["left"].axis.set_ticks(np.arange(0.,2.,0.25))
         # dias[varkey]._ax.axis["left"].axis.set_major_locator(np.arange(0.,2.,0.25))
         #dias[varkey]._ax.axis["left"].axis.set_ticks(np.arange(0.,2.,0.25))
@@ -221,8 +237,8 @@ if bool(args.make_figures):
                                 'RMSE = '+format(RMSE,'0.1f')+r'$\,  \mathrm{m\, h^{-1}}$'+'\n'+\
                                 'Bias = '+format(BIAS,'0.1f')+r'$\,  \mathrm{m\, h^{-1}}$'+'\n'+\
                                 r'$R$ = '+format(PR,'0.2f')
-                ann = axes[varkey].annotate(annotate_text, xy=(0.95, .05 ), xycoords='axes fraction',fontsize=9,
-       horizontalalignment='right', verticalalignment='bottom' ,
+                ann = axes[varkey].annotate(annotate_text, xy=(0.05, .97 ), xycoords='axes fraction',fontsize=9,
+       horizontalalignment='left', verticalalignment='top' ,
         bbox={'edgecolor':'black',
                           'fc':'white',  
                               'boxstyle':'square',
@@ -234,7 +250,7 @@ if bool(args.make_figures):
                                 'Bias = '+format(BIAS,'0.3f')+r'$\, \mathrm{K\, h^{-1}}$'+'\n'+\
                                 r'$R$ = '+format(PR,'0.2f')
 
-                ann = axes[varkey].annotate(annotate_text, xy=(0.05, .98 ), xycoords='axes fraction',fontsize=9,
+                ann = axes[varkey].annotate(annotate_text, xy=(0.05, .97 ), xycoords='axes fraction',fontsize=9,
        horizontalalignment='left', verticalalignment='top' ,
         bbox={'edgecolor':'black',
                           'fc':'white',  
@@ -290,6 +306,7 @@ if bool(args.make_figures):
                                mfc='k', mec='k', # B&W
                                #mfc=colors[ikey], mec=colors[ikey], # Colors
                                label=key)
+
                 istation += 1
     
             if varkey == 'q':
@@ -299,13 +316,38 @@ if bool(args.make_figures):
             elif varkey == 'h':
                 units_final = r'[$m\, h^{-1}$]'
     
-            axes[varkey].set_xlabel('observations')     
+            axes[varkey].set_xlabel('Observed')     
             axes[varkey].set_title(latex['d'+varkey+'dt']+' '+units_final,fontsize=12)                                     
+
+
+        # if varkey == 'q':
+        #     print('get_xlim not working well...STRANGE')
+        #     limits =  [np.percentile(nani,1),np.percentile(nani,99)]
+        # else:
+        #     limits =  [np.percentile(nani,1.0),np.percentile(nani,99.0)]
+
+
         if i==0:                                    
-            axes[varkey].set_ylabel('model')                                            
-        abline(1,0,axis=axes[varkey])
+            axes[varkey].set_ylabel('Modelled')                                            
         i +=1
-    
+          
+        axes[varkey].set_aspect('equal')
+        low  = c4gldata[key].frames['stats']['records_all_stations_mod_stats']['d'+varkey+'dt'].min()
+        high  = c4gldata[key].frames['stats']['records_all_stations_mod_stats']['d'+varkey+'dt'].max()
+
+        low  = np.min([low,c4gldata[key].frames['stats']['records_all_stations_obs_afternoon_stats']['d'+varkey+'dt'].min()])
+        high  = np.max([high,c4gldata[key].frames['stats']['records_all_stations_obs_afternoon_stats']['d'+varkey+'dt'].max()])
+
+        low = low - (high - low)*0.1
+        high = high + (high - low)*0.1
+        axes[varkey].set_xlim([low,high])
+        axes[varkey].set_ylim([low,high])
+        abline(1,0,axis=axes[varkey])
+        if varkey == 'q':
+            ticks = ticker.FuncFormatter(lambda x, pos:
+                                         '{0:g}'.format(x*1000.))
+            axes[varkey].xaxis.set_major_formatter(ticks)
+            axes[varkey].yaxis.set_major_formatter(ticks)
     
     
     # # legend for different forcing simulations (colors)
@@ -320,7 +362,7 @@ if bool(args.make_figures):
     
     
     # legend for different stations (symbols)
-    ax = fig.add_axes([0.05,0.00,0.15,0.15]) #[*left*, *bottom*, *width*,    *height*]
+    ax = fig.add_axes([0.08,-0.02,0.15,0.15]) #[*left*, *bottom*, *width*,    *height*]
     leg = []
     isymbol = 0
     for icurrent_station,current_station in c4gldata[key].frames['worldmap']['stations'].table.iterrows():
@@ -334,7 +376,7 @@ if bool(args.make_figures):
     
     
     ax.axis('off')
-    ax.legend(leg,['HUMPPA','BLLAST','GOAMAZON','All'],loc=2,fontsize=10)
+    ax.legend(leg,['HUMPPA','BLLAST','GOAMAZON','All'],loc=2,fontsize=10,ncol=4)
     
     
     fig.subplots_adjust(top=0.95,bottom=0.20,left=0.08,right=0.94,hspace=0.28,wspace=0.29)
@@ -345,6 +387,7 @@ if bool(args.make_figures):
     
     if args.figure_filename is not None:
         fig.savefig(args.figure_filename,dpi=200); print("Image file written to:",args.figure_filename)
+        fig.savefig(args.figure_filename.replace('png','pdf')); print("Image file written to:", args.figure_filename)
     fig.show()  
 
 
