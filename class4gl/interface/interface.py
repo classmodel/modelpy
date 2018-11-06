@@ -128,7 +128,7 @@ for key in args.experiments.strip(' ').split(' '):
                       args.path_forcing,\
                       globaldata,\
                       refetch_records=False,
-                      tendencies_revised = args.tendencies_revised
+                      tendencies_revised = args.tendencies_revised,
                       obs_filter = (args.obs_filter == 'True')
                     )
 
