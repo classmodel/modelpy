@@ -924,6 +924,7 @@ class class4gl_input(object):
             #    self.update(source='globaldata',air_ac=pd.DataFrame({key:list([np.nan])}))
 
         #print('keys 2', keys)
+        print(keys)
 
         for key in keys:
             # If we find it, then we obtain the variables
@@ -1058,15 +1059,21 @@ class class4gl_input(object):
                         if globaldata.datasets[key].page.variables['lon'].values[ilonmin] > globaldata.datasets[key].page.variables['lon'].values[ilon]:
                             ilonmin = ilon        
                         
-                        if ilatmin < ilatmax:
-                            ilatrange = range(ilatmin,ilatmax+1)
+                        # for the koeppen climate classification we just take nearest
+                        print(key)
+                        if key == 'KGC':
+                            ilatrange = range(ilat,ilat+1)
+                            ilonrange = range(ilon,ilon+1)
                         else:
-                            ilatrange = range(ilatmax,ilatmin+1)
-                            
-                        if ilonmin < ilonmax:
-                            ilonrange = range(ilonmin,ilonmax+1)
-                        else:
-                            ilonrange = range(ilonmax,ilonmin+1)     
+                            if ilatmin < ilatmax:
+                                ilatrange = range(ilatmin,ilatmax+1)
+                            else:
+                                ilatrange = range(ilatmax,ilatmin+1)
+                                
+                            if ilonmin < ilonmax:
+                                ilonrange = range(ilonmin,ilonmax+1)
+                            else:
+                                ilonrange = range(ilonmax,ilonmin+1)     
                             
                         if 'time' in list(globaldata.datasets[key].page[key].dims):
                             DIST = np.abs((globaldata.datasets[key].page['time'].values - classdatetime))

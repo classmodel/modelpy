@@ -1,3 +1,4 @@
+'''
 import numpy as np
 import pandas as pd
 import sys
@@ -121,11 +122,39 @@ for key in args.experiments.strip(' ').split(' '):
                       obs_filter = (args.obs_filter == 'True')
                                             
                     )
+                    '''
 sns.reset_orig()
+
+
+
+lookup_symbols= {
+ 'A':'equatorial',
+ 'B':'arid',
+ 'C':'warm temperate',
+ 'D':'snow',
+ 'E':'polar',
+ 'W':'desert',
+ 'S':'steppe',
+ 'f':'fully humid',
+ 's':'summer dry',
+ 'w':'winter dry',
+ 'm':'monsoonal',
+ 'h':'hot arid',
+ 'k':'cold arid',
+ 'a':'hot summer',
+ 'b':'warm summer',
+ 'c':'cool summer',
+ 'd':'extremely continental',
+ 'F':'polar frost',
+ 'T':'polar tundra',
+ } 
+
 key = args.experiments.strip(' ').split(' ')[0]
 xrkoeppen = xr.open_dataset('/user/data/gent/gvo000/gvo00090/EXT/data/KOEPPEN/Koeppen-Geiger.nc')
 koeppenlookuptable = pd.DataFrame()
 koeppenlookuptable['KGCID'] = pd.Series(xrkoeppen['KGCID'])
+
+from matplotlib.patches import Rectangle,FancyBboxPatch
 
 def abline(slope, intercept,axis):
     """Plot a line from slope and intercept"""
@@ -217,14 +246,12 @@ for ikoeppen,koeppen in koeppenlookuptable.iterrows():
     print(np.sum(kgc_select))
     koeppenlookuptable.iloc[ikoeppen]['amount'] = np.sum(kgc_select)
 
-#koeppenlookuptable = koeppenlookuptable[koeppenlookuptable.amount >= 200]
 koeppenlookuptable = koeppenlookuptable.sort_values('amount',ascending=False)
-# koeppenlookuptable = koeppenlookuptable[:9]
 include_koeppen = list(koeppenlookuptable.KGCID)
 
 
 if args.make_figures:
-    fig = plt.figure(figsize=(11,7))   #width,height
+    fig = plt.figure(figsize=(11,8.0))   #width,height
     i = 1                                                                           
     axes = {}         
     axes_taylor = {}         
@@ -245,7 +272,7 @@ if args.make_figures:
              "Normalized root mean square error")
         if i == 1:
             axes[varkey].annotate('Normalized standard deviation',\
-                        xy= (0.05,0.27),
+                        xy= (0.05,0.37),
                         color='black',
                         rotation=90.,
                         xycoords='figure fraction',
@@ -406,6 +433,14 @@ if args.make_figures:
                     #                )
 
                     icolor += 1
+
+
+
+
+
+
+
+
     
             latex = {}
             latex['dthetadt'] =  r'$d \theta / dt $'
@@ -427,6 +462,60 @@ if args.make_figures:
             axes[varkey].set_ylabel('Modelled')                                            
         abline(1,0,axis=axes[varkey])
         i +=1
+
+
+
+    axph = fig.add_axes([0,0,1,1])
+    axph.xaxis.set_visible(False)
+    axph.yaxis.set_visible(False)
+    axph.set_zorder(1000)
+    axph.patch.set_alpha(0.0)
+    
+    axph.add_patch(Rectangle((0.006,0.01), 0.99, 0.13, alpha=0.71,
+                           facecolor='white',edgecolor='grey'))
+
+
+    idx = 0
+    koeppenlookuptable_sel = koeppenlookuptable[koeppenlookuptable.amount >= 200].sort_values('KGCID',ascending=True)
+
+    for ikoepp,koepp in koeppenlookuptable_sel.iterrows():
+        xy_box = ((0.059+np.floor(idx/4)*0.335),0.127- 0.09*((np.mod(idx,4)/(len(koeppenlookuptable_sel)/4))))
+        xy_text = list(xy_box)
+        xy_text[0] += 0.009
+        xy_text[1] -= 0.00
+        xy_color = list(xy_box)
+        xy_color[0] += -0.045
+        xy_color[1] -= 0.019
+        axph.add_patch(Rectangle(xy_color,0.049,0.023,
+                                      edgecolor='black', 
+                               #       boxstyle='round', 
+                                      #xycoords='figure fraction',
+                                      fc=koepp.color,
+                                      alpha=1.0))
+    
+        axph.annotate(koepp.KGCID,
+                    xy= xy_box,
+                    color='white' if (brightness(koepp.color)<0.5) else 'black', 
+                    family='monospace',
+                    xycoords='figure fraction',
+                    weight='bold',
+                    fontsize=10.,
+                    horizontalalignment='right',
+                    verticalalignment='top' ,
+                    # bbox={'edgecolor':'black',
+                    #       'boxstyle':'round',
+                    #       'fc':koepp.color,
+                    #       'alpha':1.0}
+                   )
+        full_name = ""
+        if koepp.KGCID is not "Ocean":
+            for char in koepp.KGCID:
+                full_name += lookup_symbols[char] + ' - '
+            full_name = full_name[:-3]
+        axph.annotate(full_name,xy=xy_text,color='k'
+                    ,fontsize=8,xycoords='figure fraction',weight='bold',horizontalalignment='left',verticalalignment='top')
+
+        idx +=1
 
     
 
@@ -601,7 +690,7 @@ if args.make_figures:
     # ax.legend(leg,['HUMPPA','BLLAST','GOAMAZON','All'],loc=2,fontsize=10)
     
     
-    fig.subplots_adjust(top=0.95,bottom=0.09,left=0.08,right=0.94,hspace=0.35,wspace=0.29)
+    fig.subplots_adjust(top=0.95,bottom=0.20,left=0.08,right=0.94,hspace=0.35,wspace=0.29)
     
     
     #pl.legend(leglist,('EMI:WOC','EMI:MED','EMI:BEC'),loc=2,fontsize=16,prop={'family':
@@ -779,9 +868,9 @@ if args.make_figures:
         #sns.set(style="ticks", palette="deep")
 
         
-        exppairs = {'obs|ref'     :['soundings','GLOBAL_ADV'],
-                    'fcap|wilt'   :['GLOBAL_ADV_FC'  ,'GLOBAL_ADV_WILT'],
-                    'allveg|noveg':['GLOBAL_ADV_VMAX','GLOBAL_ADV_VMIN']
+        exppairs = {'obs|ref'     :['soundings',keylabels[0]],
+                    'fcap|wilt'   :[keylabels[1] ,keylabels[2]],
+                    'allveg|noveg':[keylabels[3],keylabels[4]]
                    }
         current_palette = sns.color_palette('deep')
         exppalettes = {'obs|ref'     :['white','grey'],
@@ -792,11 +881,11 @@ if args.make_figures:
         data_all['expname'] = ""
         print('making alternative names for legends')
         expnames = {'soundings':'obs',\
-                    'GLOBAL_ADV':'ref',\
-                    'GLOBAL_ADV_WILT':'dry',\
-                    'GLOBAL_ADV_FC':'wet',\
-                    'GLOBAL_ADV_VMIN':'noveg',\
-                    'GLOBAL_ADV_VMAX':'fullveg',\
+                    keylabels[0]:'ref',\
+                    keylabels[1]:'dry',\
+                    keylabels[2]:'wet',\
+                    keylabels[3]:'noveg',\
+                    keylabels[4]:'fullveg',\
                    }
         for expname_orig,expname in expnames.items():
             data_all['expname'][data_all['source'] == expname_orig] = expname
@@ -807,6 +896,9 @@ if args.make_figures:
 
         icolor = 0
         
+        koeppenlookuptable = koeppenlookuptable[koeppenlookuptable.amount >= 200]
+        koeppenlookuptable = koeppenlookuptable.sort_values('amount',ascending=False)
+        koeppenlookuptable = koeppenlookuptable[:9]
         fig, axes = plt.subplots(nrows=len(varkeys)*len(koeppenlookuptable), \
                                  ncols=len(exppairs), \
                                  figsize=(8, 13), #width, height
@@ -820,114 +912,114 @@ if args.make_figures:
         irow = 0
         sns.set_style('whitegrid')
         for ikoeppen,koeppen in koeppenlookuptable.iterrows():
-            for exppairname,exppair in exppairs.items():
-                for varkey in varkeys:
-                    varkey_full = 'd'+varkey+'dt ['+units[varkey]+'/h]'
-                    ax = axes[irow,icol]
+                for exppairname,exppair in exppairs.items():
+                    for varkey in varkeys:
+                        varkey_full = 'd'+varkey+'dt ['+units[varkey]+'/h]'
+                        ax = axes[irow,icol]
 
-                 #   axes[i] = fig.add_subplot(len(varkeys)*len(koeppenlookuptable),len(exppairs),icolor)
-            #sns.violinplot(x='KGC',y=varkey_full,data=data_all,hue='source',linewidth=2.,palette="muted",split=True,inner='quart') #,label=key+", R = "+str(round(PR[0],3)),data=data)       
-            
-            #ax.set_title(input_key_full)
-                    current_data = data_all[(data_all['exppair'] == exppairname) & (data_all['KGCname']  == koeppen.KGCID)]
-                    sns.violinplot(y='exppair', x=varkey_full,
-                                        hue="expname",split=True,
-                             palette=exppalettes[exppairname],
-                            # palette=["m", "g",'r','b'],
-                             linewidth=1.0,inner='quart',
-                                        data=current_data,sym='',legend=False,ax=ax)
-                    ax.legend("")
-                    ax.legend_.draw_frame(False)
-                    ax.set_yticks([])
-                    ax.set_ylabel("")
+                     #   axes[i] = fig.add_subplot(len(varkeys)*len(koeppenlookuptable),len(exppairs),icolor)
+                #sns.violinplot(x='KGC',y=varkey_full,data=data_all,hue='source',linewidth=2.,palette="muted",split=True,inner='quart') #,label=key+", R = "+str(round(PR[0],3)),data=data)       
+                
+                #ax.set_title(input_key_full)
+                        current_data = data_all[(data_all['exppair'] == exppairname) & (data_all['KGCname']  == koeppen.KGCID)]
+                        sns.violinplot(y='exppair', x=varkey_full,
+                                            hue="expname",split=True,
+                                 palette=exppalettes[exppairname],
+                                # palette=["m", "g",'r','b'],
+                                 linewidth=1.0,inner='quart',
+                                            data=current_data,sym='',legend=False,ax=ax)
+                        ax.legend("")
+                        ax.legend_.draw_frame(False)
+                        ax.set_yticks([])
+                        ax.set_ylabel("")
 
-                    # if varkey == 'q':
-                    #     ticks = ticker.FuncFormatter(lambda x, pos:
-                    #                                  '{0:g}'.format(x*1000.))
-                    #     ax.xaxis.set_major_formatter(ticks)
+                        # if varkey == 'q':
+                        #     ticks = ticker.FuncFormatter(lambda x, pos:
+                        #                                  '{0:g}'.format(x*1000.))
+                        #     ax.xaxis.set_major_formatter(ticks)
 
-                    if varkey == 'q':
-                        title_final = r'$dq/dt$'
-                        xlabel_final = r'[$\mathrm{g\, kg^{-1}\, h^{-1}}$]'
-                    elif varkey == 'theta':
-                        title_final = r'$d\theta/dt$'
-                        xlabel_final = r'[$\mathrm{K\, h^{-1}}$]'
-                    elif varkey == 'h':
-                        title_final = r'$dh/dt$'
-                        xlabel_final = r'[$\mathrm{m\, h^{-1}}$]'
+                        if varkey == 'q':
+                            title_final = r'$dq/dt$'
+                            xlabel_final = r'[$\mathrm{g\, kg^{-1}\, h^{-1}}$]'
+                        elif varkey == 'theta':
+                            title_final = r'$d\theta/dt$'
+                            xlabel_final = r'[$\mathrm{K\, h^{-1}}$]'
+                        elif varkey == 'h':
+                            title_final = r'$dh/dt$'
+                            xlabel_final = r'[$\mathrm{m\, h^{-1}}$]'
 
 
-                    ax.set_xlabel("")
-                    #sns.despine(left=True, right=True, bottom=False, top=False)
-                    if irow == (len(varkeys)*len(koeppenlookuptable)-1):
-                        #ax.set_frame_on(False)
+                        ax.set_xlabel("")
+                        #sns.despine(left=True, right=True, bottom=False, top=False)
+                        if irow == (len(varkeys)*len(koeppenlookuptable)-1):
+                            #ax.set_frame_on(False)
 
-                        ax.set_xlabel(xlabel_final)
-                        ax.tick_params(top='off', bottom='on', left='off',
-                                        right='off', labelleft='off',
-                                        labeltop='off',
-                                        labelbottom='on'
-                                      )
-                        ax.spines['top'].set_visible(False)
-                        ax.spines['bottom'].set_visible(True)
-                        ax.spines['left'].set_visible(True)
-                        ax.spines['right'].set_visible(True)
-                        #sns.despine(left=True, right=True, bottom=True, top=False)
-                    elif irow == 0:
-                        ax.set_title(title_final,fontsize=17.)
-                        ax.tick_params(top='off', bottom='off', left='off',
-                                        right='off', labelleft='off',
-                                        labelbottom='off')
-                        #ax.set_frame_on(False)
-                        # ax.spines['left'].set_visible(True)
-                        # ax.spines['right'].set_visible(True)
-                        ax.spines['top'].set_visible(True)
-                        ax.spines['bottom'].set_visible(False)
-                        ax.spines['left'].set_visible(True)
-                        ax.spines['right'].set_visible(True)
-                        #sns.despine(left=True, right=True, bottom=False, top=True)
-                        #ax.axis("off")
-                    elif np.mod(irow,len(exppairs)) == 0:
-                        ax.tick_params(top='off', bottom='off', left='off',
-                                        right='off', labelleft='off',
-                                        labelbottom='off')
-                        #ax.set_frame_on(False)
-                        # ax.spines['left'].set_visible(True)
-                        # ax.spines['right'].set_visible(True)
-                        ax.spines['top'].set_visible(True)
-                        ax.spines['bottom'].set_visible(False)
-                        ax.spines['left'].set_visible(True)
-                        ax.spines['right'].set_visible(True)
-                        #sns.despine(left=True, right=True, bottom=False, top=True)
-                        #ax.axis("off")
-                    elif np.mod(irow,len(exppairs)) == 2:
-                        ax.tick_params(top='off', bottom='on', left='off',
-                                        right='off', labelleft='off',
-                                        labelbottom='off')
-                        #ax.set_frame_on(False)
-                        # ax.spines['left'].set_visible(True)
-                        # ax.spines['right'].set_visible(True)
-                        ax.spines['top'].set_visible(False)
-                        ax.spines['bottom'].set_visible(True)
-                        ax.spines['left'].set_visible(True)
-                        ax.spines['right'].set_visible(True)
-                        #sns.despine(left=True, right=True, bottom=False, top=True)
-                        #ax.axis("off")
-                    else:
-                        ax.tick_params(top='off', bottom='off', left='off',
-                                        right='off', labelleft='off',
-                                        labelbottom='off')
-                        #ax.set_frame_on(False)
-                        #ax.spines['left'].set_visible(True)
-                        #ax.spines['right'].set_visible(True)
-                        ax.spines['top'].set_visible(False)
-                        ax.spines['bottom'].set_visible(False)
-                        ax.spines['left'].set_visible(True)
-                        ax.spines['right'].set_visible(True)
-                        #ax.axis("off")
-                    icol +=1
-                irow +=1
-                icol=0
+                            ax.set_xlabel(xlabel_final)
+                            ax.tick_params(top='off', bottom='on', left='off',
+                                            right='off', labelleft='off',
+                                            labeltop='off',
+                                            labelbottom='on'
+                                          )
+                            ax.spines['top'].set_visible(False)
+                            ax.spines['bottom'].set_visible(True)
+                            ax.spines['left'].set_visible(True)
+                            ax.spines['right'].set_visible(True)
+                            #sns.despine(left=True, right=True, bottom=True, top=False)
+                        elif irow == 0:
+                            ax.set_title(title_final,fontsize=17.)
+                            ax.tick_params(top='off', bottom='off', left='off',
+                                            right='off', labelleft='off',
+                                            labelbottom='off')
+                            #ax.set_frame_on(False)
+                            # ax.spines['left'].set_visible(True)
+                            # ax.spines['right'].set_visible(True)
+                            ax.spines['top'].set_visible(True)
+                            ax.spines['bottom'].set_visible(False)
+                            ax.spines['left'].set_visible(True)
+                            ax.spines['right'].set_visible(True)
+                            #sns.despine(left=True, right=True, bottom=False, top=True)
+                            #ax.axis("off")
+                        elif np.mod(irow,len(exppairs)) == 0:
+                            ax.tick_params(top='off', bottom='off', left='off',
+                                            right='off', labelleft='off',
+                                            labelbottom='off')
+                            #ax.set_frame_on(False)
+                            # ax.spines['left'].set_visible(True)
+                            # ax.spines['right'].set_visible(True)
+                            ax.spines['top'].set_visible(True)
+                            ax.spines['bottom'].set_visible(False)
+                            ax.spines['left'].set_visible(True)
+                            ax.spines['right'].set_visible(True)
+                            #sns.despine(left=True, right=True, bottom=False, top=True)
+                            #ax.axis("off")
+                        elif np.mod(irow,len(exppairs)) == 2:
+                            ax.tick_params(top='off', bottom='on', left='off',
+                                            right='off', labelleft='off',
+                                            labelbottom='off')
+                            #ax.set_frame_on(False)
+                            # ax.spines['left'].set_visible(True)
+                            # ax.spines['right'].set_visible(True)
+                            ax.spines['top'].set_visible(False)
+                            ax.spines['bottom'].set_visible(True)
+                            ax.spines['left'].set_visible(True)
+                            ax.spines['right'].set_visible(True)
+                            #sns.despine(left=True, right=True, bottom=False, top=True)
+                            #ax.axis("off")
+                        else:
+                            ax.tick_params(top='off', bottom='off', left='off',
+                                            right='off', labelleft='off',
+                                            labelbottom='off')
+                            #ax.set_frame_on(False)
+                            #ax.spines['left'].set_visible(True)
+                            #ax.spines['right'].set_visible(True)
+                            ax.spines['top'].set_visible(False)
+                            ax.spines['bottom'].set_visible(False)
+                            ax.spines['left'].set_visible(True)
+                            ax.spines['right'].set_visible(True)
+                            #ax.axis("off")
+                        icol +=1
+                    irow +=1
+                    icol=0
 
         idx = 0
         for ikoeppen,koeppen in koeppenlookuptable.iterrows():

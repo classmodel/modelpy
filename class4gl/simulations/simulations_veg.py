@@ -66,9 +66,9 @@ EXP_DEFS  =\
   'GLOBAL_ADV_VMIN':    {'sw_ac' : ['adv'],'sw_ap': True,'sw_lit': False},
   'GLOBAL_ADV_VMAX':    {'sw_ac' : ['adv'],'sw_ap': True,'sw_lit': False},
   'GLOBAL_ADV_V0':    {'sw_ac' : ['adv'],'sw_ap': True,'sw_lit': False},
-  'GLOBAL_ADV_L025':    {'sw_ac' : ['adv'],'sw_ap': True,'sw_lit': False},
+  'GLOBAL_ADV_L001':    {'sw_ac' : ['adv'],'sw_ap': True,'sw_lit': False},
   'GLOBAL_ADV_L100':    {'sw_ac' : ['adv'],'sw_ap': True,'sw_lit': False},
-  'GLOBAL_ADV_L600':    {'sw_ac' : ['adv'],'sw_ap': True,'sw_lit': False},
+  'GLOBAL_ADV_L099':    {'sw_ac' : ['adv'],'sw_ap': True,'sw_lit': False},
   'GLOBAL_W':  {'sw_ac' : ['w',],'sw_ap': True,'sw_lit': False},
   'GLOBAL_AC': {'sw_ac' : ['adv','w'],'sw_ap': True,'sw_lit': False},
 }
@@ -290,26 +290,38 @@ for expname in experiments:
                                              'z0h': 0.001,
                                              }\
                                             )
-                    if expname[-3:] == '_VMIN':
+                    if expname[-5:] == '_VMIN':
                         c4gli_morning.update(source=expname, pars=\
-                                             {'alpha': 0.2868081648656875,
-                                             'cveg': 0.08275966502449594,
-                                             'z0m': 0.05760000169277192,
-                                             'z0h': 0.005760000169277192,
-                                             'LAI': 2.0,
+                                             {'alpha': 0.2868081648656875,\
+                                             'cveg': 0.08275966502449594,\
+                                             'z0m': 0.05760000169277192,\
+                                             'z0h': 0.005760000169277192,\
+                                             'LAI': 2.0,\
                                              }\
                                             )
-                    if expname[-3:] == '_L025':
+                    if expname[-5:] == '_L001':
+                        #c4gldata['GLOBAL_ADV_SHR'].frames['stats']['records_all_stations_ini'].LAIpixel.quantile(0.01)
+
                         c4gli_morning.update(source=expname, pars=\
-                                             {'lai':.25}\
+                                             {'LAI':0.111/0.325,\
+                                              'cveg':0.325,\
+                                              'z0m':0.17425,\
+                                              'z0h':0.017425,\
+                                              'alpha':0.270,\
+                                             }\
                                             )
-                    if expname[-3:] == '_L100':
+                    if expname[-5:] == '_L099':
+                        # select = c4gldata['GLOBAL_ADV_SHR'].frames['stats']['records_all_stations_ini'].LAIpixel >= 4.38
+                        # np.mean(c4gldata['GLOBAL_ADV_SHR'].frames['stats']['records_all_stations_ini'][select].LAIpixel)
+                        # np.mean(c4gldata['GLOBAL_ADV_SHR'].frames['stats']['records_all_stations_ini'][select].LAIpixel)
+                        # np.mean(c4gldata['GLOBAL_ADV_SHR'].frames['stats']['records_all_stations_ini'][select].LAIpixel)
                         c4gli_morning.update(source=expname, pars=\
-                                             {'lai':1.0}\
-                                            )
-                    if expname[-3:] == '_L600':
-                        c4gli_morning.update(source=expname, pars=\
-                                             {'lai':6.0}\
+                                             {'LAI':4.605/0.807,\
+                                              'cveg':0.807,\
+                                              'z0m':1.78,\
+                                              'z0h':0.178,\
+                                              'alpha':0.195,\
+                                             }\
                                             )
 
                     c4gl = class4gl(c4gli_morning)

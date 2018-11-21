@@ -66,6 +66,7 @@ EXP_DEFS  =\
   'AC_ITER': {'sw_ac' : ['adv','w'],'sw_ap': True,'sw_lit': False},
   'GLOBAL_NOAC_ITER':    {'sw_ac' : [],'sw_ap': True,'sw_lit': False},
   'GLOBAL_ADV_ITER':{'sw_ac' : ['adv',],'sw_ap': True,'sw_lit': False},
+    'GLOBAL_ADV_SHR_ITER':{'sw_ac' : ['adv',],'sw_ap': True,'sw_lit': False,'sw_shearwe':True},
   'GLOBAL_W_ITER':  {'sw_ac' : ['w',],'sw_ap': True,'sw_lit': False},
   'GLOBAL_AC_ITER': {'sw_ac' : ['adv','w'],'sw_ap': True,'sw_lit': False},
   'IOPS_NOAC_ITER':    {'sw_ac' : [],'sw_ap': True,'sw_lit': False},

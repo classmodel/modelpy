@@ -20,6 +20,7 @@ parser.add_argument('--pbs_string',default=' -l walltime=2:0:0')
 parser.add_argument('--station_id') # run a specific station id
 parser.add_argument('--error_handling')
 parser.add_argument('--updates')
+parser.add_argument('--global_vars')
 parser.add_argument('--subset_input',default='morning') 
                                         # this tells which yaml subset
                                         # to initialize with.

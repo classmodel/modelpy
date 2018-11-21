@@ -19,6 +19,7 @@ parser.add_argument('--path_output')#,default='/user/data/gent/gvo000/gvo00090/D
 parser.add_argument('--first_station_row')
 parser.add_argument('--last_station_row')
 parser.add_argument('--updates')
+parser.add_argument('--global_vars')
 parser.add_argument('--station_id') # run a specific station id
 parser.add_argument('--error_handling',default='dump_on_success')
 parser.add_argument('--diag_tropo',default=None)#['advt','advq','advu','advv'])
@@ -51,7 +52,7 @@ from class4gl import blh,class4gl_input
 
 # iniitialize global data
 globaldata = data_global()
-if 'era_profiles' in args.updates.strip().split(","):
+if (args.updates is not None) and ('era_profiles' in args.updates.strip().split(",")):
     globaldata.sources = {**globaldata.sources,**{
             "ERAINT:t"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/t_6hourly/t_*_6hourly.nc",
             "ERAINT:q"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/q_6hourly/q_*_6hourly.nc",
@@ -230,6 +231,9 @@ for istation,current_station in run_stations.iterrows():
                                                 record_input.index_start, 
                                                 record_input.index_end,
                                                 mode='ini')
+                if args.global_vars is not None:
+                    c4gli_output.get_global_input(globaldata,only_keys=args.global_vars.strip().split(','))
+
                 if args.diag_tropo is not None:
                     print('add tropospheric parameters on advection and subsidence (for diagnosis)')
                     seltropo = (c4gli_output.air_ac.p > c4gli_output.air_ac.p.iloc[-1]+ 3000.*(- 1.2 * 9.81 ))
@@ -242,7 +246,7 @@ for istation,current_station in run_stations.iterrows():
                             print("warning: tropospheric variable "+var+" not recognized")
 
 
-                if 'era_profiles' in args.updates.strip().split(","):
+                if (args.updates is not None) and ('era_profiles' in args.updates.strip().split(",")):
                     c4gli_output.get_global_input(globaldata,only_keys=['t','u','v','q','sp'])
 
                     c4gli_output.update(source='era-interim',pars={'Ps' : c4gli_output.pars.sp})

@@ -69,7 +69,7 @@ EXP_DEFS  =\
   'GLOBAL_ADV_SM2':{'sw_ac' : ['adv',],'sw_ap': True,'sw_lit': False},
   'IOPS_ADV_SM2':{'sw_ac' : ['adv',],'sw_ap': True,'sw_lit': False},
   'GLOBAL_ADV_ERA_NEW':{'sw_ac' : ['adv',],'sw_ap': True,'sw_lit': False},
-    'GLOBAL_ADV_SHR':{'sw_ac' : ['adv',],'sw_ap': True,'sw_lit': False,'sw_shr':True},
+    'GLOBAL_ADV_SHR':{'sw_ac' : ['adv',],'sw_ap': True,'sw_lit': False,'sw_shearwe':True},
   'GLOBAL_W':  {'sw_ac' : ['w',],'sw_ap': True,'sw_lit': False},
   'GLOBAL_AC': {'sw_ac' : ['adv','w'],'sw_ap': True,'sw_lit': False},
   'IOPS_NOAC':    {'sw_ac' : [],'sw_ap': True,'sw_lit': False},
@@ -277,9 +277,9 @@ for expname in experiments:
                     c4gli_morning.update(source='pairs',pars={'runtime' : \
                                         runtime})
                     c4gli_morning.update(source=expname, pars=exp)
-                    if exp[-3:] == 'SM2':
-                        c4gli_morning.update(source=expname, pars={'wg': c4gli_morning.pars.wg - (c4gli_morning.pars.wg - c4gli_morning.pars.wwilt)/2.)
-                        c4gli_morning.update(source=expname, pars={'w2': c4gli_morning.pars.w2 - (c4gli_morning.pars.w2 - c4gli_morning.pars.wwilt)/2.)
+                    if expname[-3:] == 'SM2':
+                        c4gli_morning.update(source=expname, pars={'wg': c4gli_morning.pars.wg - (c4gli_morning.pars.wg - c4gli_morning.pars.wwilt)/2.})
+                        c4gli_morning.update(source=expname, pars={'w2': c4gli_morning.pars.w2 - (c4gli_morning.pars.w2 - c4gli_morning.pars.wwilt)/2.})
 
                     c4gl = class4gl(c4gli_morning)
 
