@@ -1775,6 +1775,11 @@ class model:
         self.out.wthetav[t]    = self.wthetav
         self.out.wthetae[t]    = self.wthetae
         self.out.wthetave[t]   = self.wthetave
+
+        self.out.advtheta[t]   = self.advtheta
+        self.out.advu[t]       = self.advu
+        self.out.advv[t]       = self.advv
+        self.out.advq[t]       = self.advq
         
         self.out.q[t]          = self.q
         self.out.dq[t]         = self.dq
@@ -1875,7 +1880,7 @@ class model:
         del(self.theta)
         del(self.dtheta)
         del(self.gammatheta)
-        del(self.advtheta)
+        #del(self.advtheta)
         del(self.beta)
         del(self.wtheta)
     
@@ -2019,6 +2024,11 @@ class model_output:
         self.wthetav    = np.zeros(tsteps)    # surface kinematic virtual heat flux [K m s-1]
         self.wthetae    = np.zeros(tsteps)    # entrainment kinematic heat flux [K m s-1]
         self.wthetave   = np.zeros(tsteps)    # entrainment kinematic virtual heat flux [K m s-1]
+
+        self.advtheta   = np.zeros(tsteps)
+        self.advu       = np.zeros(tsteps)
+        self.advv       = np.zeros(tsteps)
+        self.advq       = np.zeros(tsteps)
         
         self.q          = np.zeros(tsteps)    # mixed-layer specific humidity [kg kg-1]
         self.dq         = np.zeros(tsteps)    # initial specific humidity jump at h [kg kg-1]
