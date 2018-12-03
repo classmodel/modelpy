@@ -25,7 +25,7 @@
 import copy as cp
 import numpy as np
 import sys
-#import ribtol
+import ribtol   # Either the Numba version (ribtol.py) or manually compiled C++ version
 
 def esat(T):
     return 0.611e3 * np.exp(17.2694 * (T - 273.16) / (T - 35.86))
@@ -550,67 +550,67 @@ class model:
         self.Rib  = self.g / self.thetav * zsl * (self.thetav - self.thetavsurf) / ueff**2.
         self.Rib  = min(self.Rib, 0.2)
 
-        self.L     = self.ribtol(self.Rib, zsl, self.z0m, self.z0h)  # Slow python iteration
-        #self.L    = ribtol.ribtol(self.Rib, zsl, self.z0m, self.z0h) # Fast C++ iteration
+        #self.L     = self.ribtol(self.Rib, zsl, self.z0m, self.z0h)  # Slow python iteration
+        self.L    = ribtol.ribtol(self.Rib, zsl, self.z0m, self.z0h) # Fast C++ iteration
 
-        self.Cm   = self.k**2. / (np.log(zsl / self.z0m) - self.psim(zsl / self.L) + self.psim(self.z0m / self.L)) ** 2.
-        self.Cs   = self.k**2. / (np.log(zsl / self.z0m) - self.psim(zsl / self.L) + self.psim(self.z0m / self.L)) / (np.log(zsl / self.z0h) - self.psih(zsl / self.L) + self.psih(self.z0h / self.L))
+        self.Cm   = self.k**2. / (np.log(zsl / self.z0m) - ribtol.psim(zsl / self.L) + ribtol.psim(self.z0m / self.L)) ** 2.
+        self.Cs   = self.k**2. / (np.log(zsl / self.z0m) - ribtol.psim(zsl / self.L) + ribtol.psim(self.z0m / self.L)) / (np.log(zsl / self.z0h) - ribtol.psih(zsl / self.L) + ribtol.psih(self.z0h / self.L))
 
         self.ustar = np.sqrt(self.Cm) * ueff
         self.uw    = - self.Cm * ueff * self.u
         self.vw    = - self.Cm * ueff * self.v
 
         # diagnostic meteorological variables
-        self.T2m    = self.thetasurf - self.wtheta / self.ustar / self.k * (np.log(2. / self.z0h) - self.psih(2. / self.L) + self.psih(self.z0h / self.L))
-        self.q2m    = self.qsurf     - self.wq     / self.ustar / self.k * (np.log(2. / self.z0h) - self.psih(2. / self.L) + self.psih(self.z0h / self.L))
-        self.u2m    =                - self.uw     / self.ustar / self.k * (np.log(2. / self.z0m) - self.psim(2. / self.L) + self.psim(self.z0m / self.L))
-        self.v2m    =                - self.vw     / self.ustar / self.k * (np.log(2. / self.z0m) - self.psim(2. / self.L) + self.psim(self.z0m / self.L))
+        self.T2m    = self.thetasurf - self.wtheta / self.ustar / self.k * (np.log(2. / self.z0h) - ribtol.psih(2. / self.L) + ribtol.psih(self.z0h / self.L))
+        self.q2m    = self.qsurf     - self.wq     / self.ustar / self.k * (np.log(2. / self.z0h) - ribtol.psih(2. / self.L) + ribtol.psih(self.z0h / self.L))
+        self.u2m    =                - self.uw     / self.ustar / self.k * (np.log(2. / self.z0m) - ribtol.psim(2. / self.L) + ribtol.psim(self.z0m / self.L))
+        self.v2m    =                - self.vw     / self.ustar / self.k * (np.log(2. / self.z0m) - ribtol.psim(2. / self.L) + ribtol.psim(self.z0m / self.L))
         self.esat2m = 0.611e3 * np.exp(17.2694 * (self.T2m - 273.16) / (self.T2m - 35.86))
         self.e2m    = self.q2m * self.Ps / 0.622
 
-    def ribtol(self, Rib, zsl, z0m, z0h):
-        if(Rib > 0.):
-            L    = 1.
-            L0   = 2.
-        else:
-            L  = -1.
-            L0 = -2.
+    #def ribtol(self, Rib, zsl, z0m, z0h):
+    #    if(Rib > 0.):
+    #        L    = 1.
+    #        L0   = 2.
+    #    else:
+    #        L  = -1.
+    #        L0 = -2.
 
-        while (abs(L - L0) > 0.001):
-            L0      = L
-            fx      = Rib - zsl / L * (np.log(zsl / z0h) - self.psih(zsl / L) + self.psih(z0h / L)) / (np.log(zsl / z0m) - self.psim(zsl / L) + self.psim(z0m / L))**2.
-            Lstart  = L - 0.001*L
-            Lend    = L + 0.001*L
-            fxdif   = ( (- zsl / Lstart * (np.log(zsl / z0h) - self.psih(zsl / Lstart) + self.psih(z0h / Lstart)) / \
-                                          (np.log(zsl / z0m) - self.psim(zsl / Lstart) + self.psim(z0m / Lstart))**2.) \
-                      - (-zsl /  Lend   * (np.log(zsl / z0h) - self.psih(zsl / Lend  ) + self.psih(z0h / Lend  )) / \
-                                          (np.log(zsl / z0m) - self.psim(zsl / Lend  ) + self.psim(z0m / Lend  ))**2.) ) / (Lstart - Lend)
-            L       = L - fx / fxdif
+    #    while (abs(L - L0) > 0.001):
+    #        L0      = L
+    #        fx      = Rib - zsl / L * (np.log(zsl / z0h) - self.psih(zsl / L) + self.psih(z0h / L)) / (np.log(zsl / z0m) - self.psim(zsl / L) + self.psim(z0m / L))**2.
+    #        Lstart  = L - 0.001*L
+    #        Lend    = L + 0.001*L
+    #        fxdif   = ( (- zsl / Lstart * (np.log(zsl / z0h) - self.psih(zsl / Lstart) + self.psih(z0h / Lstart)) / \
+    #                                      (np.log(zsl / z0m) - self.psim(zsl / Lstart) + self.psim(z0m / Lstart))**2.) \
+    #                  - (-zsl /  Lend   * (np.log(zsl / z0h) - self.psih(zsl / Lend  ) + self.psih(z0h / Lend  )) / \
+    #                                      (np.log(zsl / z0m) - self.psim(zsl / Lend  ) + self.psim(z0m / Lend  ))**2.) ) / (Lstart - Lend)
+    #        L       = L - fx / fxdif
 
-            if(abs(L) > 1e15):
-                break
+    #        if(abs(L) > 1e15):
+    #            break
 
-        return L
+    #    return L
 
-    def psim(self, zeta):
-        if(zeta <= 0):
-            x     = (1. - 16. * zeta)**(0.25)
-            psim  = 3.14159265 / 2. - 2. * np.arctan(x) + np.log((1. + x)**2. * (1. + x**2.) / 8.)
-            #x     = (1. + 3.6 * abs(zeta) ** (2./3.)) ** (-0.5)
-            #psim = 3. * np.log( (1. + 1. / x) / 2.)
-        else:
-            psim  = -2./3. * (zeta - 5./0.35) * np.exp(-0.35 * zeta) - zeta - (10./3.) / 0.35
-        return psim
+    #def psim(self, zeta):
+    #    if(zeta <= 0):
+    #        x     = (1. - 16. * zeta)**(0.25)
+    #        psim  = 3.14159265 / 2. - 2. * np.arctan(x) + np.log((1. + x)**2. * (1. + x**2.) / 8.)
+    #        #x     = (1. + 3.6 * abs(zeta) ** (2./3.)) ** (-0.5)
+    #        #psim = 3. * np.log( (1. + 1. / x) / 2.)
+    #    else:
+    #        psim  = -2./3. * (zeta - 5./0.35) * np.exp(-0.35 * zeta) - zeta - (10./3.) / 0.35
+    #    return psim
 
-    def psih(self, zeta):
-        if(zeta <= 0):
-            x     = (1. - 16. * zeta)**(0.25)
-            psih  = 2. * np.log( (1. + x*x) / 2.)
-            #x     = (1. + 7.9 * abs(zeta) ** (2./3.)) ** (-0.5)
-            #psih  = 3. * np.log( (1. + 1. / x) / 2.)
-        else:
-            psih  = -2./3. * (zeta - 5./0.35) * np.exp(-0.35 * zeta) - (1. + (2./3.) * zeta) ** (1.5) - (10./3.) / 0.35 + 1.
-        return psih
+    #def psih(self, zeta):
+    #    if(zeta <= 0):
+    #        x     = (1. - 16. * zeta)**(0.25)
+    #        psih  = 2. * np.log( (1. + x*x) / 2.)
+    #        #x     = (1. + 7.9 * abs(zeta) ** (2./3.)) ** (-0.5)
+    #        #psih  = 3. * np.log( (1. + 1. / x) / 2.)
+    #    else:
+    #        psih  = -2./3. * (zeta - 5./0.35) * np.exp(-0.35 * zeta) - (1. + (2./3.) * zeta) ** (1.5) - (10./3.) / 0.35 + 1.
+    #    return psih
 
     def jarvis_stewart(self):
         # calculate surface resistances using Jarvis-Stewart model
