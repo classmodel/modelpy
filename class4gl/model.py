@@ -1880,7 +1880,7 @@ class model:
         del(self.theta)
         del(self.dtheta)
         del(self.gammatheta)
-        #del(self.advtheta)
+        del(self.advtheta)
         del(self.beta)
         del(self.wtheta)
     

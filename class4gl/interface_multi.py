@@ -253,7 +253,7 @@ class c4gl_interface_soundings(object):
                          #(self.frames['stats']['records_all_stations_mod_stats'].dhdt >  50.0000) & 
                          (self.frames['stats']['records_all_stations_obs_afternoon_stats'].dhdt >  40.0000) & 
                          #(self.frames['stats']['records_all_stations_mod_stats'].dhdt <  350.) & 
-                         (self.frames['stats']['records_all_stations_obs_afternoon_stats'].dhdt <  350.) & 
+                         (self.frames['stats']['records_all_stations_obs_afternoon_stats'].dhdt <  400.) & 
                          (self.frames['stats']['records_all_stations_obs_afternoon_stats'].dqdt >  -.00055) & 
                          #(self.frames['stats']['records_all_stations_mod_stats'].dqdt >  -.00055) & 
                          (self.frames['stats']['records_all_stations_obs_afternoon_stats'].dqdt <  .0003) & 
@@ -453,7 +453,7 @@ class c4gl_interface_soundings(object):
                 if 'current_station_file_afternoon' in self.frames['profiles'].keys():
                     self.frames['profiles']['current_station_file_afternoon'].close()
                 self.frames['profiles']['current_station_file_afternoon'] = \
-                    open(self.path_exp+'/'+format(STNID,"05d")+'_'+str(chunk)+'_afternoon.yaml','r')
+                    open(self.path_obs+'/'+format(STNID,"05d")+'_afternoon.yaml','r')
 
         self.update_record()
 
