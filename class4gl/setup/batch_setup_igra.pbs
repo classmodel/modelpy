@@ -1,0 +1,34 @@
+#!/bin/bash 
+#
+#PBS -j oe
+#PBS -M hendrik.wouters@ugent.be
+#PBS -m b
+#PBS -m e
+#PBS -m a
+#PBS -N c4gl_setup
+
+module purge
+source ~/.bashrc
+
+echo loading modules: $LOADDEPSCLASS4GL 
+$LOADDEPSCLASS4GL 
+
+EXEC_ALL="python $C4GLJOB_exec --first_station_row $PBS_ARRAYID --last_station_row $PBS_ARRAYID"
+
+for var in $(compgen -v | grep C4GLJOB_ ); do
+    echo $var
+    if [ "$var" != "C4GLJOB_exec" ]
+    then
+    EXEC_ALL=$EXEC_ALL" --"`echo $var | cut -c9-`"="${!var}
+    fi
+done
+
+
+# EXEC_ALL="python $exec --global-chunk-number $PBS_ARRAYID \
+#                        --split-by $split_by \
+#                        --dataset $dataset \
+#                        --experiments $experiments"
+#                  #      --path-soundings $path_soundings \
+echo Executing: $EXEC_ALL
+$EXEC_ALL
+
