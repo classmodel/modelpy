@@ -42,6 +42,6 @@ H. Wouters, I. Y. Petrova, C. C. van Heerwaarden, J. Vilà-Guerau de Arellano, A
 
 
 # Get started: 
-see class4gl.eu/#getstarted
+see https://class4gl.eu/#getstarted
 
 
