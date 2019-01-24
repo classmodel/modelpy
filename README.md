@@ -29,13 +29,13 @@ In case you experience a problem or a bug, please don’t hesitate to contact us
 
 CLASS4GL employs the balloon soundings from the Integrated Global Radiosonde Archive (IGRA) to initialize and validate the CLASS model. The sounding data is supplemented with ancillary data to further constrain the model. Therefore, a default set of gridded global datasets from satellite imagery, reanalysis and and surveys have been used that span a period of 1981–2015. An complete overview of the datasets can be found in the table. However, the default set can be replaced by alternative datasets as long as they are provided in netCDF format.
 
-[![Schematic overview of CLASS4GL](https://class4gl.eu//wp-content/uploads/2019/01/image4-1024x794.png)](https://class4gl.eu)
+[Schematic overview of CLASS4GL](https://class4gl.eu//wp-content/uploads/2019/01/image4-1024x794.png)
 
 A CLASS4GL data package is available that can be directly used to perform and validate ABL model simulations and sensitivity experiments. The locations of the balloon soundings are performed for different climate regions as shown on the map.
 
-[![150 stations from IGRA of the reference dataset to perform and validate the ABL model simulations with CLASS4GL (see Sect. 2.2 of the CLASS4GL manuscript). The different climate classes are indicated with the colors according to the Köppen-Geiger climate classification. The markers indicate the locations of the atmospheric profiles from three observation campaigns (ie., HUMPPA, BLLAST and GOAMAZON)](https://class4gl.eu/wp-content/uploads/2019/01/image-1-480x300.png)](https://class4gl.eu)
+[150 stations from IGRA of the reference dataset to perform and validate the ABL model simulations with CLASS4GL (see Sect. 2.2 of the CLASS4GL manuscript). The different climate classes are indicated with the colors according to the Köppen-Geiger climate classification. The markers indicate the locations of the atmospheric profiles from three observation campaigns (ie., HUMPPA, BLLAST and GOAMAZON)](https://class4gl.eu/wp-content/uploads/2019/01/image-1-480x300.png)]
 
-[![Data library of CLASS4GL](https://class4gl.eu/wp-content/uploads/2019/01/image-5-768x492.png)](https://class4gl.eu)
+[Data library of CLASS4GL](https://class4gl.eu/wp-content/uploads/2019/01/image-5-768x492.png)
 
 ### Reference
 H. Wouters, I. Y. Petrova, C. C. van Heerwaarden, J. Vilà-Guerau de Arellano, A. J. Teuling, J. A. Santanello, V. Meulenberg, D. G. Miralles. A novel framework to investigate atmospheric boundary layer dynamics from balloon soundings worldwide: CLASS4GL v1.0. In preparation.
