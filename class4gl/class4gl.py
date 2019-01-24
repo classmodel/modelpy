@@ -835,6 +835,14 @@ class class4gl_input(object):
             air_balloon[column] = air_balloon[column].round(decimal)
             air_ap[column] = air_ap[column].round(decimal)
 
+        # in order to avoid warnings: the ABL values should have the same
+        # rounding as the values profile.
+        dpars['h'] = round(dpars['h'],decimals['z'])
+        dpars['theta'] = round(dpars['theta'],decimals['theta'])
+        dpars['q'] = round(dpars['q'],decimals['q'])
+        dpars['u'] = round(dpars['u'],decimals['u'])
+        dpars['v'] = round(dpars['v'],decimals['v'])
+
         self.update(source='wyoming',\
                     # pars=pars,
                     pars=dpars,\
@@ -1923,11 +1931,8 @@ class class4gl(model):
                 the yaml file, including pars, air_ap, sources etc.
         """
 
-
         if include_input:
             self.input_c4gl.dump(file)
-
-
 
         file.write('---\n')
         index = file.tell()

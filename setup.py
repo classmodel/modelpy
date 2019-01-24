@@ -1,11 +1,12 @@
 from distutils.core import setup
+from setuptools import find_packages
 
 
 # I followed this tutorial to have both the git repository matched with the pip
 # repository: https://medium.com/@joel.barmettler/how-to-upload-your-python-package-to-pypi-65edc5fe9c56
 setup(
         name='class4gl',
-        version='0.1.2',
+        version='0.1.18',
         license='gpl-3.0',        # https://help.github.com/articles/licensing-a-repository
         description = 'a framework to investigate the dynamics of the atmospheric boundary layer weather balloons worldwide', # Give a short description
         author = 'Hendrik Wouters',                        # Type in your name
@@ -15,8 +16,9 @@ setup(
         # I explain this later on
         keywords = ['atmospheric boundary layer', 'weather balloons',
                     'land--atmosphere interactions'],   # Keywords
-        packages=['class4gl'],
-        # packages=find_packages(),
+        # packages=['class4gl'],
+        install_package_data = True,
+        packages=find_packages("."),
         install_requires=['beautifulsoup4','pyyaml','pysolar','basemap','xarray'],
         # long_description=open('README.md').read(),
         classifiers=[

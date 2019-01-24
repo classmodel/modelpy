@@ -66,7 +66,7 @@ class records_iterator(object):
 
 
 #'_afternoon.yaml'
-def get_record_yaml(yaml_file,index_start,index_end,mode='mod'):
+def get_record_yaml(yaml_file,index_start,index_end,mode='model_output'):
     filename = yaml_file.name
     #filename = path_yaml+'/'+format(current_station.name,'05d')+suffix
     #yaml_file = open(filename)
@@ -96,13 +96,13 @@ def get_record_yaml(yaml_file,index_start,index_end,mode='mod'):
     os.system('rm '+TEMPDIR+'/'+shortfn+'.buffer.yaml.'+str(index_start))
 
 
-    if mode =='mod':
+    if mode =='model_output':
         modelout = class4gl()
         modelout.load_yaml_dict(record_dict)
         os.system('rm '+TEMPDIR+'/'+shortfn+'.buffer.json.'+str(index_start))
 
         return modelout
-    elif mode == 'ini':
+    elif mode == 'model_input':
 
  
         # datetimes are incorrectly converted to strings. We need to convert them

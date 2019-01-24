@@ -172,10 +172,10 @@ if args.make_figures:
         for ikey,key in enumerate(args.experiments.strip(' ').split(' ')):
             # cc = c4gldata[key].frames['stats']['records_all_stations_ini']['cc']
             # clearsky = (cc < 0.05)
-            # mod = c4gldata[key].frames['stats']['records_all_stations_mod_stats'].loc[clearsky]['d'+varkey+'dt']
-            # obs = c4gldata[key].frames['stats']['records_all_stations_obs_afternoon_stats'].loc[clearsky]['d'+varkey+'dt']
-            mod = c4gldata[key].frames['stats']['records_all_stations_mod_stats']['d'+varkey+'dt']
-            obs = c4gldata[key].frames['stats']['records_all_stations_obs_afternoon_stats']['d'+varkey+'dt']
+            # mod = c4gldata[key].frames['stats']['records_all_stations_end_mod_stats'].loc[clearsky]['d'+varkey+'dt']
+            # obs = c4gldata[key].frames['stats']['records_all_stations_end_obs_stats'].loc[clearsky]['d'+varkey+'dt']
+            mod = c4gldata[key].frames['stats']['records_all_stations_end_mod_stats']['d'+varkey+'dt']
+            obs = c4gldata[key].frames['stats']['records_all_stations_end_obs_stats']['d'+varkey+'dt']
             x, y = obs.values,mod.values
             print(key,len(obs.values))
     
@@ -218,10 +218,10 @@ if args.make_figures:
         # cc = c4gldata[key].frames['stats']['records_all_stations_ini']['cc']
         # clearsky = (cc < 0.05)
     
-        # mod = c4gldata[key].frames['stats']['records_all_stations_mod_stats'].loc[clearsky]['d'+varkey+'dt']
-        # obs = c4gldata[key].frames['stats']['records_all_stations_obs_afternoon_stats'].loc[clearsky]['d'+varkey+'dt']
-        mod = c4gldata[key].frames['stats']['records_all_stations_mod_stats']['d'+varkey+'dt']
-        obs = c4gldata[key].frames['stats']['records_all_stations_obs_afternoon_stats']['d'+varkey+'dt']
+        # mod = c4gldata[key].frames['stats']['records_all_stations_end_mod_stats'].loc[clearsky]['d'+varkey+'dt']
+        # obs = c4gldata[key].frames['stats']['records_all_stations_end_obs_stats'].loc[clearsky]['d'+varkey+'dt']
+        mod = c4gldata[key].frames['stats']['records_all_stations_end_mod_stats']['d'+varkey+'dt']
+        obs = c4gldata[key].frames['stats']['records_all_stations_end_obs_stats']['d'+varkey+'dt']
     
     
         nbins=40       
@@ -373,7 +373,7 @@ if args.make_figures:
         key = list(args.experiments.strip().split(' '))[ikey]
         data_all = pd.DataFrame()
 
-        tempdatamodstats = pd.DataFrame(c4gldata[key].frames['stats']['records_all_stations_obs_afternoon_stats'].copy())
+        tempdatamodstats = pd.DataFrame(c4gldata[key].frames['stats']['records_all_stations_end_obs_stats'].copy())
         tempdatamodstats["source"] = "Soundings"
         tempdatamodstats["source_index"] = "Soundings"
 
@@ -403,7 +403,7 @@ if args.make_figures:
         for ikey,key in enumerate(list(args.experiments.strip().split(' '))):
             keylabel = keylabels[ikey]
 
-            tempdatamodstats = pd.DataFrame(c4gldata[key].frames['stats']['records_all_stations_mod_stats'].copy())
+            tempdatamodstats = pd.DataFrame(c4gldata[key].frames['stats']['records_all_stations_end_mod_stats'].copy())
             tempdataini_this= pd.DataFrame(c4gldata[key].frames['stats']['records_all_stations_ini'].copy())
             tempdatamodstats['dates']= tempdataini_this.ldatetime.dt.date
             tempdatamodstats['STNID']= tempdataini_this.STNID

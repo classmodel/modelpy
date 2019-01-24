@@ -1,3 +1,9 @@
 recursive-include class4gl *.py
+recursive-include class4gl *.png
+recursive-include class4gl *.pbs
+recursive-exclude class4gl *.pyc
+# include simulations/*
+# include setup/*
+# include processing/*
 
 

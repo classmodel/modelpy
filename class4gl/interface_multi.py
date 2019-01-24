@@ -6,9 +6,17 @@ import xarray as xr
 import sys
 from contextlib import suppress
 from time import sleep
+import copy
+import matplotlib.image as mpimg
 
 
 # sys.path.insert(0, '/user/data/gent/gvo000/gvo00090/D2D/software/CLASS/class4gl/')
+
+import class4gl
+path_lib = os.path.dirname(class4gl.__file__)
+path_worldmap = path_lib+'/Equirectangular_projection_SW.png'
+img_worldmap= mpimg.imread(path_worldmap)
+
 
 from class4gl import class4gl_input, data_global,class4gl,units
 from interface_functions import *
@@ -51,12 +59,12 @@ statsviewcmap = LinearSegmentedColormap('statsviewcmap', cdictpres)
 os.system('module load Ruby')
 
 class c4gl_interface_soundings(object):
-    def __init__(self,path_exp,path_obs=None,globaldata=None,refetch_records=False,refetch_stations=True,inputkeys = ['cveg','wg','w2','cc','sp','wwilt','Tsoil','T2','z0m','alpha','LAI',],obs_filter=False,tendencies_revised=False):
+    def __init__(self,path_exp,path_forcing=None,globaldata=None,refetch_records=False,refetch_stations=True,inputkeys = ['cveg','wg','w2','cc','sp','wwilt','Tsoil','T2','z0m','alpha','LAI',],obs_filter=False,tendencies_revised=False):
         """ creates an interactive interface for analysing class4gl experiments
 
         INPUT:
             path_exp : path of the experiment output
-            path_obs : path of the observations 
+            path_forcing : path of the original forcing, which is needed to get the end (afternoon) profiles
             globaldata: global data that is being shown on the map
             obs_filtering: extra data filter considering observation tendencies
                            beyond what the model can capture
@@ -74,7 +82,7 @@ class c4gl_interface_soundings(object):
         print(self.obs_filter)
         self.tendencies_revised = tendencies_revised
         self.path_exp = path_exp
-        self.path_obs = path_obs
+        self.path_forcing = path_forcing
         self.exp_files = glob.glob(self.path_exp+'/?????.yaml')
 
         # # get the list of stations
@@ -115,23 +123,23 @@ class c4gl_interface_soundings(object):
                                            refetch_records=refetch_records
                                            )
         # get its records and load it into the stats frame
-        self.frames['stats']['records_all_stations_mod'] =\
+        self.frames['stats']['records_all_stations_end_mod'] =\
                         get_records(self.frames['stats']['stations'].table,\
                                            self.path_exp,\
-                                           subset='mod',\
+                                           subset='end',\
                                            refetch_records=refetch_records
                                            )
 
-        if self.path_obs is not None:
+        if self.path_forcing is not None:
             # get its records and load it into the stats frame
-            self.frames['stats']['records_all_stations_obs_afternoon'] =\
+            self.frames['stats']['records_all_stations_end_obs'] =\
                             get_records(self.frames['stats']['stations'].table,\
-                                               self.path_obs,\
-                                               subset='afternoon',\
+                                               self.path_forcing,\
+                                               subset='end',\
                                                refetch_records=refetch_records
                                                )
 
-        self.frames['stats']['records_all_stations_mod'].index = \
+        self.frames['stats']['records_all_stations_end_mod'].index = \
             self.frames['stats']['records_all_stations_ini'].index 
 
         
@@ -141,46 +149,46 @@ class c4gl_interface_soundings(object):
         self.frames['stats']['records_all_stations_ini']['dates'] = \
             self.frames['stats']['records_all_stations_ini']['ldatetime'].dt.date
 
-        if self.path_obs is not None:
-            self.frames['stats']['records_all_stations_obs_afternoon']['dates'] = \
-                self.frames['stats']['records_all_stations_obs_afternoon']['ldatetime'].dt.date
+        if self.path_forcing is not None:
+            self.frames['stats']['records_all_stations_end_obs']['dates'] = \
+                self.frames['stats']['records_all_stations_end_obs']['ldatetime'].dt.date
 
-            self.frames['stats']['records_all_stations_obs_afternoon'].set_index(['STNID','dates'],inplace=True)
+            self.frames['stats']['records_all_stations_end_obs'].set_index(['STNID','dates'],inplace=True)
 
 
             ini_index_dates = self.frames['stats']['records_all_stations_ini'].set_index(['STNID','dates']).index
 
-            self.frames['stats']['records_all_stations_obs_afternoon'] = \
-                self.frames['stats']['records_all_stations_obs_afternoon'].loc[ini_index_dates]
+            self.frames['stats']['records_all_stations_end_obs'] = \
+                self.frames['stats']['records_all_stations_end_obs'].loc[ini_index_dates]
 
-            self.frames['stats']['records_all_stations_obs_afternoon'].index = \
+            self.frames['stats']['records_all_stations_end_obs'].index = \
                 self.frames['stats']['records_all_stations_ini'].index 
 
             self.frames['stats']['viewkeys'] = ['h','theta','q']
             print('Calculating table statistics')
 
             if self.tendencies_revised:
-                self.frames['stats']['records_all_stations_mod_stats'] = \
-                        tendencies_rev(self.frames['stats']['records_all_stations_mod'],\
+                self.frames['stats']['records_all_stations_end_mod_stats'] = \
+                        tendencies_rev(self.frames['stats']['records_all_stations_end_mod'],\
                                            self.frames['stats']['records_all_stations_ini'],\
                                            self.frames['stats']['viewkeys']\
                                   )
-                self.frames['stats']['records_all_stations_obs_afternoon_stats'] = \
-                        tendencies_rev(self.frames['stats']['records_all_stations_obs_afternoon'],\
+                self.frames['stats']['records_all_stations_end_obs_stats'] = \
+                        tendencies_rev(self.frames['stats']['records_all_stations_end_obs'],\
                                            self.frames['stats']['records_all_stations_ini'],\
                                            self.frames['stats']['viewkeys']\
                                   )
 
             else:
-                self.frames['stats']['records_all_stations_mod_stats'] = \
-                        tendencies(self.frames['stats']['records_all_stations_mod'],\
-                                   self.frames['stats']['records_all_stations_obs_afternoon'],\
+                self.frames['stats']['records_all_stations_end_mod_stats'] = \
+                        tendencies(self.frames['stats']['records_all_stations_end_mod'],\
+                                   self.frames['stats']['records_all_stations_end_obs'],\
                                    self.frames['stats']['records_all_stations_ini'],\
                                    self.frames['stats']['viewkeys']\
                                   )
-                self.frames['stats']['records_all_stations_obs_afternoon_stats'] = \
-                        tendencies(self.frames['stats']['records_all_stations_obs_afternoon'],\
-                                   self.frames['stats']['records_all_stations_obs_afternoon'],\
+                self.frames['stats']['records_all_stations_end_obs_stats'] = \
+                        tendencies(self.frames['stats']['records_all_stations_end_obs'],\
+                                   self.frames['stats']['records_all_stations_end_obs'],\
                                    self.frames['stats']['records_all_stations_ini'],\
                                    self.frames['stats']['viewkeys']\
                                   )
@@ -213,18 +221,18 @@ class c4gl_interface_soundings(object):
         # 
         # 
         # \
-        #        self.frames['stats']['records_all_stations_mod'], \
+        #        self.frames['stats']['records_all_stations_end_mod'], \
 
 
 
-        # self.frames['stats']['records_all_stations_mod_stats_stdrel'] = \
-        #        stdrel(mod = self.frames['stats']['records_all_stations_mod_stats'], \
-        #               obs = self.frames['stats']['records_all_stations_obs_afternoon_stats'], \
+        # self.frames['stats']['records_all_stations_end_mod_stats_stdrel'] = \
+        #        stdrel(mod = self.frames['stats']['records_all_stations_end_mod_stats'], \
+        #               obs = self.frames['stats']['records_all_stations_end_obs_stats'], \
         #               columns = [ 'd'+key+'dt' for key in \
         #                           self.frames['stats']['viewkeys']], \
         #              )
 
-        # self.frames['stats']['records_all_stations_obs_afternoon_stats_stdrel'] = \
+        # self.frames['stats']['records_all_stations_end_obs_stats_stdrel'] = \
         #        stdrel(mod = self.frames['stats']['records_all_stations_ini'], \
         #               obs = self.frames['stats']['records_all_stations_ini'], \
         #               columns = self.frames['stats']['viewkeys'], \
@@ -232,42 +240,42 @@ class c4gl_interface_soundings(object):
 
         
 
-        if self.path_obs is not None:
+        if self.path_forcing is not None:
             print('filtering pathological data')
-            indextype = self.frames['stats']['records_all_stations_mod_stats'].index.names
+            indextype = self.frames['stats']['records_all_stations_end_mod_stats'].index.names
             # some observational sounding still seem problematic, which needs to be
             # investigated. In the meantime, we filter them
 
             print('hello',self.obs_filter)
-            print ((self.path_obs is not None) and (self.obs_filter))
-            if ((self.path_obs is not None) and (self.obs_filter)) is True:
+            print ((self.path_forcing is not None) and (self.obs_filter))
+            if ((self.path_forcing is not None) and (self.obs_filter)) is True:
                 print('hallohallo')
-            if ((self.path_obs is not None) and (self.obs_filter)) is True:
+            if ((self.path_forcing is not None) and (self.obs_filter)) is True:
                 print('exclude exceptional observations')
                 print('exclude unrealistic model output -> should be investigated!')
                 valid = (\
-                         (self.frames['stats']['records_all_stations_obs_afternoon_stats'].dthetadt >  0.250) & 
-                         #(self.frames['stats']['records_all_stations_mod_stats'].dthetadt >  0.25000) & 
-                         #(self.frames['stats']['records_all_stations_mod_stats'].dthetadt <  1.8000) & 
-                         (self.frames['stats']['records_all_stations_obs_afternoon_stats'].dthetadt <  1.8000) & 
-                         #(self.frames['stats']['records_all_stations_mod_stats'].dhdt >  50.0000) & 
-                         (self.frames['stats']['records_all_stations_obs_afternoon_stats'].dhdt >  40.0000) & 
-                         #(self.frames['stats']['records_all_stations_mod_stats'].dhdt <  350.) & 
-                         (self.frames['stats']['records_all_stations_obs_afternoon_stats'].dhdt <  400.) & 
-                         (self.frames['stats']['records_all_stations_obs_afternoon_stats'].dqdt >  -.00055) & 
-                         #(self.frames['stats']['records_all_stations_mod_stats'].dqdt >  -.00055) & 
-                         (self.frames['stats']['records_all_stations_obs_afternoon_stats'].dqdt <  .0003) & 
+                         (self.frames['stats']['records_all_stations_end_obs_stats'].dthetadt >  0.250) & 
+                         #(self.frames['stats']['records_all_stations_end_mod_stats'].dthetadt >  0.25000) & 
+                         #(self.frames['stats']['records_all_stations_end_mod_stats'].dthetadt <  1.8000) & 
+                         (self.frames['stats']['records_all_stations_end_obs_stats'].dthetadt <  1.8000) & 
+                         #(self.frames['stats']['records_all_stations_end_mod_stats'].dhdt >  50.0000) & 
+                         (self.frames['stats']['records_all_stations_end_obs_stats'].dhdt >  40.0000) & 
+                         #(self.frames['stats']['records_all_stations_end_mod_stats'].dhdt <  350.) & 
+                         (self.frames['stats']['records_all_stations_end_obs_stats'].dhdt <  400.) & 
+                         (self.frames['stats']['records_all_stations_end_obs_stats'].dqdt >  -.00055) & 
+                         #(self.frames['stats']['records_all_stations_end_mod_stats'].dqdt >  -.00055) & 
+                         (self.frames['stats']['records_all_stations_end_obs_stats'].dqdt <  .0003) & 
 
                          # filter 'extreme' model output -> should be investigated!
-                         (self.frames['stats']['records_all_stations_mod_stats'].dqdt <  .0006) & 
-                         (self.frames['stats']['records_all_stations_mod_stats'].dqdt >  -.0006) & 
-                         (self.frames['stats']['records_all_stations_mod_stats'].dthetadt >  .2) & 
-                         (self.frames['stats']['records_all_stations_mod_stats'].dthetadt <  2.) & 
-                         # (self.frames['stats']['records_all_stations_mod_stats'].dqdt <  .0003) & 
+                         (self.frames['stats']['records_all_stations_end_mod_stats'].dqdt <  .0006) & 
+                         (self.frames['stats']['records_all_stations_end_mod_stats'].dqdt >  -.0006) & 
+                         (self.frames['stats']['records_all_stations_end_mod_stats'].dthetadt >  .2) & 
+                         (self.frames['stats']['records_all_stations_end_mod_stats'].dthetadt <  2.) & 
+                         # (self.frames['stats']['records_all_stations_end_mod_stats'].dqdt <  .0003) & 
                          # (self.frames['stats']['records_all_stations_ini'].KGC != 'Cwb') & 
                          # (self.frames['stats']['records_all_stations_ini'].KGC != 'Dfc') & 
-                         ~np.isnan(self.frames['stats']['records_all_stations_mod_stats'].dthetadt) & 
-                         ~np.isnan(self.frames['stats']['records_all_stations_obs_afternoon_stats'].dthetadt))
+                         ~np.isnan(self.frames['stats']['records_all_stations_end_mod_stats'].dthetadt) & 
+                         ~np.isnan(self.frames['stats']['records_all_stations_end_obs_stats'].dthetadt))
 
                 for key in self.frames['stats'].keys():
                     if (type(self.frames['stats'][key]) == pd.DataFrame) and \
@@ -275,7 +283,7 @@ class c4gl_interface_soundings(object):
                         self.frames['stats'][key] = self.frames['stats'][key][valid]
                 print("WARNING WARNING!: "+ str(len(valid) - np.sum(valid))+' soundings are filtered')
 
-        self.frames['stats']['records_all_stations_index'] = self.frames['stats']['records_all_stations_mod'].index
+        self.frames['stats']['records_all_stations_index'] = self.frames['stats']['records_all_stations_end_mod'].index
 
 
         print("filtering stations from interface that have no records")
@@ -355,9 +363,9 @@ class c4gl_interface_soundings(object):
 
         # create the value table of the records of the current station
         tab_suffixes = \
-                ['_mod','_ini','_ini_pct']
-        if self.path_obs is not None:
-            tab_suffixes=tab_suffixes+['_obs_afternoon','_mod_stats','_obs_afternoon_stats']
+                ['_end_mod','_ini','_ini_pct']
+        if self.path_forcing is not None:
+            tab_suffixes=tab_suffixes+['_end_obs','_end_mod_stats','_end_obs_stats']
 
         for tab_suffix in tab_suffixes:
             self.frames['stats']['records_current_station'+tab_suffix] = \
@@ -365,11 +373,11 @@ class c4gl_interface_soundings(object):
 
         # go to first record of current station
         self.frames['stats']['records_iterator'] = \
-                        records_iterator(self.frames['stats']['records_current_station_mod'])
+                        records_iterator(self.frames['stats']['records_current_station_end_mod'])
         (self.frames['stats']['STNID'] , \
         self.frames['stats']['current_record_chunk'] , \
         self.frames['stats']['current_record_index']) , \
-        self.frames['stats']['current_record_mod'] = \
+        self.frames['stats']['current_record_end_mod'] = \
                         self.frames['stats']['records_iterator'].__next__()
 
         for key in self.frames['stats'].keys():
@@ -382,24 +390,24 @@ class c4gl_interface_soundings(object):
         self.frames['profiles']['current_station_file_ini'] = \
             open(self.path_exp+'/'+format(STNID,"05d")+'_'+str(chunk)+'_ini.yaml','r')
 
-        if 'current_station_file_mod' in self.frames['profiles'].keys():
-            self.frames['profiles']['current_station_file_mod'].close()
-        self.frames['profiles']['current_station_file_mod'] = \
-            open(self.path_exp+'/'+format(STNID,"05d")+'_'+str(chunk)+'_mod.yaml','r')
-        if 'current_station_file_afternoon' in self.frames['profiles'].keys():
-            self.frames['profiles']['current_station_file_afternoon'].close()
-        if self.path_obs is not None:
-            self.frames['profiles']['current_station_file_afternoon'] = \
-                open(self.path_obs+'/'+format(STNID,"05d")+'_afternoon.yaml','r')
+        if 'current_station_file_end_mod' in self.frames['profiles'].keys():
+            self.frames['profiles']['current_station_file_end_mod'].close()
+        self.frames['profiles']['current_station_file_end_mod'] = \
+            open(self.path_exp+'/'+format(STNID,"05d")+'_'+str(chunk)+'_end.yaml','r')
+        if 'current_station_file_end' in self.frames['profiles'].keys():
+            self.frames['profiles']['current_station_file_end'].close()
+        if self.path_forcing is not None:
+            self.frames['profiles']['current_station_file_end'] = \
+                open(self.path_forcing+'/'+format(STNID,"05d")+'_end.yaml','r')
 
         # for the profiles we make a distinct record iterator, so that the
         # stats iterator can move independently
         self.frames['profiles']['records_iterator'] = \
-                        records_iterator(self.frames['profiles']['records_current_station_mod'])
+                        records_iterator(self.frames['profiles']['records_current_station_end_mod'])
         (self.frames['profiles']['STNID'] , \
         self.frames['profiles']['current_record_chunk'] , \
         self.frames['profiles']['current_record_index']) , \
-        self.frames['profiles']['current_record_mod'] = \
+        self.frames['profiles']['current_record_end_mod'] = \
                         self.frames['profiles']['records_iterator'].__next__()
 
 
@@ -416,16 +424,16 @@ class c4gl_interface_soundings(object):
             (self.frames['profiles']['STNID'] , \
             self.frames['profiles']['current_record_chunk'] , \
             self.frames['profiles']['current_record_index']) , \
-            self.frames['profiles']['current_record_mod'] = \
+            self.frames['profiles']['current_record_end_mod'] = \
                       self.frames['profiles']['records_iterator'].__next__(jump)
         # except (StopIteration):
         #     self.frames['profiles']['records_iterator'].close()
         #     del( self.frames['profiles']['records_iterator'])
         #     self.frames['profiles']['records_iterator'] = \
-        #                 self.frames['profiles']['records_current_station_mod'].iterrows()
+        #                 self.frames['profiles']['records_current_station_end_mod'].iterrows()
         #     (self.frames['profiles']['STNID'] , \
         #     self.frames['profiles']['current_record_index']) , \
-        #     self.frames['profiles']['current_record_mod'] = \
+        #     self.frames['profiles']['current_record_end_mod'] = \
         #                     self.frames['profiles']['records_iterator'].__next__()
 
         for key in self.frames['profiles'].keys():
@@ -444,16 +452,16 @@ class c4gl_interface_soundings(object):
             self.frames['profiles']['current_station_file_ini'] = \
                 open(self.path_exp+'/'+format(STNID,"05d")+'_'+str(chunk)+'_ini.yaml','r')
 
-            if 'current_station_file_mod' in self.frames['profiles'].keys():
-                self.frames['profiles']['current_station_file_mod'].close()
-            self.frames['profiles']['current_station_file_mod'] = \
-                open(self.path_exp+'/'+format(STNID,"05d")+'_'+str(chunk)+'_mod.yaml','r')
+            if 'current_station_file_end_mod' in self.frames['profiles'].keys():
+                self.frames['profiles']['current_station_file_end_mod'].close()
+            self.frames['profiles']['current_station_file_end_mod'] = \
+                open(self.path_exp+'/'+format(STNID,"05d")+'_'+str(chunk)+'_end.yaml','r')
 
-            if self.path_obs is not None:
-                if 'current_station_file_afternoon' in self.frames['profiles'].keys():
-                    self.frames['profiles']['current_station_file_afternoon'].close()
-                self.frames['profiles']['current_station_file_afternoon'] = \
-                    open(self.path_obs+'/'+format(STNID,"05d")+'_afternoon.yaml','r')
+            if self.path_forcing is not None:
+                if 'current_station_file_end' in self.frames['profiles'].keys():
+                    self.frames['profiles']['current_station_file_end'].close()
+                self.frames['profiles']['current_station_file_end'] = \
+                    open(self.path_forcing+'/'+format(STNID,"05d")+'_end.yaml','r')
 
         self.update_record()
 
@@ -466,20 +474,20 @@ class c4gl_interface_soundings(object):
                   (self.frames['profiles']['STNID'] , \
                   self.frames['profiles']['current_record_chunk'],\
                   self.frames['profiles']['current_record_index'])]
-        if self.path_obs is not None:
-            self.frames['profiles']['current_record_obs_afternoon'] =  \
-                self.frames['profiles']['records_current_station_obs_afternoon'].loc[\
+        if self.path_forcing is not None:
+            self.frames['profiles']['current_record_end_obs'] =  \
+                self.frames['profiles']['records_current_station_end_obs'].loc[\
                       (self.frames['profiles']['STNID'] , \
                       self.frames['profiles']['current_record_chunk'] , \
                       self.frames['profiles']['current_record_index'])]
 
-            self.frames['profiles']['current_record_mod_stats'] = \
-                    self.frames['profiles']['records_all_stations_mod_stats'].loc[(\
+            self.frames['profiles']['current_record_end_mod_stats'] = \
+                    self.frames['profiles']['records_all_stations_end_mod_stats'].loc[(\
                         self.frames['profiles']['STNID'], \
                         self.frames['profiles']['current_record_chunk'], \
                         self.frames['profiles']['current_record_index'])]
-            self.frames['profiles']['current_record_obs_afternoon_stats'] = \
-                    self.frames['profiles']['records_all_stations_obs_afternoon_stats'].loc[(\
+            self.frames['profiles']['current_record_end_obs_stats'] = \
+                    self.frames['profiles']['records_all_stations_end_obs_stats'].loc[(\
                         self.frames['profiles']['STNID'],\
                         self.frames['profiles']['current_record_chunk'],\
                         self.frames['profiles']['current_record_index'])]
@@ -496,15 +504,15 @@ class c4gl_interface_soundings(object):
 
         # select first 
         #self.frames['profiles']['current_record_index'], \
-        #self.frames['profiles']['record_yaml_mod'] = \
+        #self.frames['profiles']['record_yaml_end_mod'] = \
         #   get_record_yaml(self.frames['profiles']['current_station']['filename'],\
         #                   self.frames['stats']['current_record_index'])
-        self.frames['profiles']['record_yaml_mod'] = \
+        self.frames['profiles']['record_yaml_end_mod'] = \
            get_record_yaml(
-               self.frames['profiles']['current_station_file_mod'], \
-               self.frames['profiles']['current_record_mod'].index_start,
-               self.frames['profiles']['current_record_mod'].index_end,
-               mode='mod')
+               self.frames['profiles']['current_station_file_end_mod'], \
+               self.frames['profiles']['current_record_end_mod'].index_start,
+               self.frames['profiles']['current_record_end_mod'].index_end,
+               mode='model_output')
                                 
         record_ini = self.frames['profiles']['records_all_stations_ini'].loc[
                        (self.frames['stats']['STNID'] , \
@@ -516,20 +524,20 @@ class c4gl_interface_soundings(object):
                self.frames['profiles']['current_station_file_ini'], \
                record_ini.index_start,
                record_ini.index_end,
-                mode='ini')
+                mode='model_input')
 
-        if self.path_obs is not None:
-            record_afternoon = self.frames['profiles']['records_all_stations_obs_afternoon'].loc[
+        if self.path_forcing is not None:
+            record_end = self.frames['profiles']['records_all_stations_end_obs'].loc[
                            (self.frames['stats']['STNID'] , \
                             self.frames['stats']['current_record_chunk'] , \
                             self.frames['stats']['current_record_index'])]
 
-            self.frames['profiles']['record_yaml_obs_afternoon'] = \
+            self.frames['profiles']['record_yaml_end_obs'] = \
                get_record_yaml(
-                   self.frames['profiles']['current_station_file_afternoon'], \
-                   record_afternoon.index_start,
-                   record_afternoon.index_end,
-                    mode='ini')
+                   self.frames['profiles']['current_station_file_end'], \
+                   record_end.index_start,
+                   record_end.index_end,
+                    mode='model_input')
 
 
         key = self.frames['worldmap']['inputkey']
@@ -546,7 +554,7 @@ class c4gl_interface_soundings(object):
         else:
             if "fig" in self.__dict__.keys():
                 self.refresh_plot_interface(only=['stats_lightupdate',
-                                                  'worldmap_stations',
+                                                  'worldmap',
                                                   'profiles'])
 
     def abline(self,slope, intercept,axis):
@@ -570,9 +578,9 @@ class c4gl_interface_soundings(object):
         btns = {} #buttons
 
         # frames, which sets attributes for a group of axes, buttens, 
-        if self.path_obs is not None:
+        if self.path_forcing is not None:
 
-            for ikey,key in enumerate(list(self.frames['stats']['records_all_stations_mod_stats'].columns)):
+            for ikey,key in enumerate(list(self.frames['stats']['records_all_stations_end_mod_stats'].columns)):
                 label = 'stats_'+str(key)
                 axes[label] = fig.add_subplot(\
                                 len(self.frames['stats']['viewkeys']),\
@@ -640,9 +648,11 @@ class c4gl_interface_soundings(object):
         axes[label].lat = None
         axes[label].lon = None
 
-        label = 'worldmap_colorbar'
-        axes[label] = fig.add_axes([0.25,0.44,0.40,0.05])
-        axes[label].fields = {}
+        
+        if self.globaldata is not None:
+            label = 'worldmap_colorbar'
+            axes[label] = fig.add_axes([0.25,0.44,0.40,0.05])
+            axes[label].fields = {}
 
         # we make a overlying axes for the animations on the map, so that we don't need to redraw the whole map over and over again
         label = 'worldmap_stations'
@@ -661,7 +671,10 @@ class c4gl_interface_soundings(object):
         buttons_upper = 0.28
         buttons_left = 0.25
 
-        button_types = ['dataset','datetime','level','station','record']
+        if self.globaldata is not None:
+            button_types = ['datetime','level','station','record']
+        else:
+            button_types = ['dataset','station','record']
         
         for ibutton_type,button_type in enumerate(button_types):
             label='bprev'+button_type
@@ -671,8 +684,13 @@ class c4gl_interface_soundings(object):
                 button_width,\
                 button_height\
                                                      ])
-            btns[label] = Button(axes[label], 'Previous '+button_type)
-            btns[label].on_clicked(getattr(self, 'prev_'+button_type))
+            if button_type !='dataset':
+                btns[label] = Button(axes[label], 'Previous '+button_type)
+                btns[label].on_clicked(getattr(self, 'prev_'+button_type))
+            else:
+                btns[label] = Button(axes[label], 'Previous input var')
+                btns[label].on_clicked(getattr(self, 'prev_'+button_type))
+
 
             label='bnext'+button_type
             axes[label] = fig.add_axes([
@@ -681,8 +699,12 @@ class c4gl_interface_soundings(object):
                 button_width,\
                 button_height\
                                                      ])
-            btns[label] = Button(axes[label], 'Next '+button_type)
-            btns[label].on_clicked(getattr(self, 'next_'+button_type))
+            if button_type !='dataset':
+                btns[label] = Button(axes[label], 'Next '+button_type)
+                btns[label].on_clicked(getattr(self, 'next_'+button_type))
+            else:
+                btns[label] = Button(axes[label], 'Next input var')
+                btns[label].on_clicked(getattr(self, 'next_'+button_type))
 
         
         # label = 'bprev_dataset'
@@ -799,7 +821,7 @@ class c4gl_interface_soundings(object):
     #         current_yamlgen.close()
     #         current_yamlgen = yaml.load_all(current_file)
     #         current_file.seek(current_tell)
-    #         current_record_mod = current_yamlgen.__next__()
+    #         current_record_end_mod = current_yamlgen.__next__()
     #     current_yamlgen.close()
 
     #     return records
@@ -920,8 +942,17 @@ class c4gl_interface_soundings(object):
             'after')# get nearest datetime of the current dataset to the profile
 
         print('seldata0')
+
         if 'level' not in self.frames['worldmap'].keys():
-            levels = self.globaldata.datasets[self.frames['worldmap']['inputkey']].page['lev']
+
+            if self.globaldata is not None:
+                if 'lev' in list(self.globaldata.datasets[self.frames['worldmap']['inputkey']].page.dims):
+                    levels = self.globaldata.datasets[self.frames['worldmap']['inputkey']].page['lev']
+                else:
+                    levels = np.array([0])
+            else:
+                levels = np.array([0])
+
             self.frames['worldmap']['level'] = np.max(levels)
             print('seldata1')
 
@@ -936,27 +967,28 @@ class c4gl_interface_soundings(object):
             print('seldata3')
 
 
-        print('seldata4')
+            print('seldata4')
         self.sel_level(self.frames['worldmap']['level'])
 
 
 
     def sel_level(self,level):
 
-        if 'lev' not in list(self.globaldata.datasets[self.frames['worldmap']['inputkey']].page.dims):
-            raise ValueError('lev dimension not in dataset '+self.frames['worldmap']['inputkey'])
+        # if 'lev' not in list(self.globaldata.datasets[self.frames['worldmap']['inputkey']].page.dims):
+        #     raise ValueError('lev dimension not in dataset '+self.frames['worldmap']['inputkey'])
 
         print('seldata5')
 
+        if self.globaldata is not None:
+            if 'lev' in list(self.globaldata.datasets[self.frames['worldmap']['inputkey']].page.dims):
+                if level > (np.max(self.globaldata.datasets[self.frames['worldmap']['inputkey']].page['lev'])):
+                    raise ValueError('Level '+str(level)+' exceed those of the current dataset: '+str(self.globaldata.datasets[frames['worldmap']['inputkey']].page['lev']))
+                if level < (np.min(self.globaldata.datasets[self.frames['worldmap']['inputkey']].page['lev'])):
+                    raise ValueError('Level '+str(level)+' is lower than those of the current dataset: '+str(self.globaldata.datasets[frames['worldmap']['inputkey']].page['lev']))
+                print('seldata6')
+                self.frames['worldmap']['level'] = level
 
-        if level > (np.max(self.globaldata.datasets[self.frames['worldmap']['inputkey']].page['lev'])):
-            raise ValueError('Level '+str(level)+' exceed those of the current dataset: '+str(self.globaldata.datasets[frames['worldmap']['inputkey']].page['lev']))
-        if level < (np.min(self.globaldata.datasets[self.frames['worldmap']['inputkey']].page['lev'])):
-            raise ValueError('Level '+str(level)+' is lower than those of the current dataset: '+str(self.globaldata.datasets[frames['worldmap']['inputkey']].page['lev']))
-        print('seldata6')
-        self.frames['worldmap']['level'] = level
-
-        print(level)
+            print(level)
         if "fig" in self.__dict__.keys():
             self.refresh_plot_interface(only=['worldmap','stats_lightupdate','stats_colorbar']) 
 
@@ -1086,13 +1118,22 @@ class c4gl_interface_soundings(object):
                 # x,y = self.gmap(lons,lats)
                 # #self.cont_map = self.axmap.contourf(x,y,field.T,cmap=gmapcm)
                 # self.cont_map = self.axmap.pcolormesh(x,y,field.T,cmap=gmapcm)
+        else:
+            # simplified version for only showing a simple image
+            label = 'worldmap'
+            axes[label].lat = np.arange(-90.,91.,1.)[::-1]
+            axes[label].lon = np.arange(-180.,181.,1.)[:]
+            axes[label].fields[label] = axes[label].imshow(img_worldmap)
+            axes[label].axis('off')
 
-        if (self.path_obs is not None) and \
+
+
+        if (self.path_forcing is not None) and \
            (self.frames['worldmap']['inputkey'] in self.frames['stats']['records_all_stations_ini_pct'].keys()) and \
-           (self.path_obs is not None) and \
+           (self.path_forcing is not None) and \
            ((only is None) or ('stats' in only) or ('stats_lightupdate' in only)):
 
-            statskeys_out = list(self.frames['stats']['records_all_stations_mod_stats'].columns)
+            statskeys_out = list(self.frames['stats']['records_all_stations_end_mod_stats'].columns)
             store_xlim = {}
             store_ylim = {}
             for ikey, key in enumerate(statskeys_out):
@@ -1107,12 +1148,12 @@ class c4gl_interface_soundings(object):
             key = 'dthetadt'
             x = self.frames['stats']['records_all_stations_ini']['datetime']
             #print(x)
-            y = self.frames['stats']['records_all_stations_obs_afternoon_stats'][key]
+            y = self.frames['stats']['records_all_stations_end_obs_stats'][key]
             #print(y)
             z = self.frames['stats']['records_all_stations_ini_pct'][self.frames['worldmap']['inputkey'] ]
             #print(z)
 
-            alpha_cloud_pixels = 1./(1.+1./(0.15 * 10000. / len(self.frames['stats']['records_all_stations_mod'])))
+            alpha_cloud_pixels = 1./(1.+1./(0.15 * 10000. / len(self.frames['stats']['records_all_stations_end_mod'])))
             self.axes[label].data[label] = self.axes[label].scatter(x.values,
                                                                     y.values,
                                                                     c=z.values,
@@ -1124,13 +1165,13 @@ class c4gl_interface_soundings(object):
 
             
             x = self.frames['stats']['records_current_station_ini']['datetime']
-            y = self.frames['stats']['records_current_station_obs_afternoon_stats'][key]
+            y = self.frames['stats']['records_current_station_end_obs_stats'][key]
             z = self.frames['stats']['records_current_station_ini_pct'][self.frames['worldmap']['inputkey'] ]
             self.axes[label].data[label+'_current_station_hover'] = self.axes[label].scatter(x.values,y.values,c=z.values,cmap=self.statsviewcmap,s=5,picker=5,vmin=0.,vmax=1.,edgecolor='k',linewidth=0.3)
 
 
             x = self.frames['profiles']['records_current_station_ini']['datetime']
-            y = self.frames['profiles']['records_current_station_obs_afternoon_stats'][key]
+            y = self.frames['profiles']['records_current_station_end_obs_stats'][key]
             z = self.frames['profiles']['records_current_station_ini_pct'][self.frames['worldmap']['inputkey'] ]
 
             self.axes[label].data[label+'_current_station'] = self.axes[label].scatter(x.values,y.values,c=z.values,cmap=self.statsviewcmap,s=20,picker=20,vmin=0.,vmax=1.,edgecolor='k',linewidth=0.8)
@@ -1141,8 +1182,8 @@ class c4gl_interface_soundings(object):
             for ikey, key in enumerate(statskeys_out):
 
                 # show data of all stations
-                x = self.frames['stats']['records_all_stations_obs_afternoon_stats'][key]
-                y = self.frames['stats']['records_all_stations_mod_stats'][key]
+                x = self.frames['stats']['records_all_stations_end_obs_stats'][key]
+                y = self.frames['stats']['records_all_stations_end_mod_stats'][key]
                 z = self.frames['stats']['records_all_stations_ini_pct'][self.frames['worldmap']['inputkey'] ]
                 qvalmax = x.quantile(0.999)
                 qvalmin = x.quantile(0.001)
@@ -1162,16 +1203,16 @@ class c4gl_interface_soundings(object):
                     self.axes['stats_'+key].data['stats_'+key+'_fit'] = \
                          self.axes['stats_'+key].plot(x, fit[0] * x + fit[1], color='k',alpha=0.4,lw=4)
 
-                x = self.frames['stats']['records_current_station_obs_afternoon_stats'][key]
-                y = self.frames['stats']['records_current_station_mod_stats'][key]
+                x = self.frames['stats']['records_current_station_end_obs_stats'][key]
+                y = self.frames['stats']['records_current_station_end_mod_stats'][key]
                 z = self.frames['stats']['records_current_station_ini_pct'][self.frames['worldmap']['inputkey'] ]
                 self.axes['stats_'+key].data['stats_'+key+'_current_station_hover'] = \
                        self.axes['stats_'+key].scatter(x.values,y.values, c=z.values,\
                                 cmap=self.statsviewcmap,\
                                 s=10,picker=10,label=key,vmin=0.,vmax=1.,edgecolor='k',linewidth=0.3)
 
-                x = self.frames['profiles']['records_current_station_obs_afternoon_stats'][key]
-                y = self.frames['profiles']['records_current_station_mod_stats'][key]
+                x = self.frames['profiles']['records_current_station_end_obs_stats'][key]
+                y = self.frames['profiles']['records_current_station_end_mod_stats'][key]
                 z = self.frames['profiles']['records_current_station_ini_pct'][self.frames['worldmap']['inputkey'] ]
                 self.axes['stats_'+key].data['stats_'+key+'_current_station'] = \
                        self.axes['stats_'+key].scatter(x.values,y.values, c=z.values,\
@@ -1183,8 +1224,8 @@ class c4gl_interface_soundings(object):
                     self.axes['stats_'+key].data['stats_'+key+'_fit'] = \
                          self.axes['stats_'+key].plot(x, fit[0] * x + fit[1], color='k',alpha=0.8,lw=3)
 
-                x = self.frames['stats']['current_record_obs_afternoon_stats'][key]
-                y = self.frames['stats']['current_record_mod_stats'][key]
+                x = self.frames['stats']['current_record_end_obs_stats'][key]
+                y = self.frames['stats']['current_record_end_mod_stats'][key]
                 z = self.frames['stats']['current_record_ini_pct'][self.frames['worldmap']['inputkey'] ]
 
                 text = 'EXT: '+ format(x,'2.4f')+ ', MOD: ' + format(y,'2.4f')
@@ -1204,9 +1245,9 @@ class c4gl_interface_soundings(object):
                 # axes['stats_'+key].set_title('relative deviation per station of '+ key)
                 self.axes['stats_'+key].set_title(key+ ' ['+self.units[key]+']')
                 # # highlight data for curent station
-                # self.frames['stats']['records_all_stations_mod_stats'].iloc[self.frames['stats']['records_all_stations_index'].get_level_values('STNID') == self.frames['stats']['current_station'].name]
+                # self.frames['stats']['records_all_stations_end_mod_stats'].iloc[self.frames['stats']['records_all_stations_index'].get_level_values('STNID') == self.frames['stats']['current_station'].name]
 
-                #text = 'EXT: '+format(seltablestatsstdrel_statannotate[key+'_ext'],'2.4f')+ ', MOD: '+format(seltablestatsstdrel_statannotate[key+'_mod'],'2.4f')
+                #text = 'EXT: '+format(seltablestatsstdrel_statannotate[key+'_ext'],'2.4f')+ ', MOD: '+format(seltablestatsstdrel_statannotate[key+'_end_mod'],'2.4f')
 
                 if ikey == len(statskeys_out)-1:
                     self.axes['stats_'+key].set_xlabel('external')
@@ -1240,10 +1281,9 @@ class c4gl_interface_soundings(object):
 
         #print('r1')
         if (only is None) or ('worldmap' in only) or ('worldmap_stations' in only):
-            #print('r2')
             label = 'worldmap_stations'
             axes[label].clear()
-            
+            #print('r2')
             stations = self.frames['worldmap']['stations'].table
             globaldata = self.globaldata
             
@@ -1261,6 +1301,7 @@ class c4gl_interface_soundings(object):
                     xlist.append(x)
                     ylist.append(y)
                 #picker is needed to make it clickable (pick_event)
+                print(label)
                 axes[label].data[label] = axes[label].scatter(xlist,ylist,
                                                               c='r', s=15,
                                                               picker = 15,
@@ -1306,7 +1347,7 @@ class c4gl_interface_soundings(object):
                     text = 'STNID: '+ format(STNID,'10.0f') + \
                             ', LAT: '+format(STN['latitude'],'3.3f')+ \
                             ', LON: '+format(STN['longitude'],'3.3f')+ \
-                            ', #SOUNDINGS: '+str(self.frames['stats']['records_current_station_mod'].shape[0]) \
+                            ', #SOUNDINGS: '+str(self.frames['stats']['records_current_station_end_mod'].shape[0]) \
 
                             #+', VAL: '+format(VAL,'.3e')
 
@@ -1332,8 +1373,8 @@ class c4gl_interface_soundings(object):
 
                     # #pos = sc.get_offsets()[ind["ind"][0]]
                     # 
-                    # axes[label.data[label+'statannotate'].xy = (seltablestatsstdrel_statannotate[key+'_ext'],seltablestatsstdrel_statannotate[key+'_mod'])
-                    # text = 'STN: '+str(int(axes['statsview0'].focus['STNID']))+', DT: '+str(axes['statsview0'].focus['DT'])+', EXT: '+str(seltablestatsstdrel_statannotate[key+'_ext'])+', MOD: '+str(seltablestatsstdrel_statannotate[key+'_mod'])
+                    # axes[label.data[label+'statannotate'].xy = (seltablestatsstdrel_statannotate[key+'_ext'],seltablestatsstdrel_statannotate[key+'_end_mod'])
+                    # text = 'STN: '+str(int(axes['statsview0'].focus['STNID']))+', DT: '+str(axes['statsview0'].focus['DT'])+', EXT: '+str(seltablestatsstdrel_statannotate[key+'_ext'])+', MOD: '+str(seltablestatsstdrel_statannotate[key+'_end_mod'])
                     # axes[label].data[label+'statannotate'].set_text(text)
                     #axes[label].data[label+'statannotate'].get_bbox_patch().set_facecolor(statsviewcmap(seltablestatspct_statannotate[cmapkey]))
                     # axes[label].data[label+'statannotate'].get_bbox_patch().set_alpha(0.4)
@@ -1360,7 +1401,7 @@ class c4gl_interface_soundings(object):
                 self.frames['profiles']['record_yaml_ini'].pars.datetime.strftime("%Y/%m/%d %H:%M"))
                 # +\
                 # ' -> '+ \
-                # self.frames['profiles']['record_yaml_obs_afternoon'].pars.datetime.strftime("%Y/%m/%d %H:%M"))
+                # self.frames['profiles']['record_yaml_end_obs'].pars.datetime.strftime("%Y/%m/%d %H:%M"))
             
             
             
@@ -1373,12 +1414,12 @@ class c4gl_interface_soundings(object):
             # #axes[label].set_title(self.morning_sounding.datetime.strftime("%Y/%m/%d %H:%M") + ' -> '+self.evening_sounding.datetime.strftime("%Y/%m/%d %H:%M"))
             # 
             #print(self.frames['profiles']['record_yaml_ini'].pars.h)
-            #print(self.frames['profiles']['record_yaml_obs_afternoon'].pars.h)
-            #print(self.frames['profiles']['record_yaml_mod'].out['h'].values[-1])
+            #print(self.frames['profiles']['record_yaml_end_obs'].pars.h)
+            #print(self.frames['profiles']['record_yaml_end_mod'].out['h'].values[-1])
             hmax = np.nanmax([self.frames['profiles']['record_yaml_ini'].pars.h,\
-                           self.frames['profiles']['record_yaml_mod'].out.h[-1]])
-            if self.path_obs is not None:
-                hmax = np.nanmax([hmax,self.frames['profiles']['record_yaml_obs_afternoon'].pars.h])
+                           self.frames['profiles']['record_yaml_end_mod'].out.h[-1]])
+            if self.path_forcing is not None:
+                hmax = np.nanmax([hmax,self.frames['profiles']['record_yaml_end_obs'].pars.h])
 
 
                 zidxmax = int(np.where((self.frames['profiles']['record_yaml_ini'].air_balloon.z.values
@@ -1405,43 +1446,43 @@ class c4gl_interface_soundings(object):
 
 
             #print('r15')
-            if self.path_obs is not None:
-                zidxmax = int(np.where((self.frames['profiles']['record_yaml_obs_afternoon'].air_balloon.z.values
+            if self.path_forcing is not None:
+                zidxmax = int(np.where((self.frames['profiles']['record_yaml_end_obs'].air_balloon.z.values
                                     < 2.*hmax))[0][-1])+2
-                zidxmax = np.min((zidxmax,len(self.frames['profiles']['record_yaml_obs_afternoon'].air_balloon.z.values)))
+                zidxmax = np.min((zidxmax,len(self.frames['profiles']['record_yaml_end_obs'].air_balloon.z.values)))
                 zco = range(zidxmax)
 
                               
-                axes[label].plot(self.frames['profiles']['record_yaml_obs_afternoon'].air_balloon.theta.values[zco], \
-                                 self.frames['profiles']['record_yaml_obs_afternoon'].air_balloon.z.values[zco],"r*", \
+                axes[label].plot(self.frames['profiles']['record_yaml_end_obs'].air_balloon.theta.values[zco], \
+                                 self.frames['profiles']['record_yaml_end_obs'].air_balloon.z.values[zco],"r*", \
                                  label="obs "+\
-                                 self.frames['profiles']['record_yaml_obs_afternoon'].pars.ldatetime.strftime("%H:%M")\
+                                 self.frames['profiles']['record_yaml_end_obs'].pars.ldatetime.strftime("%H:%M")\
                                  +'LT')
 
                 #print('r16')
 
-                zidxmax = int(np.where((self.frames['profiles']['record_yaml_obs_afternoon'].air_ap.z.values < 2.*hmax))[0][-1])+2
-                zidxmax = np.min((zidxmax,len(self.frames['profiles']['record_yaml_obs_afternoon'].air_ap.z.values)))
+                zidxmax = int(np.where((self.frames['profiles']['record_yaml_end_obs'].air_ap.z.values < 2.*hmax))[0][-1])+2
+                zidxmax = np.min((zidxmax,len(self.frames['profiles']['record_yaml_end_obs'].air_ap.z.values)))
                 zco = range(zidxmax)
 
-                axes[label].plot(self.frames['profiles']['record_yaml_obs_afternoon'].air_ap.theta.values[zco], \
-                                 self.frames['profiles']['record_yaml_obs_afternoon'].air_ap.z.values[zco],"r:", \
+                axes[label].plot(self.frames['profiles']['record_yaml_end_obs'].air_ap.theta.values[zco], \
+                                 self.frames['profiles']['record_yaml_end_obs'].air_ap.z.values[zco],"r:", \
                                  label="fit "+\
-                                 self.frames['profiles']['record_yaml_obs_afternoon'].pars.ldatetime.strftime("%H:%M")\
+                                 self.frames['profiles']['record_yaml_end_obs'].pars.ldatetime.strftime("%H:%M")\
                                  +'LT')
 
             #print('r17')
-            #print(self.frames['profiles']['record_yaml_mod'].air_ap.z)
+            #print(self.frames['profiles']['record_yaml_end_mod'].air_ap.z)
             #print(hmax)
-            valid_mod = len(self.frames['profiles']['record_yaml_mod'].air_ap.z)>= 4
+            valid_mod = len(self.frames['profiles']['record_yaml_end_mod'].air_ap.z)>= 4
             if valid_mod:
 
-                zidxmax = int(np.where((self.frames['profiles']['record_yaml_mod'].air_ap.z.values < 2.*hmax))[0][-1])+2
-                zidxmax = np.min((zidxmax,len(self.frames['profiles']['record_yaml_mod'].air_ap.z.values)))
+                zidxmax = int(np.where((self.frames['profiles']['record_yaml_end_mod'].air_ap.z.values < 2.*hmax))[0][-1])+2
+                zidxmax = np.min((zidxmax,len(self.frames['profiles']['record_yaml_end_mod'].air_ap.z.values)))
                 zco = range(zidxmax)
 
-                axes[label].plot(self.frames['profiles']['record_yaml_mod'].air_ap.theta.values[zco], \
-                                 self.frames['profiles']['record_yaml_mod'].air_ap.z.values[zco],"r-", \
+                axes[label].plot(self.frames['profiles']['record_yaml_end_mod'].air_ap.theta.values[zco], \
+                                 self.frames['profiles']['record_yaml_end_mod'].air_ap.z.values[zco],"r-", \
                                  label="mod "+\
                                  (self.frames['profiles']['record_yaml_ini'].pars.ldatetime
                                  +dt.timedelta(seconds=self.frames['profiles']['record_yaml_ini'].pars.runtime)).strftime("%H:%M")\
@@ -1469,12 +1510,12 @@ class c4gl_interface_soundings(object):
             # 
             if valid_mod:
                 hmax = np.nanmax([self.frames['profiles']['record_yaml_ini'].pars.h,\
-                               self.frames['profiles']['record_yaml_mod'].out.h[-1]])
+                               self.frames['profiles']['record_yaml_end_mod'].out.h[-1]])
             else:
                 hmax = self.frames['profiles']['record_yaml_ini'].pars.h
 
-            if self.path_obs is not None:
-                hmax = np.nanmax([hmax,self.frames['profiles']['record_yaml_obs_afternoon'].pars.h])
+            if self.path_forcing is not None:
+                hmax = np.nanmax([hmax,self.frames['profiles']['record_yaml_end_obs'].pars.h])
             # 
             #print('r20')
 
@@ -1500,38 +1541,38 @@ class c4gl_interface_soundings(object):
                              self.frames['profiles']['record_yaml_ini'].pars.ldatetime.strftime("%H:%M")\
                              +'LT')
 
-            if self.path_obs is not None:
-                zidxmax = int(np.where((self.frames['profiles']['record_yaml_obs_afternoon'].air_balloon.z.values < 2.*hmax))[0][-1])+2
-                zidxmax = np.min((zidxmax,len(self.frames['profiles']['record_yaml_obs_afternoon'].air_balloon.z.values)))
+            if self.path_forcing is not None:
+                zidxmax = int(np.where((self.frames['profiles']['record_yaml_end_obs'].air_balloon.z.values < 2.*hmax))[0][-1])+2
+                zidxmax = np.min((zidxmax,len(self.frames['profiles']['record_yaml_end_obs'].air_balloon.z.values)))
                 zco = range(zidxmax)
 
 
-                axes[label].plot(self.frames['profiles']['record_yaml_obs_afternoon'].air_balloon.q.values[zco], \
-                                 self.frames['profiles']['record_yaml_obs_afternoon'].air_balloon.z.values[zco],"r*", \
+                axes[label].plot(self.frames['profiles']['record_yaml_end_obs'].air_balloon.q.values[zco], \
+                                 self.frames['profiles']['record_yaml_end_obs'].air_balloon.z.values[zco],"r*", \
                                  label="obs "+\
-                                 self.frames['profiles']['record_yaml_obs_afternoon'].pars.ldatetime.strftime("%H:%M")\
+                                 self.frames['profiles']['record_yaml_end_obs'].pars.ldatetime.strftime("%H:%M")\
                                  +'LT')
 
-                zidxmax = int(np.where((self.frames['profiles']['record_yaml_obs_afternoon'].air_ap.z.values < 2.*hmax))[0][-1])+2
-                zidxmax = np.min((zidxmax,len(self.frames['profiles']['record_yaml_obs_afternoon'].air_ap.z.values)))
+                zidxmax = int(np.where((self.frames['profiles']['record_yaml_end_obs'].air_ap.z.values < 2.*hmax))[0][-1])+2
+                zidxmax = np.min((zidxmax,len(self.frames['profiles']['record_yaml_end_obs'].air_ap.z.values)))
                 zco = range(zidxmax)
 
                 #print('r23')
-                axes[label].plot(self.frames['profiles']['record_yaml_obs_afternoon'].air_ap.q.values[zco], \
-                                 self.frames['profiles']['record_yaml_obs_afternoon'].air_ap.z.values[zco],"r:", \
+                axes[label].plot(self.frames['profiles']['record_yaml_end_obs'].air_ap.q.values[zco], \
+                                 self.frames['profiles']['record_yaml_end_obs'].air_ap.z.values[zco],"r:", \
                                  label="fit "+\
-                                 self.frames['profiles']['record_yaml_obs_afternoon'].pars.ldatetime.strftime("%H:%M")\
+                                 self.frames['profiles']['record_yaml_end_obs'].pars.ldatetime.strftime("%H:%M")\
                                  +'LT')
 
             #print('r24')
             if valid_mod:
-                zidxmax = int(np.where((self.frames['profiles']['record_yaml_mod'].air_ap.z.values < 2.*hmax))[0][-1])+2
-                zidxmax = np.min((zidxmax,len(self.frames['profiles']['record_yaml_mod'].air_ap.z.values)))
+                zidxmax = int(np.where((self.frames['profiles']['record_yaml_end_mod'].air_ap.z.values < 2.*hmax))[0][-1])+2
+                zidxmax = np.min((zidxmax,len(self.frames['profiles']['record_yaml_end_mod'].air_ap.z.values)))
                 zco = range(zidxmax)
-                axes[label].plot(self.frames['profiles']['record_yaml_mod'].air_ap.q.values[zco], \
-                                 self.frames['profiles']['record_yaml_mod'].air_ap.z.values[zco],"r-", \
+                axes[label].plot(self.frames['profiles']['record_yaml_end_mod'].air_ap.q.values[zco], \
+                                 self.frames['profiles']['record_yaml_end_mod'].air_ap.z.values[zco],"r-", \
                                  label="fit ")#+\
-                             #self.frames['profiles']['record_yaml_mod'].pars.ldatetime.strftime("%H:%M")\
+                             #self.frames['profiles']['record_yaml_end_mod'].pars.ldatetime.strftime("%H:%M")\
                              #+'LT')
             #print('r25')
             #axes[label].legend()
@@ -1577,10 +1618,10 @@ class c4gl_interface_soundings(object):
  
 
             #print('r26')
-            time = self.frames['profiles']['record_yaml_mod'].out.time
+            time = self.frames['profiles']['record_yaml_end_mod'].out.time
             for ilabel,label in enumerate(['h','theta','q']):
                 axes["out:"+label].clear()
-                axes["out:"+label].plot(time,self.frames['profiles']['record_yaml_mod'].out.__dict__[label],label=label)
+                axes["out:"+label].plot(time,self.frames['profiles']['record_yaml_end_mod'].out.__dict__[label],label=label)
                 axes["out:"+label].set_ylabel(label)
                 if ilabel == 2:
                     axes["out:"+label].set_xlabel('local sun time [h]')
@@ -1589,11 +1630,11 @@ class c4gl_interface_soundings(object):
             label = 'SEB'
             axes[label].clear()
             
-            axes[label].plot(time,self.frames['profiles']['record_yaml_mod'].out.Swin - self.frames['profiles']['record_yaml_mod'].out.Swout,label='Sw')
-            axes[label].plot(time,-self.frames['profiles']['record_yaml_mod'].out.H,label='H')
-            axes[label].plot(time,self.frames['profiles']['record_yaml_mod'].out.Lwin - self.frames['profiles']['record_yaml_mod'].out.Lwout,label='Lw')
-            axes[label].plot(time,-self.frames['profiles']['record_yaml_mod'].out.G,label='G')
-            axes[label].plot(time,-self.frames['profiles']['record_yaml_mod'].out.LE,label='LE')
+            axes[label].plot(time,self.frames['profiles']['record_yaml_end_mod'].out.Swin - self.frames['profiles']['record_yaml_end_mod'].out.Swout,label='Sw')
+            axes[label].plot(time,-self.frames['profiles']['record_yaml_end_mod'].out.H,label='H')
+            axes[label].plot(time,self.frames['profiles']['record_yaml_end_mod'].out.Lwin - self.frames['profiles']['record_yaml_end_mod'].out.Lwout,label='Lw')
+            axes[label].plot(time,-self.frames['profiles']['record_yaml_end_mod'].out.G,label='G')
+            axes[label].plot(time,-self.frames['profiles']['record_yaml_end_mod'].out.LE,label='LE')
             axes[label].hlines(0.,*axes[label].get_xlim(),'k')
             axes[label].set_ylabel('energy flux [$\mathrm{W/m^2}$]')
             axes[label].set_xlabel('local sun time [$\mathrm{h}$]')
@@ -1682,7 +1723,7 @@ class c4gl_interface_soundings(object):
         #d.set_offset_position('data')
         xy = d.get_offsets()
         x, y =  xy[:,0],xy[:,1]
-        #axes[-1].plot(seltableoutput[key+'_obs']*3600.,seltableoutput[key+'_mod']*3600.,'ro', markersize=5, picker=5,label=key)
+        #axes[-1].plot(seltableoutput[key+'_obs']*3600.,seltableoutput[key+'_end_mod']*3600.,'ro', markersize=5, picker=5,label=key)
 
         #print("p2")
         if len(ind) > 0:
@@ -1693,8 +1734,8 @@ class c4gl_interface_soundings(object):
             #    #seltablestatsstdrel = self.seltablestatsstdrel
             #    #seltablestatspct = self.seltablestatspct
 
-            #    #self.set_statsviewfocus('STNID' seltablestatsstdrel[(seltablestatsstdrel[selkey+'_ext'] == pos[0]) & (seltablestatsstdrel[selkey+'_mod'] == pos[1] )  ].STNID.iloc[0]
-            #    #self.set_statsviewfocus('DT'] = seltablestatsstdrel[(seltablestatsstdrel[selkey+'_ext'] == pos[0]) & (seltablestatsstdrel[selkey+'_mod'] == pos[1] )  ].DT.iloc[0]
+            #    #self.set_statsviewfocus('STNID' seltablestatsstdrel[(seltablestatsstdrel[selkey+'_ext'] == pos[0]) & (seltablestatsstdrel[selkey+'_end_mod'] == pos[1] )  ].STNID.iloc[0]
+            #    #self.set_statsviewfocus('DT'] = seltablestatsstdrel[(seltablestatsstdrel[selkey+'_ext'] == pos[0]) & (seltablestatsstdrel[selkey+'_end_mod'] == pos[1] )  ].DT.iloc[0]
             #    
             #    self.axes['worldmap'].focus['STNID'] = self.axes['statsview0'].focus['STNID']
             #    self.set_profilefocus(STNID=self.axes['statsview0'].focus['STNID'],DT=self.axes['statsview0'].focus['DT'])
@@ -1704,8 +1745,7 @@ class c4gl_interface_soundings(object):
             #el
             if (label == 'worldmap') or (label == 'worldmap_stations'):
                 self.hover_active = False
-                if (self.frames['worldmap']['STNID'] !=
-                    self.frames['profiles']['STNID']):
+                if (self.frames['worldmap']['STNID'] != self.frames['profiles']['STNID']):
                 # WE ALREADY HAVE the correct station from worldmap/stats because of the hovering!!
                 # so we just need to perform update_station
                     self.update_station()
@@ -1734,19 +1774,19 @@ class c4gl_interface_soundings(object):
                     self.frames['profiles']['current_station_file_ini'] = \
                         open(self.path_exp+'/'+format(STNID,"05d")+'_'+str(chunk)+'_ini.yaml','r')
 
-                    if 'current_station_file_mod' in self.frames['profiles'].keys():
-                        self.frames['profiles']['current_station_file_mod'].close()
-                    self.frames['profiles']['current_station_file_mod'] = \
-                        open(self.path_exp+'/'+format(STNID,"05d")+'_'+str(chunk)+'_mod.yaml','r')
-                    if self.path_obs is not None:
-                        if 'current_station_file_afternoon' in self.frames['profiles'].keys():
-                            self.frames['profiles']['current_station_file_afternoon'].close()
-                        self.frames['profiles']['current_station_file_afternoon'] = \
-                            open(self.path_obs+'/'+format(STNID,"05d")+'_afternoon.yaml','r')
+                    if 'current_station_file_end_mod' in self.frames['profiles'].keys():
+                        self.frames['profiles']['current_station_file_end_mod'].close()
+                    self.frames['profiles']['current_station_file_end_mod'] = \
+                        open(self.path_exp+'/'+format(STNID,"05d")+'_'+str(chunk)+'_end.yaml','r')
+                    if self.path_forcing is not None:
+                        if 'current_station_file_end' in self.frames['profiles'].keys():
+                            self.frames['profiles']['current_station_file_end'].close()
+                        self.frames['profiles']['current_station_file_end'] = \
+                            open(self.path_forcing+'/'+format(STNID,"05d")+'_end.yaml','r')
 
                     # go to hovered record of current station
                     self.frames['profiles']['records_iterator'] = \
-                                    records_iterator(self.frames['profiles']['records_current_station_mod'])
+                                    records_iterator(self.frames['profiles']['records_current_station_end_mod'])
                     # ... and go to the record of the profile window (last one that
                     # was picked by the user)
                     found = False
@@ -1764,16 +1804,16 @@ class c4gl_interface_soundings(object):
                         except StopIteration:
                             EOF = True
                     if found:
-                        self.frames['stats']['current_record_mod'] = record
+                        self.frames['stats']['current_record_end_mod'] = record
                         self.frames['stats']['current_record_chunk'] = chunk
                         self.frames['stats']['current_record_index'] = index
                     # # for the profiles we make a distinct record iterator, so that the
                     # # stats iterator can move independently
                     # self.frames['profiles']['records_iterator'] = \
-                    #                 records_iterator(self.frames['profiles']['records_current_station_mod'])
+                    #                 records_iterator(self.frames['profiles']['records_current_station_end_mod'])
                     # (self.frames['profiles']['STNID'] , \
                     # self.frames['profiles']['current_record_index']) , \
-                    # self.frames['profiles']['current_record_mod'] = \
+                    # self.frames['profiles']['current_record_end_mod'] = \
                     #                 self.frames['profiles']['records_iterator'].__next__()
 
 
@@ -1817,8 +1857,8 @@ class c4gl_interface_soundings(object):
                     #    seltablestatsstdrel = self.seltablestatsstdrel
                     #    seltablestatspct = self.seltablestatspct
 
-                    #    self.set_statsviewfocus('STNID'] = seltablestatsstdrel[(seltablestatsstdrel[selkey+'_ext'] == pos[0]) & (seltablestatsstdrel[selkey+'_mod'] == pos[1] )  ].STNID.iloc[0]
-                    #    self.set_statsviewfocus('DT'] = seltablestatsstdrel[(seltablestatsstdrel[selkey+'_ext'] == pos[0]) & (seltablestatsstdrel[selkey+'_mod'] == pos[1] )  ].DT.iloc[0]
+                    #    self.set_statsviewfocus('STNID'] = seltablestatsstdrel[(seltablestatsstdrel[selkey+'_ext'] == pos[0]) & (seltablestatsstdrel[selkey+'_end_mod'] == pos[1] )  ].STNID.iloc[0]
+                    #    self.set_statsviewfocus('DT'] = seltablestatsstdrel[(seltablestatsstdrel[selkey+'_ext'] == pos[0]) & (seltablestatsstdrel[selkey+'_end_mod'] == pos[1] )  ].DT.iloc[0]
                     #    self.axes['worldmap'].focus['STNID'] = self.axes['statsview0'].focus['STNID']
                     #    #self.goto_datetime_worldmap(self.axes['statsview0'].focus['DT'],'after')
                     #    self.hover_active = True
@@ -1828,25 +1868,25 @@ class c4gl_interface_soundings(object):
                     #el
                     #print(label[:5])
                     if (label[:5] == 'stats') or (label == 'times'):
-                        # records_mod = self.frames['stats']['records_current_station_mod'][selkey]
-                        # records_obs = self.frames['stats']['records_current_station_obs_afternoon'][selkey]
+                        # records_end_mod = self.frames['stats']['records_current_station_end_mod'][selkey]
+                        # records_obs = self.frames['stats']['records_current_station_end_obs'][selkey]
                         
-                        if self.path_obs is not None:
+                        if self.path_forcing is not None:
                             if label[:5] == 'stats':
-                                records_mod_stats = self.frames['stats']['records_all_stations_mod_stats']
-                                records_obs_stats = self.frames['stats']['records_all_stations_obs_afternoon_stats']
+                                records_end_mod_stats = self.frames['stats']['records_all_stations_end_mod_stats']
+                                records_obs_stats = self.frames['stats']['records_all_stations_end_obs_stats']
                                 (self.frames['stats']['STNID'] ,
                                  self.frames['stats']['current_record_chunk'], 
                                  self.frames['stats']['current_record_index']) = \
-                                    records_mod_stats[(records_obs_stats[selkey] == pos[0]) & (records_mod_stats[selkey] == pos[1])].index[0]
+                                    records_end_mod_stats[(records_obs_stats[selkey] == pos[0]) & (records_end_mod_stats[selkey] == pos[1])].index[0]
                             # elif label[:5] == 'stats':
-                            #     # records_mod_stats = self.frames['stats']['records_all_stations_mod_stats']
-                            #     records_obs_stats = self.frames['stats']['records_all_stations_obs_afternoon_stats']
+                            #     # records_end_mod_stats = self.frames['stats']['records_all_stations_end_mod_stats']
+                            #     records_obs_stats = self.frames['stats']['records_all_stations_end_obs_stats']
                             #     records_datetimes = self.frames['stats']['records_all_stations_ini']
                             #     (self.frames['stats']['STNID'] ,
                             #      self.frames['stats']['current_record_chunk'], 
                             #      self.frames['stats']['current_record_index']) = \
-                            #         records_mod_stats[(records_obs_stats[selkey] == pos[0]) & (records_mod_stats[selkey] == pos[1])].index[0]
+                            #         records_end_mod_stats[(records_obs_stats[selkey] == pos[0]) & (records_end_mod_stats[selkey] == pos[1])].index[0]
 
 
                         self.frames['stats']['stations_iterator'] = stations_iterator(self.frames['worldmap']['stations']) 
@@ -1888,10 +1928,10 @@ class c4gl_interface_soundings(object):
 
 
                         tab_suffixes = \
-                                ['_mod','_ini','_ini_pct']
-                        if self.path_obs is not None:
+                                ['_end_mod','_ini','_ini_pct']
+                        if self.path_forcing is not None:
                             tab_suffixes += \
-                                ['_mod_stats','_obs_afternoon','_obs_afternoon_stats']
+                                ['_end_mod_stats','_end_obs','_end_obs_stats']
                             
                         for tab_suffix in tab_suffixes:
                             self.frames['stats']['records_current_station'+tab_suffix] = \
@@ -1901,7 +1941,7 @@ class c4gl_interface_soundings(object):
 
                         # go to hovered record of current station
                         self.frames['stats']['records_iterator'] = \
-                                        records_iterator(self.frames['stats']['records_current_station_mod'])
+                                        records_iterator(self.frames['stats']['records_current_station_end_mod'])
 
 
                         # ... and go to the record of the profile window (last one that
@@ -1922,16 +1962,16 @@ class c4gl_interface_soundings(object):
                                 EOF = True
                         if found:
                             #print('h5')
-                            self.frames['stats']['current_record_mod'] = record
+                            self.frames['stats']['current_record_end_mod'] = record
                             self.frames['stats']['current_record_chunk'] = chunk
                             self.frames['stats']['current_record_index'] = index
 
                         #print(self.frames['stats']['STNID'],self.frames['stats']['current_record_index'])
                         tab_suffixes = \
                                 ['_ini','_ini_pct']
-                        if self.path_obs is not None:
+                        if self.path_forcing is not None:
                             tab_suffixes += \
-                                ['_mod_stats','_obs_afternoon','_obs_afternoon_stats']
+                                ['_end_mod_stats','_end_obs','_end_obs_stats']
                         for tab_suffix in tab_suffixes:
                             #print(tab_suffix)
                             #print(self.frames['stats']['records_current_station'+tab_suffix])
@@ -2020,8 +2060,8 @@ class c4gl_interface_soundings(object):
                                 self.frames['stats'][key] = self.frames['worldmap'][key]
                                 
                             ## fetch records of current station...
-                            #self.frames['stats']['records_current_station_mod'] =\
-                            #   get_records_mod(pd.DataFrame([self.frames['stats']['current_station']]),self.path_exp)
+                            #self.frames['stats']['records_current_station_end_mod'] =\
+                            #   get_records_end_mod(pd.DataFrame([self.frames['stats']['current_station']]),self.path_exp)
 
                             # ... and their indices
                             self.frames['stats']['records_current_station_index'] = \
@@ -2030,10 +2070,10 @@ class c4gl_interface_soundings(object):
                                      self.frames['stats']['current_station'].name)
 
                             tab_suffixes = \
-                                    ['_mod','_ini','_ini_pct']
-                            if self.path_obs is not None:
+                                    ['_end_mod','_ini','_ini_pct']
+                            if self.path_forcing is not None:
                                 tab_suffixes += \
-                                    ['_mod_stats','_obs_afternoon','_obs_afternoon_stats']
+                                    ['_end_mod_stats','_end_obs','_end_obs_stats']
 
                             for tab_suffix in tab_suffixes:
                                 self.frames['stats']['records_current_station'+tab_suffix] = \
@@ -2044,7 +2084,7 @@ class c4gl_interface_soundings(object):
                             #self.frames['stats']['records_iterator'].close()
                             del(self.frames['stats']['records_iterator'])
                             self.frames['stats']['records_iterator'] = \
-                                self.frames['stats']['records_current_station_mod'].iterrows()
+                                self.frames['stats']['records_current_station_end_mod'].iterrows()
 
 
 
@@ -2054,14 +2094,14 @@ class c4gl_interface_soundings(object):
                             (self.frames['stats']['STNID'] , \
                              self.frames['stats']['current_record_chunk'] , \
                              self.frames['stats']['current_record_index']) , \
-                            self.frames['stats']['current_record_mod'] = \
+                            self.frames['stats']['current_record_end_mod'] = \
                                 self.frames['stats']['records_iterator'].__next__()
                         
                             tab_suffixes = \
                                     ['_ini','_ini_pct']
-                            if self.path_obs is not None:
+                            if self.path_forcing is not None:
                                 tab_suffixes += \
-                                    ['_mod_stats','_obs_afternoon','_obs_afternoon_stats']
+                                    ['_end_mod_stats','_end_obs','_end_obs_stats']
 
                             for tab_suffix in tab_suffixes:
                                 self.frames['stats']['current_record'+tab_suffix] =  \
@@ -2104,8 +2144,8 @@ class c4gl_interface_soundings(object):
                 self.frames['stats']['current_station'] = \
                         self.frames['profiles']['current_station']
                 #print('h3a*')
-                self.frames['stats']['records_current_station_mod'] = \
-                        self.frames['profiles']['records_current_station_mod']
+                self.frames['stats']['records_current_station_end_mod'] = \
+                        self.frames['profiles']['records_current_station_end_mod']
                 #print('h3b*')
 
                 # the next lines recreate the records iterator. Probably it's
@@ -2116,7 +2156,7 @@ class c4gl_interface_soundings(object):
                 #self.frames['stats']['records_iterator'].close()
                 del(self.frames['stats']['records_iterator'])
                 self.frames['stats']['records_iterator'] = \
-                    self.frames['stats']['records_current_station_mod'].iterrows()
+                    self.frames['stats']['records_current_station_end_mod'].iterrows()
                 #print('h4*')
 
                 # ... and go to the record of the profile window (last one that
@@ -2139,7 +2179,7 @@ class c4gl_interface_soundings(object):
                         EOF = True
                 if found:
                     #print('h5*')
-                    self.frames['stats']['current_record_mod'] = record
+                    self.frames['stats']['current_record_end_mod'] = record
                     self.frames['stats']['current_record_chunk'] = chunk
                     self.frames['stats']['current_record_index'] = index
 
@@ -2148,8 +2188,8 @@ class c4gl_interface_soundings(object):
 
 
                 # # fetch records of current station...
-                # self.frames['stats']['records_current_station_mod'] =\
-                #    get_records_mod(pd.DataFrame([self.frames['stats']['current_station']]),self.path_exp)
+                # self.frames['stats']['records_current_station_end_mod'] =\
+                #    get_records_end_mod(pd.DataFrame([self.frames['stats']['current_station']]),self.path_exp)
 
                 # ... and their indices
                 self.frames['stats']['records_current_station_index'] = \
@@ -2160,9 +2200,9 @@ class c4gl_interface_soundings(object):
                 
                 tab_suffixes = \
                         ['_ini','_ini_pct']
-                if self.path_obs is not None:
+                if self.path_forcing is not None:
                     tab_suffixes += \
-                        ['_mod_stats','_obs_afternoon','_obs_afternoon_stats']
+                        ['_end_mod_stats','_end_obs','_end_obs_stats']
 
                 for tab_suffix in tab_suffixes:
                     self.frames['stats']['records_current_station'+tab_suffix] = \
@@ -2233,7 +2273,7 @@ class c4gl_interface_soundings(object):
                 #                 self.frames['stats']['records_current_station'].iterrows()
                 # (self.frames['stats']['STNID'] , \
                 # self.frames['stats']['current_record_index']) , \
-                # self.frames['stats']['current_record_mod'] = \
+                # self.frames['stats']['current_record_end_mod'] = \
                 #                 self.frames['stats']['records_iterator'].__next__()
                 
 

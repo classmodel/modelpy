@@ -426,21 +426,14 @@ class model:
 
                 
                 if self.air_ap[var][1] != self.air_ap[var][0]:
-                    raise ValueError("Error input profile consistency: two \
-                                     lowest profile levels for "+var+" should \
-                                     be equal.")
+                    raise ValueError("Error input profile consistency: two lowest profile levels for "+var+" should be equal.")
                 
                 # initialize the value from its profile when available
                 value_old = self.__dict__[var]
                 value_new = self.air_ap[var][indexh[0][0]]
                 
                 if ((value_old is not None) & (value_old != value_new)):
-                    warnings.warn("Warning:  input was provided \
-                                     ("+str(value_old)+ "kg kg-1), \
-                                     but it is now overwritten by the first \
-                                     level (index 0) of air_ap]var\ which is \
-                                     different (" +str(value_new)+"K).")
-                                        
+                    warnings.warn("Warning:  input was provided ("+str(value_old)+ "kg kg-1), but it is now overwritten by the first level (index 0) of air_ap.var which is different (" +str(value_new)+"kg kg-1).") 
                 self.__dict__[var] = value_new
 
                 # make a profile of the stratification 
@@ -952,18 +945,15 @@ class model:
         if (self.dtheta <= 0.1) and (dthetatend_pre < 0.):
             l_entrainment = False
             warnings.warn(str(self.t)+"/"+str(self.tsteps)+\
-                          "Warning! temperature jump is at the lower limit \
-                          and is not growing: entrainment is disabled for this (sub)timestep.") 
+                          " Warning! temperature jump is at the lower limit and is not growing: entrainment is disabled for this (sub)timestep.") 
         elif dtheta_pre < 0.1:
             dtmax_new = float((0.1 - self.dtheta)/dthetatend_pre)
             l_entrainment = True
             warnings.warn(str(self.t)+"/"+str(self.tsteps)+\
-                          " Warning! Potential temperature jump at mixed- \
-                          layer height would become too low limiting timestep \
-                          from "+ str(self.dtmax)+' to '+str(dtmax_new))
+                          " Warning! Potential temperature jump at mixed-layer height would become too low. So I'm limiting the timestep from "+ str(self.dtmax)+' to '+str(dtmax_new))
             self.dtmax = min(self.dtmax,dtmax_new)
             warnings.warn(str(self.t)+"/"+str(self.tsteps)+\
-                          "next subtimestep, entrainment will be disabled")
+                          " Next subtimestep, entrainment will also be disabled")
             #self.dthetatend = (0.1 - self.dtheta)/self.dtcur 
 
 
@@ -1232,12 +1222,7 @@ class model:
 
             if itop > 1:
                     warnings.warn(str(self.t)+"/"+str(self.tsteps)+\
-                          "Warning! Temperature profile was too steep. \
-                                  Modifying profile: "+ \
-                                  str(itop - 1)+ " measurements were dropped \
-                                  and replaced with its average \
-                                  Modifying profile. \
-                                  mean with next profile point(s).") 
+                          " Warning! Temperature profile was too steep.  Modifying profile: "+ str(itop - 1)+ " measurements were dropped and replaced with their average.") 
 
 
             self.air_ap = pd.concat((air_ap_head,\
@@ -1277,8 +1262,7 @@ class model:
             in_ml = (self.air_ac.p >= self.P_h)
 
             if in_ml.sum() == 0:
-                warnings.warn(" no circulation points in the mixed layer \
-                              found. We just take the bottom one.")
+                warnings.warn(" no circulation points in the mixed layer found. We just take the bottom one.")
                 in_ml = self.air_ac.index == (len(self.air_ac) - 1)
             for var in ['t','q','u','v']:
 

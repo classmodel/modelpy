@@ -153,8 +153,8 @@ for iSTN,STN in STNlist:
     one_run = False
 # for iSTN,STN in STNlist[5:]:  
     
-    fnout = args.path_output+"/"+format(STN.name,'05d')+"_morning.yaml"
-    fnout_afternoon = args.path_output+"/"+format(STN.name,'05d')+"_afternoon.yaml"
+    fnout = args.path_output+"/"+format(STN.name,'05d')+"_ini.yaml"
+    fnout_afternoon = args.path_output+"/"+format(STN.name,'05d')+"_end.yaml"
     
 
     # c4glfiles = dict([(EXP,odirexperiments[EXP]+'/'+format(STN['ID'],'05d')+'.yaml') \
@@ -344,12 +344,12 @@ for iSTN,STN in STNlist:
         #STN.name = STN.name
         all_records_morning = get_records(pd.DataFrame([STN]),\
                                       args.path_output,\
-                                      subset='morning',
+                                      subset='ini',
                                       refetch_records=True,
                                       )
         all_records_afternoon = get_records(pd.DataFrame([STN]),\
                                       args.path_output,\
-                                      subset='afternoon',
+                                      subset='end',
                                       refetch_records=True,
                                       )
     else:
