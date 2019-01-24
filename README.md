@@ -1,6 +1,6 @@
 [![CLASS4GL Logo](https://class4gl.eu/wp-content/uploads/2019/01/cropped-class4gl_small-1.png)](https://class4gl.eu)
 
-_CLASS4GL_ (Chemistry Land-surface Atmosphere Soil Slab model for Global Studies) is a fast and easy interface to investigate the dynamics of the atmospheric boundary layer from weather balloons worldwide. General info and tutorials for using CLASS4GL are available at class4gl.eu, and video clips about the atmospheric boundary layer physics can be found on the [website of the original CLASS model](classmodel.github.io/).
+_CLASS4GL_ (Chemistry Land-surface Atmosphere Soil Slab model for Global Studies) is a fast and easy interface to investigate the dynamics of the atmospheric boundary layer from weather balloons worldwide. General info and tutorials for using CLASS4GL are available at https://class4gl.eu, and video clips about the atmospheric boundary layer physics can be found on the [website of the original CLASS model](classmodel.github.io/).
 
 # Features
   - _Mine_ appropriate observations from global radio soundings, satellite data, reanalysis and climate models
