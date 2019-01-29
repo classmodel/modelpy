@@ -146,11 +146,15 @@ if bool(args.make_figures):
         #axes_taylor[varkey] = fig.add_subplot(2,3,i+3)                                       
     
         #print(obs.std())
-        obs = c4gldata[args.experiments.strip().split()[0]].frames['stats']['records_all_stations_obs_afternoon_stats']['d'+varkey+'dt']
+        obs = c4gldata[args.experiments.strip().split()[0]].frames['stats']['records_all_stations_end_obs_stats']['d'+varkey+'dt']
         STD_OBS = obs.std()
         dias[varkey] =  TaylorDiagram(1., srange=[0.0,1.7],fig=fig, rect=(230+i+3),label='Reference')
+        dias[varkey].add_grid(zorder=-100.)
         dias[varkey]._ax.axis["left"].label.set_text(\
             "Normalized standard deviation")
+        i += 1
+    i = 1                                                                           
+    for varkey in ['h','theta','q']:                                                    
         if i == 1:
             axes[varkey].annotate('Normalized standard deviation',\
                         xy= (0.05,0.36),
@@ -175,16 +179,11 @@ if bool(args.make_figures):
         contours = dias[varkey].add_contours(levels=5, colors='0.5') # 5 levels
         dias[varkey].ax.clabel(contours, inline=1, fontsize=10, fmt='%.1f')
         #dia._ax.set_title(season.capitalize())
+        i += 1
     
-        dias[varkey].add_grid()
-    
-    
-        #dia.ax.plot(x99,y99,color='k')
-    
-        
         for ikey,key in enumerate(args.experiments.strip(' ').split(' ')):
-            mod = c4gldata[key].frames['stats']['records_all_stations_mod_stats']['d'+varkey+'dt']
-            obs = c4gldata[key].frames['stats']['records_all_stations_obs_afternoon_stats']['d'+varkey+'dt']
+            mod = c4gldata[key].frames['stats']['records_all_stations_end_mod_stats']['d'+varkey+'dt']
+            obs = c4gldata[key].frames['stats']['records_all_stations_end_obs_stats']['d'+varkey+'dt']
             x, y = obs.values,mod.values
             print(key,len(obs.values))
     
@@ -268,7 +267,7 @@ if bool(args.make_figures):
                            marker='o', ms=5, ls='',
                            #mfc='k', mec='k', # B&W
                            mfc=colors[ikey], mec=colors[ikey], # Colors
-                           label=key)
+                           label=key,zorder=100)
     
         # put ticker position, see
         # https://matplotlib.org/examples/ticks_and_spines/tick-locators.html 
@@ -284,10 +283,10 @@ if bool(args.make_figures):
             istation = 0
             for icurrent_station,current_station in c4gldata[key].frames['worldmap']['stations'].table.iterrows():
                 indices =  (c4gldata[key].frames['stats']['records_all_stations_index'].get_level_values('STNID') == current_station.name)
-                station_mod = c4gldata[key].frames['stats']['records_all_stations_mod_stats']['d'+varkey+'dt'].iloc[indices]
-                station_obs = c4gldata[key].frames['stats']['records_all_stations_obs_afternoon_stats']['d'+varkey+'dt'].iloc[indices]
+                station_end_mod = c4gldata[key].frames['stats']['records_all_stations_end_mod_stats']['d'+varkey+'dt'].iloc[indices]
+                station_obs = c4gldata[key].frames['stats']['records_all_stations_end_obs_stats']['d'+varkey+'dt'].iloc[indices]
     
-                axes[varkey].scatter(station_obs,station_mod,marker=symbols[istation],color=colors[ikey])
+                axes[varkey].scatter(station_obs,station_end_mod,marker=symbols[istation],color=colors[ikey])
                          #  label=key+", "+\
                          #                    'R = '+str(round(PR[0],3))+', '+\
                          #                    'RMSE = '+str(round(RMSE,5))+', '+\
@@ -300,12 +299,12 @@ if bool(args.make_figures):
             # #                              'RMSE = '+str(round(RMSE,5))+', '+\
             # #                              'BIAS = '+str(round(BIAS,5)),s=1.,color=colors[ikey])
                 
-                dias[varkey].add_sample(station_mod.std()/station_obs.std(),
-                               pearsonr(station_mod,station_obs)[0],#annotate=symbols[istation],
+                dias[varkey].add_sample(station_end_mod.std()/station_obs.std(),
+                               pearsonr(station_end_mod,station_obs)[0],#annotate=symbols[istation],
                                marker=symbols[istation], ms=5, ls='',
                                mfc='k', mec='k', # B&W
                                #mfc=colors[ikey], mec=colors[ikey], # Colors
-                               label=key)
+                               label=key,zorder=100)
 
                 istation += 1
     
@@ -332,11 +331,11 @@ if bool(args.make_figures):
         i +=1
           
         axes[varkey].set_aspect('equal')
-        low  = c4gldata[key].frames['stats']['records_all_stations_mod_stats']['d'+varkey+'dt'].min()
-        high  = c4gldata[key].frames['stats']['records_all_stations_mod_stats']['d'+varkey+'dt'].max()
+        low  = c4gldata[key].frames['stats']['records_all_stations_end_mod_stats']['d'+varkey+'dt'].min()
+        high  = c4gldata[key].frames['stats']['records_all_stations_end_mod_stats']['d'+varkey+'dt'].max()
 
-        low  = np.min([low,c4gldata[key].frames['stats']['records_all_stations_obs_afternoon_stats']['d'+varkey+'dt'].min()])
-        high  = np.max([high,c4gldata[key].frames['stats']['records_all_stations_obs_afternoon_stats']['d'+varkey+'dt'].max()])
+        low  = np.min([low,c4gldata[key].frames['stats']['records_all_stations_end_obs_stats']['d'+varkey+'dt'].min()])
+        high  = np.max([high,c4gldata[key].frames['stats']['records_all_stations_end_obs_stats']['d'+varkey+'dt'].max()])
 
         low = low - (high - low)*0.1
         high = high + (high - low)*0.1

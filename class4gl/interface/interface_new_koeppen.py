@@ -311,10 +311,10 @@ if args.make_figures:
         for ikey,key in enumerate(args.experiments.strip(' ').split(' ')[:1]):
             # cc = c4gldata[key].frames['stats']['records_all_stations_ini']['cc']
             # clearsky = (cc < 0.05)
-            # mod = c4gldata[key].frames['stats']['records_all_stations_mod_stats'].loc[clearsky]['d'+varkey+'dt']
-            # obs = c4gldata[key].frames['stats']['records_all_stations_obs_afternoon_stats'].loc[clearsky]['d'+varkey+'dt']
-            mod = c4gldata[key].frames['stats']['records_all_stations_mod_stats']['d'+varkey+'dt']
-            obs = c4gldata[key].frames['stats']['records_all_stations_obs_afternoon_stats']['d'+varkey+'dt']
+            # mod = c4gldata[key].frames['stats']['records_all_stations_end_mod_stats'].loc[clearsky]['d'+varkey+'dt']
+            # obs = c4gldata[key].frames['stats']['records_all_stations_obs_end_obs_stats'].loc[clearsky]['d'+varkey+'dt']
+            mod = c4gldata[key].frames['stats']['records_all_stations_end_mod_stats']['d'+varkey+'dt']
+            obs = c4gldata[key].frames['stats']['records_all_stations_end_obs_stats']['d'+varkey+'dt']
 
             print ('filtering classes that have sufficient samples: ', include_koeppen)
             filter_classes = (c4gldata[key].frames['stats']['records_all_stations_ini'].KGCname.isin(include_koeppen))
@@ -387,10 +387,10 @@ if args.make_figures:
                 if koeppen.amount >= 200:
                     print(ikoeppen,':',koeppen)
                     kgc_select = (c4gldata[key].frames['stats']['records_all_stations_ini']['KGCname'] == koeppen['KGCID'])
-                    koeppen_mod = c4gldata[key].frames['stats']['records_all_stations_mod_stats']['d'+varkey+'dt'][kgc_select]
-                    koeppen_obs = c4gldata[key].frames['stats']['records_all_stations_obs_afternoon_stats']['d'+varkey+'dt'][kgc_select]
+                    koeppen_end_mod = c4gldata[key].frames['stats']['records_all_stations_end_mod_stats']['d'+varkey+'dt'][kgc_select]
+                    koeppen_obs = c4gldata[key].frames['stats']['records_all_stations_end_obs_stats']['d'+varkey+'dt'][kgc_select]
     
-                    #axes[varkey].scatter(koeppen_obs,koeppen_mod,marker=symbols[ikoeppen],color=colors[ikey])
+                    #axes[varkey].scatter(koeppen_obs,koeppen_end_mod,marker=symbols[ikoeppen],color=colors[ikey])
                              #  label=key+", "+\
                              #                    'R = '+str(round(PR[0],3))+', '+\
                              #                    'RMSE = '+str(round(RMSE,5))+', '+\
@@ -403,8 +403,8 @@ if args.make_figures:
                 # #                              'RMSE = '+str(round(RMSE,5))+', '+\
                 # #                              'BIAS = '+str(round(BIAS,5)),s=1.,color=colors[ikey])
                     
-                    dias[varkey].add_sample(koeppen_mod.std()/koeppen_obs.std(),
-                                   pearsonr(koeppen_mod,koeppen_obs)[0],
+                    dias[varkey].add_sample(koeppen_end_mod.std()/koeppen_obs.std(),
+                                   pearsonr(koeppen_end_mod,koeppen_obs)[0],
                                    marker='o',linewidth=0.5,
                                             mfc=koeppen.color,mec='black',#koeppen.color,
                                             zorder=300+icolor,
@@ -412,8 +412,8 @@ if args.make_figures:
                                    # annotate=koeppen.KGCID, color=koeppen.textcolor,weight='bold',fontsize=5.,\
                                    # bbox={'edgecolor':'black','boxstyle':'circle','fc':koeppen.color,'alpha':0.7}
                                    )
-                    dias[varkey].add_sample(koeppen_mod.std()/koeppen_obs.std(),
-                                   pearsonr(koeppen_mod,koeppen_obs)[0],
+                    dias[varkey].add_sample(koeppen_end_mod.std()/koeppen_obs.std(),
+                                   pearsonr(koeppen_end_mod,koeppen_obs)[0],
                                    marker='o',linewidth=0.5,
                                             mfc=koeppen.color,mec='black',#koeppen.color,
                                             zorder=301+icolor, ms=1
@@ -422,8 +422,8 @@ if args.make_figures:
                                    )
 
 
-                    # dias[varkey].add_sample(koeppen_mod.std()/koeppen_obs.std(),
-                    #                pearsonr(koeppen_mod,koeppen_obs)[0],
+                    # dias[varkey].add_sample(koeppen_end_mod.std()/koeppen_obs.std(),
+                    #                pearsonr(koeppen_end_mod,koeppen_obs)[0],
                     #                         marker='o',linewidth=0.5, mfc='none',mec=str(koeppen.color),
                     #                         zorder=600+icolor,
                     #                ms=10.*np.sqrt(koeppen.amount)/np.mean(np.sqrt(np.array(koeppenlookuptable.amount.values,dtype=np.float)))
@@ -526,11 +526,11 @@ if args.make_figures:
         # cc = c4gldata[key].frames['stats']['records_all_stations_ini']['cc']
         # clearsky = (cc < 0.05)
     
-        # mod = c4gldata[key].frames['stats']['records_all_stations_mod_stats'].loc[clearsky]['d'+varkey+'dt']
-        # obs = c4gldata[key].frames['stats']['records_all_stations_obs_afternoon_stats'].loc[clearsky]['d'+varkey+'dt']
+        # mod = c4gldata[key].frames['stats']['records_all_stations_end_mod_stats'].loc[clearsky]['d'+varkey+'dt']
+        # obs = c4gldata[key].frames['stats']['records_all_stations_end_obs_stats'].loc[clearsky]['d'+varkey+'dt']
     
-        mod = c4gldata[key].frames['stats']['records_all_stations_mod_stats']['d'+varkey+'dt']
-        obs = c4gldata[key].frames['stats']['records_all_stations_obs_afternoon_stats']['d'+varkey+'dt']
+        mod = c4gldata[key].frames['stats']['records_all_stations_end_mod_stats']['d'+varkey+'dt']
+        obs = c4gldata[key].frames['stats']['records_all_stations_end_obs_stats']['d'+varkey+'dt']
         print ('filtering classes that have sufficient samples: ', include_koeppen)
         filter_classess = (c4gldata[key].frames['stats']['records_all_stations_ini'].KGCname.isin(include_koeppen))
         mod = mod.loc[filter_classes]
@@ -748,7 +748,7 @@ if args.make_figures:
         key = list(args.experiments.strip().split(' '))[ikey]
         data_all = pd.DataFrame()
 
-        tempdatamodstats = pd.DataFrame(c4gldata[key].frames['stats']['records_all_stations_obs_afternoon_stats'].copy())
+        tempdatamodstats = pd.DataFrame(c4gldata[key].frames['stats']['records_all_stations_end_obs_stats'].copy())
         
 
         tempdatamodstats["source"] = "soundings"
@@ -780,7 +780,7 @@ if args.make_figures:
         for ikey,key in enumerate(list(args.experiments.strip().split(' '))):
             keylabel = keylabels[ikey]
 
-            tempdatamodstats = pd.DataFrame(c4gldata[key].frames['stats']['records_all_stations_mod_stats'].copy())
+            tempdatamodstats = pd.DataFrame(c4gldata[key].frames['stats']['records_all_stations_end_mod_stats'].copy())
             tempdataini_this= pd.DataFrame(c4gldata[key].frames['stats']['records_all_stations_ini'].copy())
 
             tempdatamodstats['dates']= tempdataini_this.ldatetime.dt.date

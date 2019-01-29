@@ -59,6 +59,8 @@ class records_iterator(object):
         self.ix = (self.ix+jump) 
         if self.ix >= len(self.records.index):
             raise StopIteration
+        if self.ix < 0:
+            raise StopIteration
 
         return self.records.index[self.ix], self.records.iloc[self.ix]
     def __prev__(self):

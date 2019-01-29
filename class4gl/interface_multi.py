@@ -254,23 +254,23 @@ class c4gl_interface_soundings(object):
                 print('exclude exceptional observations')
                 print('exclude unrealistic model output -> should be investigated!')
                 valid = (\
-                         (self.frames['stats']['records_all_stations_end_obs_stats'].dthetadt >  0.250) & 
+                      #   (self.frames['stats']['records_all_stations_end_obs_stats'].dthetadt >  0.250) & 
                          #(self.frames['stats']['records_all_stations_end_mod_stats'].dthetadt >  0.25000) & 
                          #(self.frames['stats']['records_all_stations_end_mod_stats'].dthetadt <  1.8000) & 
-                         (self.frames['stats']['records_all_stations_end_obs_stats'].dthetadt <  1.8000) & 
+                      #   (self.frames['stats']['records_all_stations_end_obs_stats'].dthetadt <  1.8000) & 
                          #(self.frames['stats']['records_all_stations_end_mod_stats'].dhdt >  50.0000) & 
                          (self.frames['stats']['records_all_stations_end_obs_stats'].dhdt >  40.0000) & 
                          #(self.frames['stats']['records_all_stations_end_mod_stats'].dhdt <  350.) & 
                          (self.frames['stats']['records_all_stations_end_obs_stats'].dhdt <  400.) & 
-                         (self.frames['stats']['records_all_stations_end_obs_stats'].dqdt >  -.00055) & 
+                      #   (self.frames['stats']['records_all_stations_end_obs_stats'].dqdt >  -.00055) & 
                          #(self.frames['stats']['records_all_stations_end_mod_stats'].dqdt >  -.00055) & 
-                         (self.frames['stats']['records_all_stations_end_obs_stats'].dqdt <  .0003) & 
+                     #    (self.frames['stats']['records_all_stations_end_obs_stats'].dqdt <  .0003) & 
 
-                         # filter 'extreme' model output -> should be investigated!
-                         (self.frames['stats']['records_all_stations_end_mod_stats'].dqdt <  .0006) & 
-                         (self.frames['stats']['records_all_stations_end_mod_stats'].dqdt >  -.0006) & 
-                         (self.frames['stats']['records_all_stations_end_mod_stats'].dthetadt >  .2) & 
-                         (self.frames['stats']['records_all_stations_end_mod_stats'].dthetadt <  2.) & 
+                     #     # filter 'extreme' model output -> should be investigated!
+                     #     (self.frames['stats']['records_all_stations_end_mod_stats'].dqdt <  .0006) & 
+                     #     (self.frames['stats']['records_all_stations_end_mod_stats'].dqdt >  -.0006) & 
+                     #     (self.frames['stats']['records_all_stations_end_mod_stats'].dthetadt >  .2) & 
+                     #     (self.frames['stats']['records_all_stations_end_mod_stats'].dthetadt <  2.) & 
                          # (self.frames['stats']['records_all_stations_end_mod_stats'].dqdt <  .0003) & 
                          # (self.frames['stats']['records_all_stations_ini'].KGC != 'Cwb') & 
                          # (self.frames['stats']['records_all_stations_ini'].KGC != 'Dfc') & 
@@ -331,8 +331,10 @@ class c4gl_interface_soundings(object):
             self.update_station()
 
 
+    def next_station_event(self,event=None,**kwargs):
+        self.next_station(**kwargs)
 
-    def next_station(self,event=None,jump=1):
+    def next_station(self,jump=1):
         with suppress(StopIteration):
             self.frames['worldmap']['STNID'],\
             self.frames['worldmap']['current_station'] \
@@ -347,8 +349,11 @@ class c4gl_interface_soundings(object):
 
         self.update_station()
 
-    def prev_station(self,event=None):
-        self.next_station(jump = -1,event=event)
+    def prev_station_event(self,event=None,**kwargs):
+        self.prev_station(**kwargs)
+
+    def prev_station(self):
+        self.next_station(jump = -1)
     def update_station(self):
         for key in ['STNID','current_station','stations_iterator']: 
             self.frames['stats'][key] = self.frames['worldmap'][key] 
@@ -416,7 +421,10 @@ class c4gl_interface_soundings(object):
 
         self.update_record()
 
-    def next_record(self,event=None,jump=1):
+    def next_record_event(self,event=None,**kwargs):
+        self.next_record(**kwargs)
+
+    def next_record(self,jump=1):
         
         old_chunk =  self.frames['profiles']['current_record_chunk']
 
@@ -465,8 +473,11 @@ class c4gl_interface_soundings(object):
 
         self.update_record()
 
+    def prev_record_event(self,event=None,**kwargs):
+        self,prev_record(**kwargs)
+
     def prev_record(self,event=None):
-        self.next_record(jump=-1,event=event)
+        self.next_record(jump=-1)
 
     def update_record(self):
         self.frames['profiles']['current_record_ini'] =  \
@@ -686,10 +697,10 @@ class c4gl_interface_soundings(object):
                                                      ])
             if button_type !='dataset':
                 btns[label] = Button(axes[label], 'Previous '+button_type)
-                btns[label].on_clicked(getattr(self, 'prev_'+button_type))
+                btns[label].on_clicked(getattr(self, 'prev_'+button_type+'_event'))
             else:
                 btns[label] = Button(axes[label], 'Previous input var')
-                btns[label].on_clicked(getattr(self, 'prev_'+button_type))
+                btns[label].on_clicked(getattr(self, 'prev_'+button_type+'_event'))
 
 
             label='bnext'+button_type
@@ -701,10 +712,10 @@ class c4gl_interface_soundings(object):
                                                      ])
             if button_type !='dataset':
                 btns[label] = Button(axes[label], 'Next '+button_type)
-                btns[label].on_clicked(getattr(self, 'next_'+button_type))
+                btns[label].on_clicked(getattr(self, 'next_'+button_type+'_event'))
             else:
                 btns[label] = Button(axes[label], 'Next input var')
-                btns[label].on_clicked(getattr(self, 'next_'+button_type))
+                btns[label].on_clicked(getattr(self, 'next_'+button_type+'_event'))
 
         
         # label = 'bprev_dataset'
@@ -907,6 +918,8 @@ class c4gl_interface_soundings(object):
             #else:
             #    self.frames['worldmap'].pop('DT')
 
+    def next_datetime_event(self,event=None,**kwargs):
+        self.next_datetime(**kwargs)
     def next_datetime(self,event=None):
         if 'time' in self.globaldata.datasets[self.frames['worldmap']['inputkey']].page.variables[self.frames['worldmap']['inputkey']].dims:
             # for now we don't go to different files, so we cannot go to
@@ -916,6 +929,8 @@ class c4gl_interface_soundings(object):
             if "fig" in self.__dict__.keys():
                 self.refresh_plot_interface(only='worldmap') 
 
+    def prev_datetime_event(self,event=None,**kwargs):
+        self.prev_datetime(**kwargs)
     def prev_datetime(self,event=None):
         if 'time' in self.globaldata.datasets[self.frames['worldmap']['inputkey']].page.variables[self.frames['worldmap']['inputkey']].dims:
             # for now we don't go to different files, so we cannot go to
@@ -994,6 +1009,8 @@ class c4gl_interface_soundings(object):
 
         print('seldata7')
 
+    def next_level_event(self,event=None,**kwargs):
+        self.next_level(self,**kwargs)
     def next_level(self,event=None,jump=1):
         if 'lev' not in list(self.globaldata.datasets[self.frames['worldmap']['inputkey']].page.dims.keys()):
             raise ValueError('lev dimension not in dataset'+self.frames['worldmap']['inputkey'])
@@ -1002,7 +1019,9 @@ class c4gl_interface_soundings(object):
         level =  ((level + jump - min(levels)) % (max(levels)-min(levels))) + min(levels)
         self.sel_level(level)
 
-    def prev_level(self,event=None):
+    def prev_level_event(self,event=None,**kwargs):
+        self.prev_level(self,**kwargs)
+    def prev_level(self):
         self.next_level(jump=-1)
 
         #self.frames['worldmap']['level'] = level: 
