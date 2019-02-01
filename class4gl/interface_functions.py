@@ -77,6 +77,8 @@ def get_record_yaml(yaml_file,index_start,index_end,mode='model_output'):
     #print('going to next observation',filename)
     yaml_file.seek(index_start)
 
+    print('index_start',index_start)
+    print('index_end',index_end)
     buf =  yaml_file.read(index_end- index_start).replace('inf','9e19').replace('nan','9e19').replace('---','')
 
     os.system('mkdir -p '+TEMPDIR)
@@ -241,13 +243,19 @@ class stations_iterator(object):
     def __init__(self,stations):
         self.stations = stations
         self.ix = -1 
+        print('self.ix',self.ix)
+        print(stations.table)
     def __iter__(self):
         return self
     def __next__(self,jump=1):
-        self.ix = (self.ix+jump) 
-        if ((self.ix >= len(self.stations.table.index)) or (self.ix < 0 )):
+        print('next jump',jump)
+        print('self.ix',self.ix)
+        if ((self.ix+jump >= len(self.stations.table.index)) or (self.ix+jump < 0 )):
             raise StopIteration
+        self.ix = (self.ix+jump) 
+        print('self.ix',self.ix)
         self.ix = np.mod(self.ix,len(self.stations.table)) 
+        print('self.ix',self.ix)
         return self.stations.table.index[self.ix], self.stations.table.iloc[self.ix]
     def set_row(self,row):
         self.ix = row

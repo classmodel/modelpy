@@ -1,4 +1,3 @@
-'''
 import numpy as np
 
 import pandas as pd
@@ -212,7 +211,6 @@ for i in range(15):
             #axes[varkey].set_title(latex['d'+varkey+'dt']+' '+units_final,fontsize=12.)                                     
 
 
-'''
 
 
 

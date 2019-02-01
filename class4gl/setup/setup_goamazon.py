@@ -70,11 +70,11 @@ DTS = [DTSTART+dt.timedelta(days=day) for day in range(0, int((DTEND-DTSTART).to
 HOUR_FILES = {}
 for iDT, DT in enumerate(DTS):
     morning_file = None
-    possible_files = glob.glob(path_soundings_in+'/maosondewnpnM1.b1.'+DT.strftime("%Y%m%d")+'.05??00.*.cdf')
+    possible_files = glob.glob(path_soundings_in+'/maosondewnpnM1.b1.'+DT.strftime("%Y%m%d")+'.05??00.*cdf')
     if len(possible_files)>0:
         morning_file= possible_files[0]
     afternoon_file = None
-    possible_files = glob.glob(path_soundings_in+'/maosondewnpnM1.b1.'+DT.strftime("%Y%m%d")+'.17??00.*.cdf')
+    possible_files = glob.glob(path_soundings_in+'/maosondewnpnM1.b1.'+DT.strftime("%Y%m%d")+'.17??00.*cdf')
     if len(possible_files)>0:
         afternoon_file= possible_files[0]
 
@@ -291,6 +291,7 @@ def humppa_parser(balloon_file,file_sounding,ldate,lhour,c4gli=None):
         # only select samples monotonically increasing with height
         air_ap_tail_orig = pd.DataFrame(air_ap_tail)
         air_ap_tail = pd.DataFrame()
+        print(air_ap_tail_orig)
         air_ap_tail = air_ap_tail.append(air_ap_tail_orig.iloc[0],ignore_index=True)
         for ibottom in range(1,len(air_ap_tail_orig)):
             if air_ap_tail_orig.iloc[ibottom].z > air_ap_tail.iloc[-1].z +10.:
@@ -343,7 +344,7 @@ def humppa_parser(balloon_file,file_sounding,ldate,lhour,c4gli=None):
         # this is the real longitude that will be used to extract ground data
         
         dpars['ldatetime'] = ldate+dt.timedelta(hours=lhour)
-        dpars['datetime'] =  dpars['ldatetime'] + dt.timedelta(hours=-4)
+        dpars['datetime'] =  dpars['ldatetime'] + dt.timedelta(hours=+4)
         dpars['doy'] = dpars['datetime'].timetuple().tm_yday
         
         dpars['SolarAltitude'] = \
@@ -415,7 +416,7 @@ def humppa_parser(balloon_file,file_sounding,ldate,lhour,c4gli=None):
         
         print('updating...')
         print(column)
-        c4gli.update(source='humppa',\
+        c4gli.update(source='goamazon',\
                     # pars=pars,
                     pars=dpars,\
                     air_balloon=air_balloon,\
@@ -445,28 +446,38 @@ def humppa_parser(balloon_file,file_sounding,ldate,lhour,c4gli=None):
         return c4gli
 
 
-path_soundings = '/kyukon/data/gent/gvo000/gvo00090/D2D/data/SOUNDINGS/IOPS/'
+# path_soundings = '/kyukon/data/gent/gvo000/gvo00090/D2D/data/SOUNDINGS/IOPS/'
+path_soundings = '/kyukon/data/gent/gvo000/gvo00090/D2D/data/SOUNDINGS/GOAMAZON2/'
 
-
-file_morning = open(path_soundings+format(current_station.name,'05d')+'_morning.yaml','w') 
+file_afternoon = open(path_soundings+format(current_station.name,'05d')+'_end.yaml','w') 
+file_morning = open(path_soundings+format(current_station.name,'05d')+'_ini.yaml','w') 
+ipair = 0
 for date,pair  in HOUR_FILES.items(): 
-    print(pair['morning'])
-    humpafn =pair['morning'][1]
-    print(humpafn)
-    balloon_file = xr.open_dataset(humpafn)
+    
+    humpafn = pair['afternoon'][1]
+    balloon_file_afternoon = xr.open_dataset(humpafn)
+    balloon_file_morning = xr.open_dataset(humpafn)
+    print(ipair)
+    if (\
+        (balloon_file_morning.pres.shape[0] > 10) and \
+        (balloon_file_afternoon.pres.shape[0] > 10)\
+        ):
 
-    c4gli_morning = humppa_parser(balloon_file,file_morning,date,pair['morning'][0])
-    print('c4gli_morning_ldatetime 0',c4gli_morning.pars.ldatetime)
+        c4gli_afternoon = humppa_parser(balloon_file_afternoon,file_afternoon,date,pair['afternoon'][0])
+        print('c4gli_afternoon_ldatetime 0',c4gli_afternoon.pars.ldatetime)
+        ipair += 1
+
+        print(pair['morning'])
+        humpafn =pair['morning'][1]
+        print(humpafn)
+
+        c4gli_morning = humppa_parser(balloon_file_morning,file_morning,date,pair['morning'][0])
+        print('c4gli_morning_ldatetime 0',c4gli_morning.pars.ldatetime)
+
+print(ipair)
+file_afternoon.close()
 file_morning.close()
 
-file_afternoon = open(path_soundings+format(current_station.name,'05d')+'_afternoon.yaml','w') 
-for date,pair  in HOUR_FILES.items(): 
-    humpafn = pair['afternoon'][1]
-    balloon_file = xr.open_dataset(humpafn)
-
-    c4gli_afternoon = humppa_parser(balloon_file,file_afternoon,date,pair['afternoon'][0])
-    print('c4gli_afternoon_ldatetime 0',c4gli_afternoon.pars.ldatetime)
-file_afternoon.close()
  
 
 # file_morning = open(path_soundings+format(current_station.name,'05d')+'_morning.yaml','w') 
@@ -492,17 +503,16 @@ file_afternoon.close()
 # 
 # file_model    = open(fnout_model+   format(current_station.name,'05d')+'.yaml','w') 
 
-
 records_morning = get_records(pd.DataFrame([current_station]),\
                                            path_soundings,\
-                                           subset='morning',
+                                           subset='ini',
                                            refetch_records=True,
                                            )
 print('records_morning_ldatetime',records_morning.ldatetime)
 
 records_afternoon = get_records(pd.DataFrame([current_station]),\
                                            path_soundings,\
-                                           subset='afternoon',
+                                           subset='end',
                                            refetch_records=True,
                                            )
 
@@ -512,62 +522,62 @@ records_afternoon = records_afternoon.loc[records_morning.ldatetime.dt.date]
 records_afternoon.index = records_morning.index
 path_exp = '/kyukon/data/gent/gvo000/gvo00090/D2D/data/C4GL/IOPS/'
 
-os.system('mkdir -p '+path_exp)
-file_morning = open(path_soundings+'/'+format(current_station.name,'05d')+'_morning.yaml')
-file_afternoon = open(path_soundings+'/'+format(current_station.name,'05d')+'_afternoon.yaml')
-file_ini = open(path_exp+'/'+format(current_station.name,'05d')+'_ini.yaml','w')
-file_mod = open(path_exp+'/'+format(current_station.name,'05d')+'_mod.yaml','w')
-
-for (STNID,chunk,index),record_morning in records_morning.iterrows():
-    record_afternoon = records_afternoon.loc[(STNID,chunk,index)]
-
-    c4gli_morning = get_record_yaml(file_morning, 
-                                    record_morning.index_start, 
-                                    record_morning.index_end,
-                                    mode='ini')
-    #print('c4gli_morning_ldatetime',c4gli_morning.pars.ldatetime)
-    
-    
-    c4gli_afternoon = get_record_yaml(file_afternoon, 
-                                      record_afternoon.index_start, 
-                                      record_afternoon.index_end,
-                                    mode='ini')
-
-    c4gli_morning.update(source='pairs',pars={'runtime' : \
-                        int((c4gli_afternoon.pars.datetime_daylight - 
-                             c4gli_morning.pars.datetime_daylight).total_seconds())})
-    c4gli_morning.update(source='manual',
-                         pars={'sw_ac' : [],'sw_ap': True,'sw_lit': False})
-    c4gli_morning.dump(file_ini)
-    
-    c4gl = class4gl(c4gli_morning)
-    c4gl.run()
-    
-    c4gl.dump(file_mod,\
-              include_input=False,\
-              timeseries_only=timeseries_only)
-file_ini.close()
-file_mod.close()
-file_morning.close()
-file_afternoon.close()
-
-records_ini = get_records(pd.DataFrame([current_station]),\
-                                           path_exp,\
-                                           subset='ini',
-                                           refetch_records=True,
-                                           )
-records_mod = get_records(pd.DataFrame([current_station]),\
-                                           path_exp,\
-                                           subset='mod',
-                                           refetch_records=True,
-                                           )
-
-records_mod.index = records_ini.index
-
-# align afternoon records with initial records, and set same index
-records_afternoon.index = records_afternoon.ldatetime.dt.date
-records_afternoon = records_afternoon.loc[records_ini.ldatetime.dt.date]
-records_afternoon.index = records_ini.index
+# os.system('mkdir -p '+path_exp)
+# file_morning = open(path_soundings+'/'+format(current_station.name,'05d')+'_ini.yaml')
+# file_afternoon = open(path_soundings+'/'+format(current_station.name,'05d')+'_end.yaml')
+# file_ini = open(path_exp+'/'+format(current_station.name,'05d')+'_ini.yaml','w')
+# file_mod = open(path_exp+'/'+format(current_station.name,'05d')+'_mod.yaml','w')
+# 
+# for (STNID,chunk,index),record_morning in records_morning.iterrows():
+#     record_afternoon = records_afternoon.loc[(STNID,chunk,index)]
+# 
+#     c4gli_morning = get_record_yaml(file_morning, 
+#                                     record_morning.index_start, 
+#                                     record_morning.index_end,
+#                                     mode='ini')
+#     #print('c4gli_morning_ldatetime',c4gli_morning.pars.ldatetime)
+#     
+#     
+#     c4gli_afternoon = get_record_yaml(file_afternoon, 
+#                                       record_afternoon.index_start, 
+#                                       record_afternoon.index_end,
+#                                     mode='ini')
+# 
+#     c4gli_morning.update(source='pairs',pars={'runtime' : \
+#                         int((c4gli_afternoon.pars.datetime_daylight - 
+#                              c4gli_morning.pars.datetime_daylight).total_seconds())})
+#     c4gli_morning.update(source='manual',
+#                          pars={'sw_ac' : [],'sw_ap': True,'sw_lit': False})
+#     c4gli_morning.dump(file_ini)
+#     
+#     c4gl = class4gl(c4gli_morning)
+#     c4gl.run()
+#     
+#     c4gl.dump(file_mod,\
+#               include_input=False,\
+#               timeseries_only=timeseries_only)
+# file_ini.close()
+# file_mod.close()
+# file_morning.close()
+# file_afternoon.close()
+# 
+# records_ini = get_records(pd.DataFrame([current_station]),\
+#                                            path_exp,\
+#                                            subset='ini',
+#                                            refetch_records=True,
+#                                            )
+# records_mod = get_records(pd.DataFrame([current_station]),\
+#                                            path_exp,\
+#                                            subset='mod',
+#                                            refetch_records=True,
+#                                            )
+# 
+# records_mod.index = records_ini.index
+# 
+# # align afternoon records with initial records, and set same index
+# records_afternoon.index = records_afternoon.ldatetime.dt.date
+# records_afternoon = records_afternoon.loc[records_ini.ldatetime.dt.date]
+# records_afternoon.index = records_ini.index
 
 
 """

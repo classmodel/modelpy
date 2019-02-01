@@ -399,10 +399,10 @@ class c4gl_interface_soundings(object):
             self.frames['profiles']['current_station_file_end_mod'].close()
         self.frames['profiles']['current_station_file_end_mod'] = \
             open(self.path_exp+'/'+format(STNID,"05d")+'_'+str(chunk)+'_end.yaml','r')
-        if 'current_station_file_end' in self.frames['profiles'].keys():
-            self.frames['profiles']['current_station_file_end'].close()
+        if 'current_station_file_end_obs' in self.frames['profiles'].keys():
+            self.frames['profiles']['current_station_file_end_obs'].close()
         if self.path_forcing is not None:
-            self.frames['profiles']['current_station_file_end'] = \
+            self.frames['profiles']['current_station_file_end_obs'] = \
                 open(self.path_forcing+'/'+format(STNID,"05d")+'_end.yaml','r')
 
         # for the profiles we make a distinct record iterator, so that the
@@ -466,9 +466,9 @@ class c4gl_interface_soundings(object):
                 open(self.path_exp+'/'+format(STNID,"05d")+'_'+str(chunk)+'_end.yaml','r')
 
             if self.path_forcing is not None:
-                if 'current_station_file_end' in self.frames['profiles'].keys():
-                    self.frames['profiles']['current_station_file_end'].close()
-                self.frames['profiles']['current_station_file_end'] = \
+                if 'current_station_file_end_obs' in self.frames['profiles'].keys():
+                    self.frames['profiles']['current_station_file_end_obs'].close()
+                self.frames['profiles']['current_station_file_end_obs'] = \
                     open(self.path_forcing+'/'+format(STNID,"05d")+'_end.yaml','r')
 
         self.update_record()
@@ -545,7 +545,7 @@ class c4gl_interface_soundings(object):
 
             self.frames['profiles']['record_yaml_end_obs'] = \
                get_record_yaml(
-                   self.frames['profiles']['current_station_file_end'], \
+                   self.frames['profiles']['current_station_file_end_obs'], \
                    record_end.index_start,
                    record_end.index_end,
                     mode='model_input')
@@ -940,10 +940,14 @@ class c4gl_interface_soundings(object):
             if "fig" in self.__dict__.keys():
                 self.refresh_plot_interface(only='worldmap') 
 
+    def next_dataset_event(self,event=None,**kwargs):
+        self.next_dataset(**kwargs)
     def next_dataset(self,event=None):
         ikey = self.frames['worldmap']['inputkeys'].index(self.frames['worldmap']['inputkey'])
         ikey = (ikey + 1) % len(self.frames['worldmap']['inputkeys'])
         self.sel_dataset(self.frames['worldmap']['inputkeys'][ikey])
+    def prev_dataset_event(self,event=None,**kwargs):
+        self.prev_dataset(**kwargs)
     def prev_dataset(self,event=None):
         ikey = self.frames['worldmap']['inputkeys'].index(self.frames['worldmap']['inputkey'])
         ikey = (ikey - 1) % len(self.frames['worldmap']['inputkeys'])
@@ -1798,9 +1802,9 @@ class c4gl_interface_soundings(object):
                     self.frames['profiles']['current_station_file_end_mod'] = \
                         open(self.path_exp+'/'+format(STNID,"05d")+'_'+str(chunk)+'_end.yaml','r')
                     if self.path_forcing is not None:
-                        if 'current_station_file_end' in self.frames['profiles'].keys():
-                            self.frames['profiles']['current_station_file_end'].close()
-                        self.frames['profiles']['current_station_file_end'] = \
+                        if 'current_station_file_end_obs' in self.frames['profiles'].keys():
+                            self.frames['profiles']['current_station_file_end_obs'].close()
+                        self.frames['profiles']['current_station_file_end_obs'] = \
                             open(self.path_forcing+'/'+format(STNID,"05d")+'_end.yaml','r')
 
                     # go to hovered record of current station
