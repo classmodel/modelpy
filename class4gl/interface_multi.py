@@ -474,7 +474,7 @@ class c4gl_interface_soundings(object):
         self.update_record()
 
     def prev_record_event(self,event=None,**kwargs):
-        self,prev_record(**kwargs)
+        self.prev_record(**kwargs)
 
     def prev_record(self,event=None):
         self.next_record(jump=-1)

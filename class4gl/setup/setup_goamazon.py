@@ -456,6 +456,7 @@ for date,pair  in HOUR_FILES.items():
     
     humpafn = pair['afternoon'][1]
     balloon_file_afternoon = xr.open_dataset(humpafn)
+    humpafn = pair['morning'][1]
     balloon_file_morning = xr.open_dataset(humpafn)
     print(ipair)
     if (\
@@ -467,9 +468,6 @@ for date,pair  in HOUR_FILES.items():
         print('c4gli_afternoon_ldatetime 0',c4gli_afternoon.pars.ldatetime)
         ipair += 1
 
-        print(pair['morning'])
-        humpafn =pair['morning'][1]
-        print(humpafn)
 
         c4gli_morning = humppa_parser(balloon_file_morning,file_morning,date,pair['morning'][0])
         print('c4gli_morning_ldatetime 0',c4gli_morning.pars.ldatetime)
