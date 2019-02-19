@@ -110,9 +110,11 @@ def execute(**kwargs):
     
     EXP_DEFS  =\
     {
-      'BASE_ITER':{'sw_ac' : ['adv',],'sw_ap': True,'sw_lit': False},
+      'BASE_ITER':{'sw_ac' : [],'sw_ap': True,'sw_lit': False},
+      'BASE_ITER_ADV':{'sw_ac' : ['adv',],'sw_ap': True,'sw_lit': False},
+      'BASE_ITER_W_ADV':{'sw_ac' : ['adv',"w"],'sw_ap': True,'sw_lit': False},
+      'BASE_ITER_W':{'sw_ac' : ["w"],'sw_ap': True,'sw_lit': False},
     
-      'NOADV_ITER':{'sw_ac' : [],'sw_ap': True,'sw_lit': False},
         
       'ERA_NOAC_ITER':    {'sw_ac' : [],'sw_ap': True,'sw_lit': False},
       'NOAC_ITER':    {'sw_ac' : [],'sw_ap': True,'sw_lit': False},
@@ -222,6 +224,11 @@ def execute(**kwargs):
                                   subset=args.subset_forcing,
                                   refetch_records=False,
                                   )
+    if len(records_morning) == 0:
+        raise IOError("No initialization records records found in "+\
+                      args.path_forcing+' (subset: '+args_subset_forcing+')')
+
+
     
     # note that if runtime is an integer number, we don't need to get the afternoon
     # profiles. 
@@ -232,6 +239,9 @@ def execute(**kwargs):
                                         subset='end',
                                         refetch_records=False,
                                         )
+        if len(records_afternoon) == 0:
+            raise IOError("No final state records found in "+\
+                          args.path_forcing+' (subset: '+args_subset_forcing+')')
         
         # print(records_morning.index)
         # print(records_afternoon.index)
@@ -348,7 +358,6 @@ def execute(**kwargs):
                         b = c4gli_morning.pars.wwilt
                         c = c4gli_morning.pars.wfc #max(c4gli_morning.pars.wfc,c4gli_morning.pars.wsat-0.01)
                         
-                        
                         try:
                             #fb = f(b)
                             c4gli_morning.pars.wg = b
@@ -374,7 +383,6 @@ def execute(**kwargs):
                             c4gli_morningc = c4gli_morning
                             i=0
                             
-    
                             if fc*fb > 0.:
                                 if abs(fb) < abs(fc):
                                     c4gl = c4glb
@@ -490,7 +498,8 @@ def execute(**kwargs):
                 file_ini.close()
                 file_mod.close()
                 file_morning.close()
-                file_afternoon.close()
+                if args.runtime == 'from_profile_pair':
+                    file_afternoon.close()
         
                 if onerun:
                     records_ini = get_records(pd.DataFrame([current_station]),\

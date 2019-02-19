@@ -175,8 +175,7 @@ else:
             # https://stackoverflow.com/questions/67631/how-to-import-a-module-given-the-full-path
             import importlib.util
             print(batch_args.exec)
-            spec = importlib.util.spec_from_file_location("module.name",
-                                                          batch_args.exec)
+            spec = importlib.util.spec_from_file_location("module.name", batch_args.exec)
             task_module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(task_module)
             print('hello')

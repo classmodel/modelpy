@@ -130,14 +130,31 @@ class model:
                     # correct pressure of levels according to surface pressure
                     # error (so that interpolation is done in a consistent way)
 
-                    p_e = self.input.Ps - self.input.sp
-                    for irow in self.input.air_ac.index[::-1]:
-                       self.input.air_ac.p.iloc[irow] =\
-                        self.input.air_ac.p.iloc[irow] + p_e
-                       p_e = p_e -\
-                       (self.input.air_ac.p.iloc[irow]+p_e)/\
-                        self.input.air_ac.p.iloc[irow] *\
-                        self.input.air_ac.delpdgrav.iloc[irow]*grav
+                    p_prev = self.input.sp
+                    p_corr_prev = self.input.Ps
+                    #p_corr_prev = self.input.Ps - self.input.sp
+                    air_ac_index = self.input.air_ac.index
+                    for irow,indexrow in list(enumerate(air_ac_index))[::-1]:
+                        p_corr =self.input.air_ac.p.iloc[indexrow]/p_prev*p_corr_prev
+                        p_prev = self.input.air_ac.p.iloc[indexrow]
+
+                        self.input.air_ac.p.iloc[indexrow] = p_corr
+                        p_corr_prev = p_corr
+                       
+                       # p_old = self.input.air_ac.p.iloc[indexrow]
+
+                       # p_new = self.input.air_ac.p.iloc[indexrow] + p_corr
+
+                       # p_corr_next = np.log(self.input.air_ac.p.iloc[air_ac_index[irow-1]]/\
+                       #                      self.input.air_ac.p.iloc[indexrow]*p_corr)
+                       # self.input.air_ac.p.iloc[irow]=p_new
+
+                       # self.input.air_ac.p.iloc[irow] =\
+                       #  self.input.air_ac.p.iloc[irow] + p_e
+                       # p_e = p_e -\
+                       # (self.input.air_ac.p.iloc[irow]+p_e)/\
+                       #  self.input.air_ac.p.iloc[irow] *\
+                       #  self.input.air_ac.delpdgrav.iloc[irow]*grav
 
 
 
@@ -268,6 +285,8 @@ class model:
 
         self.dtheta     = self.input.dtheta     # initial temperature jump at h [K]
         self.gammatheta = self.input.gammatheta # free atmosphere potential temperature lapse rate [K m-1]
+        self.gammatheta_lower_limit = \
+                self.input.gammatheta_lower_limit # free atmosphere potential temperature lapse rate lower limit to avoid crashes [K m-1]
         self.advtheta   = self.input.advtheta   # advection of heat [K s-1]
         self.beta       = self.input.beta       # entrainment ratio for virtual heat [-]
         self.wtheta     = self.input.wtheta     # surface kinematic heat flux [K m s-1]
@@ -454,6 +473,7 @@ class model:
                 self.air_ap = self.air_ap.assign(**{'gamma'+var : gammavar})
 
 
+                # gammatheta, gammaq, gammau, gammav are updated here.
                 self.__dict__['gamma'+var] = \
                     self.air_ap['gamma'+var][np.where(self.h >= \
                                                      self.air_ap.z)[0][-1]]
@@ -509,35 +529,54 @@ class model:
                                   found. We just take the bottom one.")
                     in_ml = self.air_ac.index == (len(self.air_ac) - 1)
 
-                for var in ['t','q','u','v']:
+                for var in ['theta','q','u','v']:
     
                    # calculation of the advection variables for the mixed layer
                    # we weight by the hydrostatic thickness of each layer and
                    # divide by the total thickness
-                   self.__dict__['adv'+var] = \
-                            ((self.air_ac['adv'+var+'_x'][in_ml] \
-                             + \
-                             self.air_ac['adv'+var+'_y'][in_ml])* \
-                            self.air_ac['delpdgrav'][in_ml]).sum()/ \
-                            self.air_ac['delpdgrav'][in_ml].sum()
+                   if var == 'theta':
+                       self.__dict__['adv'+var] = \
+                                ((self.air_ac['advt_x'][in_ml] \
+                                 + \
+                                 self.air_ac['advt_y'][in_ml])* \
+                                self.air_ac['delpdgrav'][in_ml]).sum()/ \
+                                self.air_ac['delpdgrav'][in_ml].sum()
+                   else:
+                       self.__dict__['adv'+var] = \
+                                ((self.air_ac['adv'+var+'_x'][in_ml] \
+                                 + \
+                                 self.air_ac['adv'+var+'_y'][in_ml])* \
+                                self.air_ac['delpdgrav'][in_ml]).sum()/ \
+                                self.air_ac['delpdgrav'][in_ml].sum()
 
                    # calculation of the advection variables for the profile above
                    # (lowest 3 values are not used by class)
                    self.air_ap = self.air_ap.assign(**{'adv'+var : 0.})
-                   self.air_ap['adv'+var] = \
-                           np.interp(self.air_ap.p,\
-                                     self.air_ac.p,\
-                                     self.air_ac['adv'+var+'_x']) \
-                           + \
-                           np.interp(self.air_ap.p, \
-                                       self.air_ac.p, \
-                                       self.air_ac['adv'+var+'_y'])
+
+                   if var == 'theta':
+                       self.air_ap['adv'+var] = \
+                               np.interp(self.air_ap.p,\
+                                         self.air_ac.p,\
+                                         self.air_ac['advt_x']) \
+                               + \
+                               np.interp(self.air_ap.p, \
+                                           self.air_ac.p, \
+                                           self.air_ac['advt_y'])
+                   else:
+                       self.air_ap['adv'+var] = \
+                               np.interp(self.air_ap.p,\
+                                         self.air_ac.p,\
+                                         self.air_ac['adv'+var+'_x']) \
+                               + \
+                               np.interp(self.air_ap.p, \
+                                           self.air_ac.p, \
+                                           self.air_ac['adv'+var+'_y'])
 
                 # as an approximation, we consider that advection of theta in the
                 # mixed layer is equal to advection of t. This is a sufficient
                 # approximation since theta and t are very similar at the surface
                 # pressure.
-                self.__dict__['advtheta'] = self.__dict__['advt']
+                # self.__dict__['advtheta'] = self.__dict__['advt']
 
 
             # # # STRANGE, THIS DOESN'T GIVE REALISTIC VALUES, IT NEEDS TO BE
@@ -559,16 +598,22 @@ class model:
             #                      self.air_ach['wrho']) 
             # self.ws   = self.air_ap.w.iloc[1]
 
+            if (self.sw_ac is not None) and \
+               (('w' in self.sw_ac) or ('adv' in self.sw_ac)):
+                self.air_ap = self.air_ap.assign(R = 0.)
+                self.air_ap['R'] = (self.Rd*(1.-self.air_ap.q) + \
+                                                     self.Rv*self.air_ap.q)
+                self.air_ap = self.air_ap.assign(rho = 0.)
+                self.air_ap['t'] = \
+                            self.air_ap.theta * \
+                            (self.air_ap.p/self.Ps)**(self.air_ap['R']/self.cp)
+                self.air_ap['rho'] = self.air_ap.p /self.air_ap.R/  self.air_ap.t
+
             if (self.sw_ac is not None) and ('w' in self.sw_ac):
                 self.air_ap = self.air_ap.assign(wp = 0.)
                 self.air_ap['wp'] = np.interp(self.air_ap.p, \
                                               self.air_ac.p, \
                                               self.air_ac['wp'])
-                self.air_ap = self.air_ap.assign(R = 0.)
-                self.air_ap['R'] = (self.Rd*(1.-self.air_ap.q) + \
-                                                     self.Rv*self.air_ap.q)
-                self.air_ap = self.air_ap.assign(rho = 0.)
-                self.air_ap['rho'] = self.air_ap.p /self.air_ap.R/  self.air_ap.t
                 
                 self.air_ap = self.air_ap.assign(w = 0.)
                 self.air_ap['w'] = -self.air_ap['wp'] /self.air_ap['rho']/self.g
@@ -625,6 +670,7 @@ class model:
         self.tstart     = self.input.tstart     # time of the day [-]
         self.cc         = self.input.cc         # cloud cover fraction [-]
         self.Swin       = None                  # incoming short wave radiation [W m-2]
+        self.Swin_cs    = None                  # incoming short wave radiation clearsky [W m-2]
         self.Swout      = None                  # outgoing short wave radiation [W m-2]
         self.Lwin       = None                  # incoming long wave radiation [W m-2]
         self.Lwout      = None                  # outgoing long wave radiation [W m-2]
@@ -1070,7 +1116,7 @@ class model:
 
         if (self.sw_ac is not None) and ('adv' in self.sw_ac):
 
-            for var in ['t','q','u','v']:
+            for var in ['theta','q','u','v']:
                 #if ((self.z_pro is not None) and (self.__dict__['adv'+var+'_pro'] is not None)):
 
             # take into account advection for the whole profile
@@ -1101,9 +1147,9 @@ class model:
                                                  self.Rv*self.air_ap.q)
 
             # air_aptheta_old = pd.Series(self.air_ap['theta'])
-            self.air_ap['theta'] = \
-                        self.air_ap.t * \
-                        (self.Ps/self.air_ap.p)**(self.air_ap['R']/self.cp)
+            self.air_ap['t'] = \
+                        self.air_ap.theta * \
+                        (self.air_ap.p/self.Ps)**(self.air_ap['R']/self.cp)
         if (self.sw_ac is not None) and ('w' in self.sw_ac):
             zidx_first = np.where(self.air_ap.z > self.h)[0][0]
             self.air_ap.z[zidx_first:] = self.air_ap.z[zidx_first:] + \
@@ -1198,14 +1244,14 @@ class model:
             # quantities of moisture and temperature. The limit is set by trial
             # and error. The numerics behind the crash should be investigated
             # so that a cleaner solution can be provided.
-            gammatheta_lower_limit = 0.002
+            # self.gammatheta_lower_limit = 0.002
             while ((itop in range(0,1)) or (itop != ibottom)):
                 theta_mean = air_ap_tail_orig.theta.iloc[ibottom:(itop+1)].mean()
                 z_mean =     air_ap_tail_orig.z.iloc[ibottom:(itop+1)].mean()
                 if (
                     #(z_mean > (z_low+0.2)) and \
                     #(theta_mean > (theta_low+0.02) ) and \
-                    (((theta_mean - theta_low)/(z_mean - z_low)) > gammatheta_lower_limit)) or \
+                    (((theta_mean - theta_low)/(z_mean - z_low)) > self.gammatheta_lower_limit)) or \
                   (itop >= (len(air_ap_tail_orig)-1)) \
                    :
 
@@ -1264,29 +1310,48 @@ class model:
             if in_ml.sum() == 0:
                 warnings.warn(" no circulation points in the mixed layer found. We just take the bottom one.")
                 in_ml = self.air_ac.index == (len(self.air_ac) - 1)
-            for var in ['t','q','u','v']:
+            for var in ['theta','q','u','v']:
 
                 # calculation of the advection variables for the mixed-layer
                 # these will be used for the next timestep
                 # Warning: w is excluded for now.
 
-                self.__dict__['adv'+var] = \
-                        ((self.air_ac['adv'+var+'_x'][in_ml] \
-                         + \
-                         self.air_ac['adv'+var+'_y'][in_ml])* \
-                        self.air_ac['delpdgrav'][in_ml]).sum()/ \
-                        self.air_ac['delpdgrav'][in_ml].sum()
+                if var == 'theta':
+                    self.__dict__['adv'+var] = \
+                            ((self.air_ac['advt_x'][in_ml] \
+                             + \
+                             self.air_ac['advt_y'][in_ml])* \
+                            self.air_ac['delpdgrav'][in_ml]).sum()/ \
+                            self.air_ac['delpdgrav'][in_ml].sum()
+                else:
+                    self.__dict__['adv'+var] = \
+                            ((self.air_ac['adv'+var+'_x'][in_ml] \
+                             + \
+                             self.air_ac['adv'+var+'_y'][in_ml])* \
+                            self.air_ac['delpdgrav'][in_ml]).sum()/ \
+                            self.air_ac['delpdgrav'][in_ml].sum()
 
                 # calculation of the advection variables for the profile above
                 # the mixed layer (also for the next timestep)
-                self.air_ap['adv'+var] = \
-                                    np.interp(self.air_ap.p,\
-                                              self.air_ac.p,\
-                                              self.air_ac['adv'+var+'_x']) \
-                                    + \
-                                    np.interp(self.air_ap.p,\
-                                              self.air_ac.p, \
-                                              self.air_ac['adv'+var+'_y'])
+
+                if var == 'theta':
+                    self.air_ap['adv'+var] = \
+                                        np.interp(self.air_ap.p,\
+                                                  self.air_ac.p,\
+                                                  self.air_ac['advt_x']) \
+                                        + \
+                                        np.interp(self.air_ap.p,\
+                                                  self.air_ac.p, \
+                                                  self.air_ac['advt_y'])
+                else:
+                    self.air_ap['adv'+var] = \
+                                        np.interp(self.air_ap.p,\
+                                                  self.air_ac.p,\
+                                                  self.air_ac['adv'+var+'_x']) \
+                                        + \
+                                        np.interp(self.air_ap.p,\
+                                                  self.air_ac.p, \
+                                                  self.air_ac['adv'+var+'_y'])
                 # if var == 't':
                 #     print(self.air_ap['adv'+var])
                 #     stop
@@ -1296,7 +1361,7 @@ class model:
             # approximation since theta and t are very similar at the surface
             # pressure.
 
-            self.__dict__['advtheta'] = self.__dict__['advt']
+            # self.__dict__['advtheta'] = self.__dict__['advt']
 
         if (self.sw_ac is not None) and ('w' in self.sw_ac):
             # update the vertical wind profile
@@ -1364,6 +1429,7 @@ class model:
 
                 # Based on the above, update the gamma value at the mixed-layer
                 # top
+                # gammatheta, gammaq, gammau, gammav are updated here.
                 self.__dict__['gamma'+var] = self.air_ap['gamma'+var][np.where(self.h >=
                                                                      self.air_ap.z)[0][-1]]
 
@@ -1378,6 +1444,11 @@ class model:
         Tr  = (0.6 + 0.2 * sinlea) * (1. - 0.4 * self.cc)
   
         self.Swin  = self.S0 * Tr * sinlea
+        self.Swin_cs = self.S0 * (0.6 + 0.2 * sinlea)  * sinlea 
+
+        # Swin/Swin_cs = (1. - 0.4*self.cc)
+        # self.cc = (1.-Swin/Swin_cs)/0.4
+
         self.Swout = self.alpha * self.S0 * Tr * sinlea
         
         
@@ -1814,6 +1885,7 @@ class model:
         self.out.Rib[t]        = self.Rib
   
         self.out.Swin[t]       = self.Swin
+        self.out.Swin_cs[t]       = self.Swin_cs
         self.out.Swout[t]      = self.Swout
         self.out.Lwin[t]       = self.Lwin
         self.out.Lwout[t]      = self.Lwout
@@ -1829,6 +1901,12 @@ class model:
         self.out.LEpot[t]      = self.LEpot
         self.out.LEref[t]      = self.LEref
         self.out.G[t]          = self.G
+
+        self.out.ws[t]         = self.ws
+        self.out.advtheta[t]   = self.advtheta
+        self.out.advu[t]       = self.advu
+        self.out.advv[t]       = self.advv
+        self.out.advq[t]       = self.advq
 
         self.out.zlcl[t]       = self.lcl
         self.out.RH_h[t]       = self.RH_h
@@ -1934,6 +2012,7 @@ class model:
         del(self.tstart)
    
         del(self.Swin)
+        del(self.Swin_cs)
         del(self.Swout)
         del(self.Lwin)
         del(self.Lwout)
@@ -2068,6 +2147,7 @@ class model_output:
 
         # radiation variables
         self.Swin       = np.zeros(tsteps)    # incoming short wave radiation [W m-2]
+        self.Swin_cs    = np.zeros(tsteps)    # incoming short wave radiation clearsky [W m-2]
         self.Swout      = np.zeros(tsteps)    # outgoing short wave radiation [W m-2]
         self.Lwin       = np.zeros(tsteps)    # incoming long wave radiation [W m-2]
         self.Lwout      = np.zeros(tsteps)    # outgoing long wave radiation [W m-2]
@@ -2084,6 +2164,13 @@ class model_output:
         self.LEpot      = np.zeros(tsteps)    # potential evaporation [W m-2]
         self.LEref      = np.zeros(tsteps)    # reference evaporation at rs = rsmin / LAI [W m-2]
         self.G          = np.zeros(tsteps)    # ground heat flux [W m-2]
+
+        self.ws         = np.zeros(tsteps)
+        self.advtheta   = np.zeros(tsteps)
+        self.advu       = np.zeros(tsteps)
+        self.advv       = np.zeros(tsteps)
+        self.advq       = np.zeros(tsteps)
+
 
         # Mixed-layer top variables
         self.zlcl       = np.zeros(tsteps)    # lifting condensation level [m]

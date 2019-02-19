@@ -183,6 +183,7 @@ class class4gl_input(object):
         theta      = 288.   ,  # initial mixed-layer potential temperature [K]
         dtheta     = 1.     ,  # initial temperature jump at h [K]
         gammatheta = 0.006  ,  # free atmosphere potential temperature lapse rate [K m-1]
+        gammatheta_lower_limit = 0.002,
         advtheta   = 0.     ,  # advection of heat [K s-1]
         beta       = 0.2    ,  # entrainment ratio for virtual heat [-]
         wtheta     = 0.1    ,  # surface kinematic heat flux [K m s-1]
@@ -599,15 +600,29 @@ class class4gl_input(object):
         #is_valid = (air_balloon.z >= 0)
         # # this is an alternative pipe/numpy method
         # (~np.isnan(air_balloon).any(axis=1) & (air_balloon.z >= 0)).pipe(np.where)[0]
-        valid_indices = air_balloon.index[is_valid].values
+        valid_indices = air_balloon.index[is_valid]
         #print(valid_indices)
 
-        dpars['Ps'] = air_balloon.p.iloc[valid_indices[0]]
+        dpars['Ps'] = air_balloon.p.loc[[valid_indices[0]]][0]
 
         air_balloon['t'] = air_balloon['TEMP']+273.15
         air_balloon['theta'] = (air_balloon.t) * \
                    (dpars['Ps']/(air_balloon.PRES*100.))**(air_balloon['R']/cp)
         air_balloon['thetav']   = air_balloon['theta']*(1. + 0.61 * air_balloon['q'])
+
+
+
+        i = 1
+        t_cut_off = 2.0
+        if t_cut_off is not None:
+            
+            while (air_balloon.thetav.loc[[valid_indices[0]]][0] - \
+                   air_balloon.thetav.loc[valid_indices[i:i+1]][0] ) > t_cut_off:
+                #diff = (air_balloon.theta.iloc[valid_indices[i]] -air_balloon.theta.iloc[valid_indices[i+1]])- 0.5
+                air_balloon.thetav.loc[valid_indices[0:i]] = \
+                        air_balloon.thetav.loc[valid_indices[i:i+1]][0] + t_cutoff
+                
+                i +=1
 
         if len(valid_indices) > 0:
             #calculated mixed-layer height considering the critical Richardson number of the virtual temperature profile
@@ -635,13 +650,13 @@ class class4gl_input(object):
             # determine mixed-layer properties (moisture, potential temperature...) from profile
             
             # ... and those of the mixed layer
-            is_valid_below_h = is_valid & (air_balloon.z < dpars['h'])
-            valid_indices_below_h =  air_balloon.index[is_valid_below_h].values
+            is_valid_below_h = (air_balloon.loc[valid_indices].z < dpars['h'])
+            valid_indices_below_h =  air_balloon.loc[valid_indices].index[is_valid_below_h].values
             if len(valid_indices) > 1:
                 if len(valid_indices_below_h) >= 3.:
-                    ml_mean = air_balloon[is_valid_below_h].mean()
+                    ml_mean = air_balloon.loc[valid_indices][is_valid_below_h].mean()
                 else:
-                    ml_mean = air_balloon.iloc[valid_indices[0]:valid_indices[1]].mean()
+                    ml_mean = air_balloon.loc[valid_indices[0:2]].mean()
             elif len(valid_indices) == 1:
                 ml_mean = (air_balloon.iloc[0:1]).mean()
             else:

@@ -62,38 +62,31 @@ columns =\
  'Range[m]',
 ]
 
-#DTSTART = dt.datetime(2014,1,1,0,0,0,0,pytz.UTC)
-#DTEND = dt.datetime(2015,5,16,0,0,0,0,pytz.UTC)
-#DTS = [DTSTART+dt.timedelta(days=day) for day in range(0, int((DTEND-DTSTART).total_seconds()/3600./24.))]
-
-DTS = [dt.datetime(2014,11,15,0,0,0,0,pytz.UTC), 
-       dt.datetime(2014,12,29,0,0,0,0,pytz.UTC),
-       dt.datetime(2015,1,5,0,0,0,0,pytz.UTC),
-       dt.datetime(2015,5,7,0,0,0,0,pytz.UTC)
-      ]
+DTSTART = dt.datetime(2014,9,1,0,0,0,0,pytz.UTC)
+DTEND = dt.datetime(2014,10,1,0,0,0,0,pytz.UTC)
 
 
-
-
-
+DTS = [DTSTART+dt.timedelta(days=day) for day in range(0, int((DTEND-DTSTART).total_seconds()/3600./24.))]
 HOUR_FILES = {}
 for iDT, DT in enumerate(DTS):
     morning_file = None
-    possible_files = glob.glob(path_soundings_in+'/maosondewnpnM1.b1.'+DT.strftime("%Y%m%d")+'.05??00.*.cdf')
-    if len(possible_files)>0:
-        morning_file= possible_files[0]
-    afternoon_file = None
-    possible_files = glob.glob(path_soundings_in+'/maosondewnpnM1.b1.'+DT.strftime("%Y%m%d")+'.12??00.*.cdf')+\
-                     glob.glob(path_soundings_in+'/maosondewnpnM1.b1.'+DT.strftime("%Y%m%d")+'.11??00.*.cdf')+\
-                     glob.glob(path_soundings_in+'/maosondewnpnM1.b1.'+DT.strftime("%Y%m%d")+'.10??00.*.cdf')
-    if len(possible_files)>0:
-        afternoon_file= possible_files[-1]
-        hour_afternoon = int(afternoon_file[-17:-15])+float(afternoon_file[-15:-13])/60.
-    if (morning_file is not None) and (afternoon_file is not None):
-        HOUR_FILES[DT] = {'morning':[5.5,morning_file],
-                          'afternoon':[hour_afternoon,afternoon_file]}
+    possible_files_morning =\
+    glob.glob(path_soundings_in+'/maosondewnpnM1.b1.'+DT.strftime("%Y%m%d")+'.23??00.*cdf')
+    if len(possible_files_morning)>0:
+        ix = 0
+        while ((ix < (len(possible_files_morning))) and (morning_file is None)):
+            # print (xr.open_dataset(possible_files_morning[ix]).pres.shape)
+            # print(xr.open_dataset(possible_files_morning[ix]).pres.shape[0] >= 10)
+            if (xr.open_dataset(possible_files_morning[ix]).pres.shape[0] >= 500) :
+            # and\
+            #   (possible_files_morning[ix] != '/kyukon/data/gent/gvo000/gvo00090/EXT/data/SOUNDINGS/GOAMAZON/Radiosounding_ARM/maosondewnpnM1.b1.20150103.115200.custom.cdf'):
+                morning_file = possible_files_morning[ix]
+            ix +=1
 
-print(HOUR_FILES)
+
+    if (morning_file is not None):
+        HOUR_FILES[DT] = {'morning':  [int(morning_file.split('/')[-1].split('.')[3])/10000.,morning_file], }
+        print(HOUR_FILES[DT])
 
 # HOUR_FILES = \
 # {
@@ -127,8 +120,6 @@ def efrom_rh100_T(rh100,T):
 def qfrom_e_p(e,p):
     return epsilon * e/(p - (1.-epsilon)*e)
 
-
-
 def humppa_parser(balloon_file,file_sounding,ldate,lhour,c4gli=None):
         print(balloon_file)
         
@@ -157,38 +148,37 @@ def humppa_parser(balloon_file,file_sounding,ldate,lhour,c4gli=None):
         #                              header=None,
         #                              names = columns,
         #                              na_values='-----')
-    
-
         
-        rowmatches = {
+        print(air_balloon['p'][0])
+        varcalc = {
             'R' :    lambda x: (Rd*(1.-x.q) + Rv*x.q),
+            'pp': lambda x: (x['p'][0]/x['p'])**(x['R']/cp),
             'theta': lambda x: (x['t']) * (x['p'][0]/x['p'])**(x['R']/cp),
             'thetav': lambda x: x.theta  + 0.61 * x.theta * x.q,
             'rho': lambda x: x.p /x.t / x.R ,
         }
-        for varname,lfunction in rowmatches.items():
+        for varname,lfunction in varcalc.items():
             air_balloon[varname] = lfunction(air_balloon)
         
         print('alt in xrin?:','alt' in xrin)
         if 'alt' in xrin:
             air_balloon['z'] = xrin.alt.values
         else:
+            g          = 9.81                  # gravity acceleration [m s-2]
             air_balloon['z'] = 0.
             for irow,row in air_balloon.iloc[1:].iterrows():
                 air_balloon['z'].iloc[irow] = air_balloon['z'].iloc[irow-1] - \
-                        2./(air_balloon['rho'].iloc[irow-1]+air_balloon['rho'].iloc[irow]) * \
+                        2./(air_balloon['rho'].iloc[irow-1]+air_balloon['rho'].iloc[irow])/g * \
                         (air_balloon['p'].iloc[irow] - air_balloon['p'].iloc[irow-1])
-                        
              
-        for varname,lfunction in rowmatches.items():
-            air_balloon[varname] = lfunction(air_balloon)
+        # for varname,lfunction in varcakc.items():
+        #     air_balloon[varname] = lfunction(air_balloon)
         
         dpars = {}
         dpars['longitude']  = current_station['longitude']
         dpars['latitude']  = current_station['latitude'] 
         
         dpars['STNID'] = current_station.name
-        
 
         # # there are issues with the lower measurements in the HUMPPA campaign,
         # # for which a steady decrease of potential temperature is found, which
@@ -200,15 +190,29 @@ def humppa_parser(balloon_file,file_sounding,ldate,lhour,c4gli=None):
         # air_balloon = air_balloon.iloc[ifirst:].reset_index().drop(['index'],axis=1)
         air_balloon = air_balloon.iloc[:].reset_index().drop(['index'],axis=1)
         
+        # if air_balloon.z.max() > 100000.:
+        #     air_balloon.z = air_balloon.z/10.
+
         is_valid = ~np.isnan(air_balloon).any(axis=1) & (air_balloon.z >= 0)
         valid_indices = air_balloon.index[is_valid].values
         
         air_ap_mode='b'
+
+
+        while ((len(valid_indices) > 10) and
+               ((air_balloon.theta.iloc[valid_indices[0]] -
+                 air_balloon.theta.iloc[valid_indices[1]]) > 0.5)):
+            valid_indices = valid_indices[1:]
+
+        #theta_vs_first_inconsistent = True
+        # while theta_vs_first_inconsistent:
         
         if len(valid_indices) > 0:
-            print(air_balloon.z.shape,air_balloon.thetav.shape,)
+            air_balloon_temp = air_balloon.iloc[valid_indices]
+            print(air_balloon_temp)
+            print(air_balloon_temp.z.shape,air_balloon_temp.thetav.shape,)
             dpars['h'],dpars['h_u'],dpars['h_l'] =\
-                blh(air_balloon.z,air_balloon.thetav,air_balloon.WSPD)
+                blh(air_balloon_temp.z.values,air_balloon_temp.thetav.values,air_balloon_temp.WSPD.values)
             dpars['h_b'] = np.max((dpars['h'],10.))
             dpars['h_u'] = np.max((dpars['h_u'],10.)) #upper limit of mixed layer height
             dpars['h_l'] = np.max((dpars['h_l'],10.)) #low limit of mixed layer height
@@ -220,8 +224,6 @@ def humppa_parser(balloon_file,file_sounding,ldate,lhour,c4gli=None):
             dpars['h_e'] =np.nan
             dpars['h'] =np.nan
         
-        
-        
         if ~np.isnan(dpars['h']):
             dpars['Ps'] = air_balloon.p.iloc[valid_indices[0]]
         else:
@@ -232,11 +234,11 @@ def humppa_parser(balloon_file,file_sounding,ldate,lhour,c4gli=None):
             # determine mixed-layer properties (moisture, potential temperature...) from profile
             
             # ... and those of the mixed layer
-            is_valid_below_h = is_valid & (air_balloon.z < dpars['h'])
-            valid_indices_below_h =  air_balloon.index[is_valid_below_h].values
+            is_valid_below_h = (air_balloon.iloc[valid_indices].z < dpars['h'])
+            valid_indices_below_h =  air_balloon.iloc[valid_indices].index[is_valid_below_h].values
             if len(valid_indices) > 1:
                 if len(valid_indices_below_h) >= 3.:
-                    ml_mean = air_balloon[is_valid_below_h].mean()
+                    ml_mean = air_balloon.iloc[valid_indices][is_valid_below_h].mean()
                 else:
                     ml_mean = air_balloon.iloc[valid_indices[0]:valid_indices[1]].mean()
             elif len(valid_indices) == 1:
@@ -245,22 +247,28 @@ def humppa_parser(balloon_file,file_sounding,ldate,lhour,c4gli=None):
                 temp =  pd.DataFrame(air_balloon)
                 temp.iloc[0] = np.nan
                 ml_mean = temp
-                       
+
             dpars['theta']= ml_mean.theta
             dpars['q']    = ml_mean.q
             dpars['u']    = ml_mean.u
             dpars['v']    = ml_mean.v 
+            # theta_vs_first_inconsistent = \
+            #     ((air_balloon.theta.iloc[valid_indices[0]] - air_balloon.theta.iloc[valid_indices[1]]) > 0.2)
+            # theta_vs_first_inconsistent = \
+            #     ((air_balloon.theta.iloc[valid_indices[0]] - dpars['theta']) > 0.1)
+            # if theta_vs_first_inconsistent:
+            #     valid_indices = valid_indices[1:]
+            #     print("warning! too large difference between near surface value and abl value of theta. I'm taking the next one as near surface vlue")
         else:
             dpars['theta'] = np.nan
             dpars['q'] = np.nan
             dpars['u'] = np.nan
             dpars['v'] = np.nan
-        
+            # theta_bl_inconsistent = False
+
         air_ap_head = air_balloon[0:0] #pd.DataFrame(columns = air_balloon.columns)
         # All other  data points above the mixed-layer fit
         air_ap_tail = air_balloon[air_balloon.z > dpars['h']]
-
-
 
         air_ap_head.z = pd.Series(np.array([2.,dpars['h'],dpars['h']]))
         jump = air_ap_head.iloc[0] * np.nan
@@ -297,16 +305,14 @@ def humppa_parser(balloon_file,file_sounding,ldate,lhour,c4gli=None):
         
         air_ap_head.WSPD = np.sqrt(air_ap_head.u**2 +air_ap_head.v**2)
 
-
-
         # only select samples monotonically increasing with height
         air_ap_tail_orig = pd.DataFrame(air_ap_tail)
         air_ap_tail = pd.DataFrame()
+        print(air_ap_tail_orig)
         air_ap_tail = air_ap_tail.append(air_ap_tail_orig.iloc[0],ignore_index=True)
         for ibottom in range(1,len(air_ap_tail_orig)):
             if air_ap_tail_orig.iloc[ibottom].z > air_ap_tail.iloc[-1].z +10.:
                 air_ap_tail = air_ap_tail.append(air_ap_tail_orig.iloc[ibottom],ignore_index=True)
-
 
         # make theta increase strong enough to avoid numerical
         # instability
@@ -347,16 +353,20 @@ def humppa_parser(balloon_file,file_sounding,ldate,lhour,c4gli=None):
         air_ap['p'].iloc[1] =(dpars['Ps'] - rho * g * dpars['h'])
         air_ap['p'].iloc[2] =(dpars['Ps'] - rho * g * dpars['h'] -0.1)
         
-        
         dpars['lat'] = dpars['latitude']
         # this is set to zero because we use local (sun) time as input (as if we were in Greenwhich)
         dpars['lon'] = 0.
         # this is the real longitude that will be used to extract ground data
         
-        print('ldate',ldate)
-        print('lhour',lhour)
-        dpars['ldatetime'] = ldate+dt.timedelta(hours=lhour)
-        dpars['datetime'] =  dpars['ldatetime'] + dt.timedelta(hours=-4)
+        # dpars['ldatetime'] = ldate+dt.timedelta(hours=lhour)
+        # dpars['datetime'] =  dpars['ldatetime'] + dt.timedelta(hours=+4)
+
+        dpars['datetime'] =  ldate+dt.timedelta(hours=lhour)
+        dpars['ldatetime'] =  dpars['datetime'] + dt.timedelta(hours=-4)
+
+
+
+
         dpars['doy'] = dpars['datetime'].timetuple().tm_yday
         
         dpars['SolarAltitude'] = \
@@ -371,13 +381,12 @@ def humppa_parser(balloon_file,file_sounding,ldate,lhour,c4gli=None):
                                     dpars['datetime']\
                                 )
         
-        
         dpars['lSunrise'], dpars['lSunset'] \
         =  Pysolar.util.GetSunriseSunset(dpars['latitude'],
                                          0.,
                                          dpars['ldatetime'],0.)
         
-        # Warning!!! Unfortunately!!!! WORKAROUND!!!! Even though we actually write local solar time, we need to assign the timezone to UTC (which is WRONG!!!). Otherwise ruby cannot understand it (it always converts tolocal computer time :( ). 
+        # Warning!!! Unfortunatly!!!! WORKAROUND!!!! Even though we actually write local solar time, we need to assign the timezone to UTC (which is WRONG!!!). Otherwise ruby cannot understand it (it always converts tolocal computer time :( ). 
         dpars['lSunrise'] = pytz.utc.localize(dpars['lSunrise'])
         dpars['lSunset'] = pytz.utc.localize(dpars['lSunset'])
         
@@ -421,6 +430,9 @@ def humppa_parser(balloon_file,file_sounding,ldate,lhour,c4gli=None):
                     air_balloon[column] = air_balloon[column].round(decimal)
                     air_ap[column] = air_ap[column].round(decimal)
         
+
+
+        dpars['gammatheta_lower_limit'] = 0.0001
         updateglobal = False
         if c4gli is None:
             c4gli = class4gl_input()
@@ -428,7 +440,7 @@ def humppa_parser(balloon_file,file_sounding,ldate,lhour,c4gli=None):
         
         print('updating...')
         print(column)
-        c4gli.update(source='humppa',\
+        c4gli.update(source='goamazon',\
                     # pars=pars,
                     pars=dpars,\
                     air_balloon=air_balloon,\
@@ -439,7 +451,9 @@ def humppa_parser(balloon_file,file_sounding,ldate,lhour,c4gli=None):
         # if profile_ini:
         #     c4gli.runtime = 10 * 3600
 
-        c4gli.dump(file_sounding)
+        if not ((dpars['ldatetime'].hour <=12) or\
+           ((dpars['lSunset'].hour - dpars['ldatetime'].hour) >= (2.))):
+            c4gli = None
         
         # if profile_ini:
         #     c4gl = class4gl(c4gli)
@@ -458,29 +472,25 @@ def humppa_parser(balloon_file,file_sounding,ldate,lhour,c4gli=None):
         return c4gli
 
 
-path_soundings = '/kyukon/data/gent/gvo000/gvo00090/D2D/data/SOUNDINGS/IOPS_NOON/'
-
-
+# path_soundings = '/kyukon/data/gent/gvo000/gvo00090/D2D/data/SOUNDINGS/IOPS/'
+path_soundings = '/kyukon/data/gent/gvo000/gvo00090/D2D/data/SOUNDINGS/GOAMAZON_EVENING/'
 os.system('mkdir -p '+path_soundings)
-file_morning = open(path_soundings+format(current_station.name,'05d')+'_morning.yaml','w') 
-for date,pair  in HOUR_FILES.items(): 
-    print(pair['morning'])
-    humpafn =pair['morning'][1]
-    print(humpafn)
-    balloon_file = xr.open_dataset(humpafn)
 
-    c4gli_morning = humppa_parser(balloon_file,file_morning,date,pair['morning'][0])
-    print('c4gli_morning_ldatetime 0',c4gli_morning.pars.ldatetime)
+file_morning = open(path_soundings+format(current_station.name,'05d')+'_ini.yaml','w') 
+ipair = 0
+for date,pair  in HOUR_FILES.items(): 
+    
+    humpafn = pair['morning'][1]
+    balloon_file_morning = xr.open_dataset(humpafn)
+    if (balloon_file_morning.pres.shape[0] > 10):
+        c4gli_morning = humppa_parser(balloon_file_morning,file_morning,date,pair['morning'][0])
+        if (c4gli_morning is not None) :
+            c4gli_morning.dump(file_morning)
+        ipair += 1
+
+print(ipair)
 file_morning.close()
 
-file_afternoon = open(path_soundings+format(current_station.name,'05d')+'_afternoon.yaml','w') 
-for date,pair  in HOUR_FILES.items(): 
-    humpafn = pair['afternoon'][1]
-    balloon_file = xr.open_dataset(humpafn)
-
-    c4gli_afternoon = humppa_parser(balloon_file,file_afternoon,date,pair['afternoon'][0])
-    print('c4gli_afternoon_ldatetime 0',c4gli_afternoon.pars.ldatetime)
-file_afternoon.close()
  
 
 # file_morning = open(path_soundings+format(current_station.name,'05d')+'_morning.yaml','w') 
@@ -506,82 +516,70 @@ file_afternoon.close()
 # 
 # file_model    = open(fnout_model+   format(current_station.name,'05d')+'.yaml','w') 
 
-
 records_morning = get_records(pd.DataFrame([current_station]),\
                                            path_soundings,\
-                                           subset='morning',
-                                           refetch_records=True,
-                                           )
-print('records_morning_ldatetime',records_morning.ldatetime)
-
-records_afternoon = get_records(pd.DataFrame([current_station]),\
-                                           path_soundings,\
-                                           subset='afternoon',
-                                           refetch_records=True,
+                                           subset='ini',\
+                                           refetch_records=True,\
                                            )
 
 # align afternoon records with noon records, and set same index
-records_afternoon.index = records_afternoon.ldatetime.dt.date
-records_afternoon = records_afternoon.loc[records_morning.ldatetime.dt.date]
-records_afternoon.index = records_morning.index
-path_exp = '/kyukon/data/gent/gvo000/gvo00090/D2D/data/C4GL/IOPS_NOON/'
 
-os.system('mkdir -p '+path_exp)
-file_morning = open(path_soundings+'/'+format(current_station.name,'05d')+'_morning.yaml')
-file_afternoon = open(path_soundings+'/'+format(current_station.name,'05d')+'_afternoon.yaml')
-file_ini = open(path_exp+'/'+format(current_station.name,'05d')+'_ini.yaml','w')
-file_mod = open(path_exp+'/'+format(current_station.name,'05d')+'_mod.yaml','w')
-
-for (STNID,chunk,index),record_morning in records_morning.iterrows():
-    record_afternoon = records_afternoon.loc[(STNID,chunk,index)]
-
-    c4gli_morning = get_record_yaml(file_morning, 
-                                    record_morning.index_start, 
-                                    record_morning.index_end,
-                                    mode='ini')
-    #print('c4gli_morning_ldatetime',c4gli_morning.pars.ldatetime)
-    
-    
-    c4gli_afternoon = get_record_yaml(file_afternoon, 
-                                      record_afternoon.index_start, 
-                                      record_afternoon.index_end,
-                                    mode='ini')
-
-    c4gli_morning.update(source='pairs',pars={'runtime' : \
-                        int((c4gli_afternoon.pars.datetime_daylight - 
-                             c4gli_morning.pars.datetime_daylight).total_seconds())})
-    c4gli_morning.update(source='manual',
-                         pars={'sw_ac' : [],'sw_ap': True,'sw_lit': False})
-    c4gli_morning.dump(file_ini)
-    
-    c4gl = class4gl(c4gli_morning)
-    c4gl.run()
-    
-    c4gl.dump(file_mod,\
-              include_input=False,\
-              timeseries_only=timeseries_only)
-file_ini.close()
-file_mod.close()
-file_morning.close()
-file_afternoon.close()
-
-records_ini = get_records(pd.DataFrame([current_station]),\
-                                           path_exp,\
-                                           subset='ini',
-                                           refetch_records=True,
-                                           )
-records_mod = get_records(pd.DataFrame([current_station]),\
-                                           path_exp,\
-                                           subset='mod',
-                                           refetch_records=True,
-                                           )
-
-records_mod.index = records_ini.index
-
-# align afternoon records with initial records, and set same index
-records_afternoon.index = records_afternoon.ldatetime.dt.date
-records_afternoon = records_afternoon.loc[records_ini.ldatetime.dt.date]
-records_afternoon.index = records_ini.index
+# os.system('mkdir -p '+path_exp)
+# file_morning = open(path_soundings+'/'+format(current_station.name,'05d')+'_ini.yaml')
+# file_afternoon = open(path_soundings+'/'+format(current_station.name,'05d')+'_end.yaml')
+# file_ini = open(path_exp+'/'+format(current_station.name,'05d')+'_ini.yaml','w')
+# file_mod = open(path_exp+'/'+format(current_station.name,'05d')+'_mod.yaml','w')
+# 
+# for (STNID,chunk,index),record_morning in records_morning.iterrows():
+#     record_afternoon = records_afternoon.loc[(STNID,chunk,index)]
+# 
+#     c4gli_morning = get_record_yaml(file_morning, 
+#                                     record_morning.index_start, 
+#                                     record_morning.index_end,
+#                                     mode='ini')
+#     #print('c4gli_morning_ldatetime',c4gli_morning.pars.ldatetime)
+#     
+#     
+#     c4gli_afternoon = get_record_yaml(file_afternoon, 
+#                                       record_afternoon.index_start, 
+#                                       record_afternoon.index_end,
+#                                     mode='ini')
+# 
+#     c4gli_morning.update(source='pairs',pars={'runtime' : \
+#                         int((c4gli_afternoon.pars.datetime_daylight - 
+#                              c4gli_morning.pars.datetime_daylight).total_seconds())})
+#     c4gli_morning.update(source='manual',
+#                          pars={'sw_ac' : [],'sw_ap': True,'sw_lit': False})
+#     c4gli_morning.dump(file_ini)
+#     
+#     c4gl = class4gl(c4gli_morning)
+#     c4gl.run()
+#     
+#     c4gl.dump(file_mod,\
+#               include_input=False,\
+#               timeseries_only=timeseries_only)
+# file_ini.close()
+# file_mod.close()
+# file_morning.close()
+# file_afternoon.close()
+# 
+# records_ini = get_records(pd.DataFrame([current_station]),\
+#                                            path_exp,\
+#                                            subset='ini',
+#                                            refetch_records=True,
+#                                            )
+# records_mod = get_records(pd.DataFrame([current_station]),\
+#                                            path_exp,\
+#                                            subset='mod',
+#                                            refetch_records=True,
+#                                            )
+# 
+# records_mod.index = records_ini.index
+# 
+# # align afternoon records with initial records, and set same index
+# records_afternoon.index = records_afternoon.ldatetime.dt.date
+# records_afternoon = records_afternoon.loc[records_ini.ldatetime.dt.date]
+# records_afternoon.index = records_ini.index
 
 
 """

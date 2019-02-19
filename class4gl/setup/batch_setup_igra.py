@@ -26,7 +26,7 @@ import argparse
 parser = argparse.ArgumentParser()
 #parser.add_argument('--timestamp')
 parser.add_argument('--exec') # chunk simulation script
-parser.add_argument('--pbs_string',default=' -l walltime=30:0:0')
+parser.add_argument('--pbs_string',default=' -l walltime=50:0:0')
 parser.add_argument('--path_input')#,default='/user/data/gent/gvo000/gvo00090/D2D/data/SOUNDINGS/')
 parser.add_argument('--path_output')#,default='/user/data/gent/gvo000/gvo00090/D2D/data/C4GL/')
 # parser.add_argument('--first_YYYYMMDD',default="19810101")

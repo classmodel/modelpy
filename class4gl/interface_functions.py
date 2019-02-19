@@ -14,6 +14,7 @@ from class4gl import class4gl_input, data_global,class4gl,units
 from interface_functions import *
 #from data_soundings import wyoming
 import yaml
+from yaml import CLoader
 import glob
 import pandas as pd
 import json
@@ -81,29 +82,34 @@ def get_record_yaml(yaml_file,index_start,index_end,mode='model_output'):
     print('index_end',index_end)
     buf =  yaml_file.read(index_end- index_start).replace('inf','9e19').replace('nan','9e19').replace('---','')
 
-    os.system('mkdir -p '+TEMPDIR)
-    filebuffer = open(TEMPDIR+'/'+shortfn+'.buffer.yaml.'+str(index_start),'w')
-    filebuffer.write(buf)
-    filebuffer.close()
-    # print("HHHEEELOOOO",filename+'.buffer.yaml'+str(index_start))
-    
-    if which('ruby') is None:
-        raise RuntimeError ('ruby is not found. Aborting...')
-    command = 'ruby -rjson -ryaml -e "'+"puts YAML.load_file('"+TEMPDIR+'/'+shortfn+".buffer.yaml."+str(index_start)+"').to_json"+'" > '+TEMPDIR+'/'+shortfn+'.buffer.json.'+str(index_start)+' '
+    # # Ruby way -> fast
+    # os.system('mkdir -p '+TEMPDIR)
+    # filebuffer = open(TEMPDIR+'/'+shortfn+'.buffer.yaml.'+str(index_start),'w')
+    # filebuffer.write(buf)
+    # filebuffer.close()
+    # # print("HHHEEELOOOO",filename+'.buffer.yaml'+str(index_start))
+    # 
+    # if which('ruby') is None:
+    #     raise RuntimeError ('ruby is not found. Aborting...')
+    # command = 'ruby -rjson -ryaml -e "'+"puts YAML.load_file('"+TEMPDIR+'/'+shortfn+".buffer.yaml."+str(index_start)+"').to_json"+'" > '+TEMPDIR+'/'+shortfn+'.buffer.json.'+str(index_start)+' '
 
-    #command = '/apps/gent/CO7/sandybridge/software/Ruby/2.4.2-foss-2017b/bin/ruby -rjson -ryaml -e "'+"puts YAML.load(ARGF.read()).to_json"+'"'
-    print(command)
-    os.system(command)
-    jsonstream = open(TEMPDIR+'/'+shortfn+'.buffer.json.'+str(index_start))
-    record_dict = json.load(jsonstream)
-    jsonstream.close()
-    os.system('rm '+TEMPDIR+'/'+shortfn+'.buffer.yaml.'+str(index_start))
+    # #command = '/apps/gent/CO7/sandybridge/software/Ruby/2.4.2-foss-2017b/bin/ruby -rjson -ryaml -e "'+"puts YAML.load(ARGF.read()).to_json"+'"'
+    # print(command)
+    # os.system(command)
+    # jsonstream = open(TEMPDIR+'/'+shortfn+'.buffer.json.'+str(index_start))
+    # record_dict = json.load(jsonstream)
+    # jsonstream.close()
+    # os.system('rm '+TEMPDIR+'/'+shortfn+'.buffer.yaml.'+str(index_start))
+
+    record_dict = yaml.load(buf,Loader=CLoader)
 
 
     if mode =='model_output':
         modelout = class4gl()
         modelout.load_yaml_dict(record_dict)
-        os.system('rm '+TEMPDIR+'/'+shortfn+'.buffer.json.'+str(index_start))
+
+        # # needed in case of Ruby
+        # os.system('rm '+TEMPDIR+'/'+shortfn+'.buffer.json.'+str(index_start))
 
         return modelout
     elif mode == 'model_input':
@@ -112,11 +118,12 @@ def get_record_yaml(yaml_file,index_start,index_end,mode='model_output'):
         # datetimes are incorrectly converted to strings. We need to convert them
         # again to datetimes
         for key,value in record_dict['pars'].items():
+            # # needed in case of ruby
             # we don't want the key with columns that have none values
-            if value is not None: 
-                if key in ['lSunrise','lSunset','datetime','ldatetime','ldatetime_daylight','datetime_daylight',]:#(type(value) == str):
-               # elif (type(value) == str):
-                    record_dict['pars'][key] = dt.datetime.strptime(value,"%Y-%m-%d %H:%M:%S %z")
+            # if value is not None: 
+            #     if key in ['lSunrise','lSunset','datetime','ldatetime','ldatetime_daylight','datetime_daylight',]:#(type(value) == str):
+            #    # elif (type(value) == str):
+            #         record_dict['pars'][key] = dt.datetime.strptime(value,"%Y-%m-%d %H:%M:%S %z")
 
             if (value == 0.9e19) or (value == '.9e19'):
                 record_dict['pars'][key] = np.nan
@@ -127,12 +134,13 @@ def get_record_yaml(yaml_file,index_start,index_end,mode='model_output'):
                 for datakey,datavalue in record_dict[key].items():
                     record_dict[key][datakey] = [ np.nan if (x =='.9e19') else x for x in record_dict[key][datakey]]
 
-        #os.system('rm '+filename+'.buffer.json.'+str(index_start))
 
         c4gli = class4gl_input()
         #print(c4gli.logger,'hello')
         c4gli.load_yaml_dict(record_dict)
-        os.system('rm '+TEMPDIR+'/'+shortfn+'.buffer.json.'+str(index_start))
+
+        # # needed in case of ruby
+        # os.system('rm '+TEMPDIR+'/'+shortfn+'.buffer.json.'+str(index_start))
         return c4gli
 
 
@@ -222,7 +230,7 @@ class stations(object):
         stations_list = []
         for stations_list_file in stations_list_files:
             thisfile = open(stations_list_file,'r')
-            yamlgen = yaml.load_all(thisfile)
+            yamlgen = yaml.load_all(thisfile,Loader=CLoader)
             try:
                 first_record  = yamlgen.__next__()
             except:
@@ -477,14 +485,13 @@ def get_records(stations,path_yaml,getchunk='all',subset='morning',refetch_recor
                         print('pkl file does not exist. I generate "'+\
                               path_yaml+'/'+pklfilename+'" from "'+path_yaml+'/'+yamlfilename+'"...')
                         generate_pkl = True
+                    elif refetch_records:
+                        print('refetch_records flag is True. I regenerate "'+\
+                              path_yaml+'/'+pklfilename+'" from "'+path_yaml+'/'+yamlfilename+'"...')
+                        generate_pkl = True
                     elif not (os.path.getmtime(path_yaml+'/'+yamlfilename) <  \
                         os.path.getmtime(path_yaml+'/'+pklfilename)):
                         print('pkl file older than yaml file, so I regenerate "'+\
-                              path_yaml+'/'+pklfilename+'" from "'+path_yaml+'/'+yamlfilename+'"...')
-                        generate_pkl = True
-
-                    if refetch_records:
-                        print('refetch_records flag is True. I regenerate "'+\
                               path_yaml+'/'+pklfilename+'" from "'+path_yaml+'/'+yamlfilename+'"...')
                         generate_pkl = True
                     if not generate_pkl:
@@ -496,6 +503,7 @@ def get_records(stations,path_yaml,getchunk='all',subset='morning',refetch_recor
 
                             dictout = {}
 
+                            #initialization (go to file position just after "---")
                             next_record_found = False
                             end_of_file = False
                             while (not next_record_found) and (not end_of_file):
@@ -504,39 +512,54 @@ def get_records(stations,path_yaml,getchunk='all',subset='morning',refetch_recor
                                 end_of_file = (linebuffer == '')
                             next_tell = yaml_file.tell()
                             
+                            # loop over different yaml profile records
                             while not end_of_file:
 
                                 print(' next record:',next_tell)
                                 current_tell = next_tell
                                 next_record_found = False
                                 yaml_file.seek(current_tell)
-                                os.system('mkdir -p '+TEMPDIR)
-                                filebuffer = open(TEMPDIR+'/'+yamlfilename+'.buffer.yaml.'+str(current_tell),'w')
+
+                                # # needed for Ruby
+                                # os.system('mkdir -p '+TEMPDIR)
+                                # filebuffer = open(TEMPDIR+'/'+yamlfilename+'.buffer.yaml.'+str(current_tell),'w')
+
                                 linebuffer = ''
+                                stringbuffer = ''
                                 while ( (not next_record_found) and (not end_of_file)):
-                                    filebuffer.write(linebuffer.replace('inf','0').replace('nan','0'))
+                                    # # needed for Ruby
+                                    # filebuffer.write(linebuffer.replace('inf','0').replace('nan','0'))
+                                    stringbuffer += linebuffer 
                                     linebuffer = yaml_file.readline()
                                     next_record_found = (linebuffer == '---\n')
                                     end_of_file = (linebuffer == '')
-                                filebuffer.close()
+                                # # needed for Ruby
+                                # filebuffer.close()
                                 
                                 next_tell = yaml_file.tell()
                                 index_start = current_tell
                                 index_end = next_tell
 
-                                
-                                if which('ruby') is None:
-                                    raise RuntimeError ('ruby is not found. Aborting...')
-                                #if ((irecord >= start) and (np.mod(irecord - start,2) == 0.) :
-                                command = 'ruby -rjson -ryaml -e "'+"puts YAML.load_file('"+TEMPDIR+'/'+yamlfilename+".buffer.yaml."+str(current_tell)+"').to_json"+'" > '+TEMPDIR+'/'+yamlfilename+'.buffer.json.'+str(current_tell)+' ' 
-                                print(command)
-                                
-                                os.system(command)
-                                #jsonoutput = subprocess.check_output(command,shell=True) 
-                                #print(jsonoutput)
-                                #jsonstream = io.StringIO(jsonoutput)
-                                jsonstream = open(TEMPDIR+'/'+yamlfilename+'.buffer.json.'+str(current_tell))
-                                record = json.load(jsonstream)
+                                # start direct yaml way -> slow
+                                record = yaml.load(stringbuffer,Loader=CLoader)
+                                # end direct way
+
+                                # # # start json ruby way -> much faster 
+                                # if which('ruby') is None:
+                                #     raise RuntimeError ('ruby is not found. Aborting...')
+                                # #if ((irecord >= start) and (np.mod(irecord - start,2) == 0.) :
+                                # command = 'ruby -rjson -ryaml -e "'+"puts YAML.load_file('"+TEMPDIR+'/'+yamlfilename+".buffer.yaml."+str(current_tell)+"').to_json"+'" > '+TEMPDIR+'/'+yamlfilename+'.buffer.json.'+str(current_tell)+' ' 
+                                # print(command)
+                                # 
+                                # os.system(command)
+                                # #jsonoutput = subprocess.check_output(command,shell=True) 
+                                # #print(jsonoutput)
+                                # #jsonstream = io.StringIO(jsonoutput)
+                                # jsonstream = open(TEMPDIR+'/'+yamlfilename+'.buffer.json.'+str(current_tell))
+                                # record = json.load(jsonstream)
+                                # # end json ruby way
+
+
                                 dictouttemp = {}
                                 for key,value in record['pars'].items():
                                     # we don't want the key with columns that have none values
@@ -545,22 +568,25 @@ def get_records(stations,path_yaml,getchunk='all',subset='morning',refetch_recor
                                        if (type(value) in regular_numeric_types):
                                             dictouttemp[key] = value
                                        elif key in ['lSunrise','lSunset','datetime','ldatetime','datetime_daylight','datetime_daylight','ldatetime_daylight','ldatetime_daylight']:#(type(value) == str):
-                                           #print (key,value) # dictouttemp[key] = dt.datetime.strptime(value[:-6],"%Y-%m-%d %H:%M:%S")
-                                           dictouttemp[key] = dt.datetime.strptime(value,"%Y-%m-%d %H:%M:%S %z")
+                                           dictouttemp[key] = value
+                                           # # needed for Ruby
+                                           # dictouttemp[key] = dt.datetime.strptime(value,"%Y-%m-%d %H:%M:%S %z")
+
                                            # Workaround. Unfortunately, Ruby puts it in local time of the computer. Turn it back to UTC (note that UTC means actually local time)!!!
                                            dictouttemp[key] = dictouttemp[key].astimezone(pytz.UTC)
                                 recordindex = record['index']
                                 dictouttemp['chunk'] = chunk
                                 dictouttemp['index_start'] = index_start
                                 dictouttemp['index_end'] = index_end
-                                os.system('rm '+TEMPDIR+'/'+yamlfilename+'.buffer.json.'+str(current_tell))
+                                # os.system('rm '+TEMPDIR+'/'+yamlfilename+'.buffer.json.'+str(current_tell))
                                 for key,value in dictouttemp.items():
                                     if key not in dictout.keys():
                                         dictout[key] = {}
                                     dictout[key][(STNID,chunk,recordindex)] = dictouttemp[key]
                                 print(' obs record registered')
-                                jsonstream.close()
-                                os.system('rm '+TEMPDIR+'/'+yamlfilename+'.buffer.yaml.'+str(current_tell))
+                                # # needed for Ruby
+                                # jsonstream.close()
+                                #  os.system('rm '+TEMPDIR+'/'+yamlfilename+'.buffer.yaml.'+str(current_tell))
                             records_station_chunk = pd.DataFrame.from_dict(dictout)
                             records_station_chunk.index.set_names(('STNID','chunk','index'),inplace=True)
                             print('writing table file ('+path_yaml+'/'+pklfilename+') for station '\

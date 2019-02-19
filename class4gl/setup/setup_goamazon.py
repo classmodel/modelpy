@@ -23,7 +23,7 @@ cp         = 1005.                 # specific heat of dry air [J kg-1 K-1]
 Rv         = 461.5                 # gas constant for moist air [J kg-1 K-1]
 epsilon = Rd/Rv # or mv/md
 
-path_soundings_in = '/kyukon/data/gent/gvo000/gvo00090/EXT/data/SOUNDINGS/GOAMAZON/Radiosounding_ARM/'
+path_soundings_in = '/kyukon/data/gent/gvo000/gvo00090/EXT/data/SOUNDINGS/GOAMAZON/radio_all/'
 
 def replace_iter(iterable, search, replace):
     for value in iterable:
@@ -70,19 +70,50 @@ DTS = [DTSTART+dt.timedelta(days=day) for day in range(0, int((DTEND-DTSTART).to
 HOUR_FILES = {}
 for iDT, DT in enumerate(DTS):
     morning_file = None
-    possible_files = glob.glob(path_soundings_in+'/maosondewnpnM1.b1.'+DT.strftime("%Y%m%d")+'.05??00.*cdf')
-    if len(possible_files)>0:
-        morning_file= possible_files[0]
+    possible_files_morning =\
+    glob.glob(path_soundings_in+'/maosondewnpnM1.b1.'+DT.strftime("%Y%m%d")+'.11??00.*cdf')+\
+    glob.glob(path_soundings_in+'/maosondewnpnM1.b1.'+DT.strftime("%Y%m%d")+'.10??00.*cdf')+\
+    glob.glob(path_soundings_in+'/maosondewnpnM1.b1.'+DT.strftime("%Y%m%d")+'.09??00.*cdf')+\
+    glob.glob(path_soundings_in+'/maosondewnpnM1.b1.'+DT.strftime("%Y%m%d")+'.08??00.*cdf')+\
+    glob.glob(path_soundings_in+'/maosondewnpnM1.b1.'+DT.strftime("%Y%m%d")+'.12??00.*cdf')+\
+    glob.glob(path_soundings_in+'/maosondewnpnM1.b1.'+DT.strftime("%Y%m%d")+'.13??00.*cdf')+\
+    glob.glob(path_soundings_in+'/maosondewnpnM1.b1.'+DT.strftime("%Y%m%d")+'.14??00.*cdf')+\
+    glob.glob(path_soundings_in+'/maosondewnpnM1.b1.'+DT.strftime("%Y%m%d")+'.15??00.*cdf')
+    # glob.glob(path_soundings_in+'/maosondewnpnM1.b1.'+DT.strftime("%Y%m%d")+'.07??00.*cdf')+\
+    # glob.glob(path_soundings_in+'/maosondewnpnM1.b1.'+DT.strftime("%Y%m%d")+'.06??00.*cdf')+\
+    # glob.glob(path_soundings_in+'/maosondewnpnM1.b1.'+DT.strftime("%Y%m%d")+'.05??00.*cdf')+\
+    if len(possible_files_morning)>0:
+        ix = 0
+        while ((ix < (len(possible_files_morning))) and (morning_file is None)):
+            # print (xr.open_dataset(possible_files_morning[ix]).pres.shape)
+            # print(xr.open_dataset(possible_files_morning[ix]).pres.shape[0] >= 10)
+            if (xr.open_dataset(possible_files_morning[ix]).pres.shape[0] >= 500) and\
+                (possible_files_morning[ix].split('/')[-1] != 'maosondewnpnM1.b1.20150103.115200.custom.cdf') and \
+                (possible_files_morning[ix].split('/')[-1] != 'maosondewnpnM1.b1.20150103.115200.custom.cdf'):
+                morning_file = possible_files_morning[ix]
+            ix +=1
+
     afternoon_file = None
-    possible_files = glob.glob(path_soundings_in+'/maosondewnpnM1.b1.'+DT.strftime("%Y%m%d")+'.17??00.*cdf')
-    if len(possible_files)>0:
-        afternoon_file= possible_files[0]
+    possible_files_afternoon =\
+        glob.glob(path_soundings_in+'/maosondewnpnM1.b1.'+DT.strftime("%Y%m%d")+'.20??00.*cdf')+\
+        glob.glob(path_soundings_in+'/maosondewnpnM1.b1.'+DT.strftime("%Y%m%d")+'.19??00.*cdf')+\
+        glob.glob(path_soundings_in+'/maosondewnpnM1.b1.'+DT.strftime("%Y%m%d")+'.18??00.*cdf')+\
+        glob.glob(path_soundings_in+'/maosondewnpnM1.b1.'+DT.strftime("%Y%m%d")+'.17??00.*cdf')+\
+        glob.glob(path_soundings_in+'/maosondewnpnM1.b1.'+DT.strftime("%Y%m%d")+'.16??00.*cdf')
+    if len(possible_files_afternoon)>0:
+        ix = 0
+        while ((ix < (len(possible_files_afternoon))) and (afternoon_file is None)):
+            # print (xr.open_dataset(possible_files_afternoon[ix]).pres.shape)
+            # print(xr.open_dataset(possible_files_afternoon[ix]).pres.shape[0] >= 10)
+            if (xr.open_dataset(possible_files_afternoon[ix]).pres.shape[0] >= 300) and \
+               (possible_files_afternoon[ix].split('/')[-1] != '/kyukon/data/gent/gvo000/gvo00090/EXT/data/SOUNDINGS/GOAMAZON/Radiosounding_ARM/maosondewnpnM1.b1.20140823.143600.cdf'):
+                afternoon_file = possible_files_afternoon[ix]
+            ix +=1
 
     if (morning_file is not None) and (afternoon_file is not None):
-        HOUR_FILES[DT] = {'morning':[5.5,morning_file],
-                          'afternoon':[17.5,afternoon_file]}
-
-print(HOUR_FILES)
+        HOUR_FILES[DT] = {'morning':  [int(morning_file.split('/')[-1].split('.')[3])/10000.,morning_file],
+                          'afternoon':[ int(afternoon_file.split('/')[-1].split('.')[3])/10000. ,afternoon_file]}
+        print(HOUR_FILES[DT])
 
 # HOUR_FILES = \
 # {
@@ -162,12 +193,13 @@ def humppa_parser(balloon_file,file_sounding,ldate,lhour,c4gli=None):
         if 'alt' in xrin:
             air_balloon['z'] = xrin.alt.values
         else:
+            g          = 9.81                  # gravity acceleration [m s-2]
             air_balloon['z'] = 0.
             for irow,row in air_balloon.iloc[1:].iterrows():
                 air_balloon['z'].iloc[irow] = air_balloon['z'].iloc[irow-1] - \
-                        2./(air_balloon['rho'].iloc[irow-1]+air_balloon['rho'].iloc[irow]) * \
+                        2./(air_balloon['rho'].iloc[irow-1]+air_balloon['rho'].iloc[irow])/g * \
                         (air_balloon['p'].iloc[irow] - air_balloon['p'].iloc[irow-1])
-                        
+                    
              
         for varname,lfunction in rowmatches.items():
             air_balloon[varname] = lfunction(air_balloon)
@@ -189,15 +221,38 @@ def humppa_parser(balloon_file,file_sounding,ldate,lhour,c4gli=None):
         # air_balloon = air_balloon.iloc[ifirst:].reset_index().drop(['index'],axis=1)
         air_balloon = air_balloon.iloc[:].reset_index().drop(['index'],axis=1)
         
+        # if air_balloon.z.max() > 100000.:
+        #     air_balloon.z = air_balloon.z/10.
+
         is_valid = ~np.isnan(air_balloon).any(axis=1) & (air_balloon.z >= 0)
         valid_indices = air_balloon.index[is_valid].values
         
         air_ap_mode='b'
         
+        i = 1
+        while (air_balloon.thetav.iloc[valid_indices[0]] - \
+               air_balloon.thetav.iloc[valid_indices[i]] ) > 0.5:
+            #diff = (air_balloon.theta.iloc[valid_indices[i]] -air_balloon.theta.iloc[valid_indices[i+1]])- 0.5
+            air_balloon.thetav.iloc[valid_indices[0:i]] = \
+                air_balloon.thetav.iloc[valid_indices[i]] + 0.5 
+            
+            i +=1
+
+
+        # while ((len(valid_indices) > 10) and
+        #        ((air_balloon.theta.iloc[valid_indices[0]] -
+        #          air_balloon.theta.iloc[valid_indices[1]]) > 0.5)):
+        #     valid_indices = valid_indices[1:]
+
+        #theta_vs_first_inconsistent = True
+        # while theta_vs_first_inconsistent:
+        
         if len(valid_indices) > 0:
-            print(air_balloon.z.shape,air_balloon.thetav.shape,)
+            air_balloon_temp = air_balloon.iloc[valid_indices]
+            print(air_balloon_temp)
+            print(air_balloon_temp.z.shape,air_balloon_temp.thetav.shape,)
             dpars['h'],dpars['h_u'],dpars['h_l'] =\
-                blh(air_balloon.z,air_balloon.thetav,air_balloon.WSPD)
+                blh(air_balloon_temp.z.values,air_balloon_temp.thetav.values,air_balloon_temp.WSPD.values)
             dpars['h_b'] = np.max((dpars['h'],10.))
             dpars['h_u'] = np.max((dpars['h_u'],10.)) #upper limit of mixed layer height
             dpars['h_l'] = np.max((dpars['h_l'],10.)) #low limit of mixed layer height
@@ -221,11 +276,11 @@ def humppa_parser(balloon_file,file_sounding,ldate,lhour,c4gli=None):
             # determine mixed-layer properties (moisture, potential temperature...) from profile
             
             # ... and those of the mixed layer
-            is_valid_below_h = is_valid & (air_balloon.z < dpars['h'])
-            valid_indices_below_h =  air_balloon.index[is_valid_below_h].values
+            is_valid_below_h = (air_balloon.iloc[valid_indices].z < dpars['h'])
+            valid_indices_below_h =  air_balloon.iloc[valid_indices].index[is_valid_below_h].values
             if len(valid_indices) > 1:
                 if len(valid_indices_below_h) >= 3.:
-                    ml_mean = air_balloon[is_valid_below_h].mean()
+                    ml_mean = air_balloon.iloc[valid_indices][is_valid_below_h].mean()
                 else:
                     ml_mean = air_balloon.iloc[valid_indices[0]:valid_indices[1]].mean()
             elif len(valid_indices) == 1:
@@ -235,15 +290,26 @@ def humppa_parser(balloon_file,file_sounding,ldate,lhour,c4gli=None):
                 temp.iloc[0] = np.nan
                 ml_mean = temp
                        
+
+
             dpars['theta']= ml_mean.theta
             dpars['q']    = ml_mean.q
             dpars['u']    = ml_mean.u
             dpars['v']    = ml_mean.v 
+            # theta_vs_first_inconsistent = \
+            #     ((air_balloon.theta.iloc[valid_indices[0]] - air_balloon.theta.iloc[valid_indices[1]]) > 0.2)
+            # theta_vs_first_inconsistent = \
+            #     ((air_balloon.theta.iloc[valid_indices[0]] - dpars['theta']) > 0.1)
+            # if theta_vs_first_inconsistent:
+            #     valid_indices = valid_indices[1:]
+            #     print("warning! too large difference between near surface value and abl value of theta. I'm taking the next one as near surface vlue")
         else:
             dpars['theta'] = np.nan
             dpars['q'] = np.nan
             dpars['u'] = np.nan
             dpars['v'] = np.nan
+            # theta_bl_inconsistent = False
+
         
         air_ap_head = air_balloon[0:0] #pd.DataFrame(columns = air_balloon.columns)
         # All other  data points above the mixed-layer fit
@@ -343,8 +409,14 @@ def humppa_parser(balloon_file,file_sounding,ldate,lhour,c4gli=None):
         dpars['lon'] = 0.
         # this is the real longitude that will be used to extract ground data
         
-        dpars['ldatetime'] = ldate+dt.timedelta(hours=lhour)
-        dpars['datetime'] =  dpars['ldatetime'] + dt.timedelta(hours=+4)
+        # dpars['ldatetime'] = ldate+dt.timedelta(hours=lhour)
+        # dpars['datetime'] =  dpars['ldatetime'] + dt.timedelta(hours=+4)
+
+
+        dpars['datetime'] =  ldate+dt.timedelta(hours=lhour)
+        dpars['ldatetime'] =  dpars['datetime'] + dt.timedelta(hours=dpars['longitude']/360.*24.)
+
+
         dpars['doy'] = dpars['datetime'].timetuple().tm_yday
         
         dpars['SolarAltitude'] = \
@@ -409,6 +481,9 @@ def humppa_parser(balloon_file,file_sounding,ldate,lhour,c4gli=None):
                     air_balloon[column] = air_balloon[column].round(decimal)
                     air_ap[column] = air_ap[column].round(decimal)
         
+
+
+        dpars['gammatheta_lower_limit'] = 0.0001
         updateglobal = False
         if c4gli is None:
             c4gli = class4gl_input()
@@ -427,7 +502,9 @@ def humppa_parser(balloon_file,file_sounding,ldate,lhour,c4gli=None):
         # if profile_ini:
         #     c4gli.runtime = 10 * 3600
 
-        c4gli.dump(file_sounding)
+        # if not ((dpars['ldatetime'].hour <=12) or\
+        #    ((dpars['lSunset'].hour - dpars['ldatetime'].hour) >= (2.))):
+        #     c4gli = None
         
         # if profile_ini:
         #     c4gl = class4gl(c4gli)
@@ -447,30 +524,38 @@ def humppa_parser(balloon_file,file_sounding,ldate,lhour,c4gli=None):
 
 
 # path_soundings = '/kyukon/data/gent/gvo000/gvo00090/D2D/data/SOUNDINGS/IOPS/'
-path_soundings = '/kyukon/data/gent/gvo000/gvo00090/D2D/data/SOUNDINGS/GOAMAZON2/'
+path_soundings = '/kyukon/data/gent/gvo000/gvo00090/D2D/data/SOUNDINGS/GOAMAZON6/'
 
+if os.path.isdir(path_soundings):
+    print("Warning, I'm removing "+path_soundings+" in 10 seconds. Press ctrl-c to cancel")
+    os.system('rm '+path_soundings)
 file_afternoon = open(path_soundings+format(current_station.name,'05d')+'_end.yaml','w') 
 file_morning = open(path_soundings+format(current_station.name,'05d')+'_ini.yaml','w') 
 ipair = 0
 for date,pair  in HOUR_FILES.items(): 
     
+    print(date,ipair,pair)
     humpafn = pair['afternoon'][1]
     balloon_file_afternoon = xr.open_dataset(humpafn)
     humpafn = pair['morning'][1]
     balloon_file_morning = xr.open_dataset(humpafn)
-    print(ipair)
     if (\
         (balloon_file_morning.pres.shape[0] > 10) and \
         (balloon_file_afternoon.pres.shape[0] > 10)\
         ):
-
+        print('filename',pair['afternoon'][1],date,pair['afternoon'][0])
         c4gli_afternoon = humppa_parser(balloon_file_afternoon,file_afternoon,date,pair['afternoon'][0])
-        print('c4gli_afternoon_ldatetime 0',c4gli_afternoon.pars.ldatetime)
         ipair += 1
+        
 
-
+        print('filename',pair['morning'][1],date,pair['afternoon'][0])
         c4gli_morning = humppa_parser(balloon_file_morning,file_morning,date,pair['morning'][0])
-        print('c4gli_morning_ldatetime 0',c4gli_morning.pars.ldatetime)
+        if (c4gli_morning is not None) and (c4gli_afternoon is not None):
+            print('c4gli_morning_ldatetime 0',c4gli_morning.pars.ldatetime)
+            print('c4gli_afternoon_ldatetime 0',c4gli_afternoon.pars.ldatetime)
+            c4gli_morning.dump(file_morning)
+            c4gli_afternoon.dump(file_afternoon)
+
 
 print(ipair)
 file_afternoon.close()
@@ -503,15 +588,15 @@ file_morning.close()
 
 records_morning = get_records(pd.DataFrame([current_station]),\
                                            path_soundings,\
-                                           subset='ini',
-                                           refetch_records=True,
+                                           subset='ini',\
+                                           refetch_records=True,\
                                            )
 print('records_morning_ldatetime',records_morning.ldatetime)
 
 records_afternoon = get_records(pd.DataFrame([current_station]),\
                                            path_soundings,\
-                                           subset='end',
-                                           refetch_records=True,
+                                           subset='end',\
+                                           refetch_records=True,\
                                            )
 
 # align afternoon records with noon records, and set same index

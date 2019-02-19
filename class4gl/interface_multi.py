@@ -59,7 +59,7 @@ statsviewcmap = LinearSegmentedColormap('statsviewcmap', cdictpres)
 os.system('module load Ruby')
 
 class c4gl_interface_soundings(object):
-    def __init__(self,path_exp,path_forcing=None,globaldata=None,refetch_records=False,refetch_stations=True,inputkeys = ['cveg','wg','w2','cc','sp','wwilt','Tsoil','T2','z0m','alpha','LAI',],obs_filter=False,tendencies_revised=False):
+    def __init__(self,path_exp,path_forcing=None,globaldata=None,refetch_records=False,end_state=True,refetch_stations=True,inputkeys = ['cveg','wg','w2','cc','sp','wwilt','Tsoil','T2','z0m','alpha','LAI',],obs_filter=False,tendencies_revised=False):
         """ creates an interactive interface for analysing class4gl experiments
 
         INPUT:
@@ -83,6 +83,7 @@ class c4gl_interface_soundings(object):
         self.tendencies_revised = tendencies_revised
         self.path_exp = path_exp
         self.path_forcing = path_forcing
+        self.end_state = end_state
         self.exp_files = glob.glob(self.path_exp+'/?????.yaml')
 
         # # get the list of stations
@@ -122,7 +123,10 @@ class c4gl_interface_soundings(object):
                                            subset='ini',\
                                            refetch_records=refetch_records
                                            )
+        print(self.frames['stats']['records_all_stations_ini'])
         # get its records and load it into the stats frame
+
+
         self.frames['stats']['records_all_stations_end_mod'] =\
                         get_records(self.frames['stats']['stations'].table,\
                                            self.path_exp,\
@@ -138,9 +142,15 @@ class c4gl_interface_soundings(object):
                                                subset='end',\
                                                refetch_records=refetch_records
                                                )
+        if self.end_state:
+            if len(self.frames['stats']['records_all_stations_end_mod']) == 0:
+                raise IOError ('No end state records found. If you want to ignore end states, please use the option end_state = False')
+            self.frames['stats']['records_all_stations_end_mod'].index = \
+                self.frames['stats']['records_all_stations_ini'].index 
 
-        self.frames['stats']['records_all_stations_end_mod'].index = \
-            self.frames['stats']['records_all_stations_ini'].index 
+        else:
+                self.frames['stats']['records_all_stations_end_mod'] = \
+                self.frames['stats']['records_all_stations_ini']
 
         
         if len(self.frames['stats']['records_all_stations_ini']) ==0:
@@ -254,22 +264,21 @@ class c4gl_interface_soundings(object):
                 print('exclude exceptional observations')
                 print('exclude unrealistic model output -> should be investigated!')
                 valid = (\
-                      #   (self.frames['stats']['records_all_stations_end_obs_stats'].dthetadt >  0.250) & 
-                         #(self.frames['stats']['records_all_stations_end_mod_stats'].dthetadt >  0.25000) & 
-                         #(self.frames['stats']['records_all_stations_end_mod_stats'].dthetadt <  1.8000) & 
+                         #(self.frames['stats']['records_all_stations_end_obs_stats'].dthetadt >  0.00) & 
+                         (self.frames['stats']['records_all_stations_end_obs_stats'].dthetadt >  0.25000) & 
+                         (self.frames['stats']['records_all_stations_end_obs_stats'].dthetadt <  3.0000) & 
                       #   (self.frames['stats']['records_all_stations_end_obs_stats'].dthetadt <  1.8000) & 
                          #(self.frames['stats']['records_all_stations_end_mod_stats'].dhdt >  50.0000) & 
                          (self.frames['stats']['records_all_stations_end_obs_stats'].dhdt >  40.0000) & 
                          #(self.frames['stats']['records_all_stations_end_mod_stats'].dhdt <  350.) & 
                          (self.frames['stats']['records_all_stations_end_obs_stats'].dhdt <  400.) & 
-                      #   (self.frames['stats']['records_all_stations_end_obs_stats'].dqdt >  -.00055) & 
-                         #(self.frames['stats']['records_all_stations_end_mod_stats'].dqdt >  -.00055) & 
-                     #    (self.frames['stats']['records_all_stations_end_obs_stats'].dqdt <  .0003) & 
+                         (self.frames['stats']['records_all_stations_end_obs_stats'].dqdt >  -0.0006) & 
+                         (self.frames['stats']['records_all_stations_end_obs_stats'].dqdt <  0.0003) & 
 
                      #     # filter 'extreme' model output -> should be investigated!
-                     #     (self.frames['stats']['records_all_stations_end_mod_stats'].dqdt <  .0006) & 
-                     #     (self.frames['stats']['records_all_stations_end_mod_stats'].dqdt >  -.0006) & 
-                     #     (self.frames['stats']['records_all_stations_end_mod_stats'].dthetadt >  .2) & 
+                         (self.frames['stats']['records_all_stations_end_mod_stats'].dqdt <  .0006) & 
+                         (self.frames['stats']['records_all_stations_end_mod_stats'].dqdt >  -.0006) & 
+                          (self.frames['stats']['records_all_stations_end_mod_stats'].dthetadt >  .2) & 
                      #     (self.frames['stats']['records_all_stations_end_mod_stats'].dthetadt <  2.) & 
                          # (self.frames['stats']['records_all_stations_end_mod_stats'].dqdt <  .0003) & 
                          # (self.frames['stats']['records_all_stations_ini'].KGC != 'Cwb') & 
@@ -390,15 +399,28 @@ class c4gl_interface_soundings(object):
 
         STNID = self.frames['profiles']['STNID']
         chunk = self.frames['profiles']['current_record_chunk']
+        print(chunk)
         if 'current_station_file_ini' in self.frames['profiles'].keys():
             self.frames['profiles']['current_station_file_ini'].close()
+
+
+        fn_ini = format(STNID,"05d")+'_ini.yaml'
+        if not os.path.isfile(self.path_exp+'/'+fn_ini):
+            fn_ini = format(STNID,"05d")+'_'+str(chunk)+'_ini.yaml'
+
         self.frames['profiles']['current_station_file_ini'] = \
-            open(self.path_exp+'/'+format(STNID,"05d")+'_'+str(chunk)+'_ini.yaml','r')
+            open(self.path_exp+'/'+fn_ini,'r')
 
         if 'current_station_file_end_mod' in self.frames['profiles'].keys():
             self.frames['profiles']['current_station_file_end_mod'].close()
-        self.frames['profiles']['current_station_file_end_mod'] = \
-            open(self.path_exp+'/'+format(STNID,"05d")+'_'+str(chunk)+'_end.yaml','r')
+
+
+        if  self.end_state:
+            self.frames['profiles']['current_station_file_end_mod'] = \
+                    open(self.path_exp+'/'+format(STNID,"05d")+'_'+str(chunk)+'_end.yaml','r')
+        else:
+            self.frames['profiles']['current_station_file_end_mod'] = \
+                    open(self.path_exp+'/'+fn_ini,'r')
         if 'current_station_file_end_obs' in self.frames['profiles'].keys():
             self.frames['profiles']['current_station_file_end_obs'].close()
         if self.path_forcing is not None:
@@ -546,8 +568,8 @@ class c4gl_interface_soundings(object):
             self.frames['profiles']['record_yaml_end_obs'] = \
                get_record_yaml(
                    self.frames['profiles']['current_station_file_end_obs'], \
-                   record_end.index_start,
-                   record_end.index_end,
+                   int(record_end.index_start),
+                   int(record_end.index_end),
                     mode='model_input')
 
 

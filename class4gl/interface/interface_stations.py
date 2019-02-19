@@ -146,8 +146,6 @@ if bool(args.make_figures):
         #axes_taylor[varkey] = fig.add_subplot(2,3,i+3)                                       
     
         #print(obs.std())
-        obs = c4gldata[args.experiments.strip().split()[0]].frames['stats']['records_all_stations_end_obs_stats']['d'+varkey+'dt']
-        STD_OBS = obs.std()
         dias[varkey] =  TaylorDiagram(1., srange=[0.0,1.7],fig=fig, rect=(230+i+3),label='Reference')
         dias[varkey].add_grid(zorder=-100.)
         dias[varkey]._ax.axis["left"].label.set_text(\
@@ -155,6 +153,8 @@ if bool(args.make_figures):
         i += 1
     i = 1                                                                           
     for varkey in ['h','theta','q']:                                                    
+        obs = c4gldata[args.experiments.strip().split()[0]].frames['stats']['records_all_stations_end_obs_stats']['d'+varkey+'dt']
+        STD_OBS = obs.std()
         if i == 1:
             axes[varkey].annotate('Normalized standard deviation',\
                         xy= (0.05,0.36),
@@ -192,7 +192,16 @@ if bool(args.make_figures):
             RMSE = rmse(obs,mod)                                               
             BIAS = np.mean(mod) - np.mean(obs)
             STD = mod.std()
-            
+
+            # print(STD)
+            # print(PR)
+            print(varkey,STD,STD_OBS,STD/STD_OBS,PR)
+            dias[varkey].add_sample(STD/STD_OBS, PR,
+                           marker='o', ms=5, ls='',
+                           #mfc='k', mec='k', # B&W
+                           mfc=colors[ikey], mec=colors[ikey], # Colors
+                           label=key,zorder=101)
+                
             fit = np.polyfit(x,y,deg=1)
 
             if varkey == 'q':
@@ -261,13 +270,6 @@ if bool(args.make_figures):
 
 
             
-            # print(STD)
-            # print(PR)
-            dias[varkey].add_sample(STD/STD_OBS, PR,
-                           marker='o', ms=5, ls='',
-                           #mfc='k', mec='k', # B&W
-                           mfc=colors[ikey], mec=colors[ikey], # Colors
-                           label=key,zorder=100)
     
         # put ticker position, see
         # https://matplotlib.org/examples/ticks_and_spines/tick-locators.html 

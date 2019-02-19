@@ -124,8 +124,6 @@ for key in args.experiments.strip(' ').split(' '):
 
 sns.reset_orig()
 
-
-
 lookup_symbols= {
  'A':'equatorial',
  'B':'arid',
@@ -535,6 +533,7 @@ if args.make_figures:
         filter_classess = (c4gldata[key].frames['stats']['records_all_stations_ini'].KGCname.isin(include_koeppen))
         mod = mod.loc[filter_classes]
         obs = obs.loc[filter_classes]
+
     
         nbins=40       
         x, y = obs.values,mod.values
@@ -702,7 +701,7 @@ if args.make_figures:
     fig.show()  
 
     koeppenlookuptable = koeppenlookuptable.sort_index()
-    if bool(args.show_control_parameters):
+    if args.show_control_parameters == 'True':
 
 
         pkmn_type_colors = [
@@ -797,9 +796,7 @@ if args.make_figures:
             tempdataini = tempdataini.set_index(['source_index','STNID','dates'])
     
 
-            #print('hello2')
             index_intersect = tempdataini.index.intersection(tempdatamodstats.index)
-            #print('hello3')
 
             tempdataini = tempdataini.loc[index_intersect]
             #print('hello4')
@@ -905,6 +902,7 @@ if args.make_figures:
                                  #gridspec_kw=dict(height_ratios=(1, 3), 
                                  gridspec_kw=dict(hspace=0.20,wspace=0.08,top=0.94,bottom=0.06,left=0.15,right=0.99))
 
+        varkey = 'q'
         data_all['d'+varkey+'dt ['+units[varkey]+'/h]'] *= 1000.  
 
         icol = 0
