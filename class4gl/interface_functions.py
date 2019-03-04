@@ -588,11 +588,14 @@ def get_records(stations,path_yaml,getchunk='all',subset='morning',refetch_recor
                                 # jsonstream.close()
                                 #  os.system('rm '+TEMPDIR+'/'+yamlfilename+'.buffer.yaml.'+str(current_tell))
                             records_station_chunk = pd.DataFrame.from_dict(dictout)
-                            records_station_chunk.index.set_names(('STNID','chunk','index'),inplace=True)
-                            print('writing table file ('+path_yaml+'/'+pklfilename+') for station '\
-                                  +str(STNID)+', chunk number '+str(chunk))
-                            records_station_chunk.to_pickle(path_yaml+'/'+pklfilename)
-                            records_station = pd.concat([records_station,records_station_chunk])
+                            if len(records_station_chunk) > 0:
+                                records_station_chunk.index.set_names(('STNID','chunk','index'),inplace=True)
+                                print('writing table file ('+path_yaml+'/'+pklfilename+') for station '\
+                                      +str(STNID)+', chunk number '+str(chunk))
+                                records_station_chunk.to_pickle(path_yaml+'/'+pklfilename)
+                                records_station = pd.concat([records_station,records_station_chunk])
+                            else:
+                                print('Warning. No records found in ',yaml_file)
                         # else:
                         #     os.system('rm '+pklfilename)
                 if (getchunk == 'all') and (pklfilename_unified not in pklchunks):

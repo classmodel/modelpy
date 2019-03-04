@@ -285,7 +285,11 @@ class model:
 
         self.dtheta     = self.input.dtheta     # initial temperature jump at h [K]
         self.gammatheta = self.input.gammatheta # free atmosphere potential temperature lapse rate [K m-1]
-        self.gammatheta_lower_limit = \
+
+        if 'gammatheta_lower_limit' not in self.input.__dict__.keys():
+            self.gammatheta_lower_limit = 0.002
+        else:
+            self.gammatheta_lower_limit = \
                 self.input.gammatheta_lower_limit # free atmosphere potential temperature lapse rate lower limit to avoid crashes [K m-1]
         self.advtheta   = self.input.advtheta   # advection of heat [K s-1]
         self.beta       = self.input.beta       # entrainment ratio for virtual heat [-]
@@ -417,6 +421,10 @@ class model:
             # these variables/namings are more convenient to work with in the code
             # we will update the original variables afterwards
             #self.air_ap['q'] = self.air_ap.QABS/1000.
+
+            #work around for corrupt input
+            if 'level_0' in self.air_ap.columns:
+                self.air_ap = self.air_ap.drop(columns=['level_0'])
 
             self.air_ap = \
                     self.air_ap.assign(R= lambda x: self.Rd*(1.-x.q) + self.Rv*x.q)

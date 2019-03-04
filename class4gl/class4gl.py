@@ -601,30 +601,32 @@ class class4gl_input(object):
         # # this is an alternative pipe/numpy method
         # (~np.isnan(air_balloon).any(axis=1) & (air_balloon.z >= 0)).pipe(np.where)[0]
         valid_indices = air_balloon.index[is_valid]
+        air_balloon = air_balloon[is_valid].reset_index()
         #print(valid_indices)
 
-        dpars['Ps'] = air_balloon.p.loc[[valid_indices[0]]][0]
 
-        air_balloon['t'] = air_balloon['TEMP']+273.15
-        air_balloon['theta'] = (air_balloon.t) * \
-                   (dpars['Ps']/(air_balloon.PRES*100.))**(air_balloon['R']/cp)
-        air_balloon['thetav']   = air_balloon['theta']*(1. + 0.61 * air_balloon['q'])
+        if len(air_balloon) > 2:
+
+            dpars['Ps'] = air_balloon.p.values[0]
+            air_balloon['t'] = air_balloon['TEMP']+273.15
+            air_balloon['theta'] = (air_balloon.t) * \
+                       (dpars['Ps']/(air_balloon.PRES*100.))**(air_balloon['R']/cp)
+            air_balloon['thetav']   = air_balloon['theta']*(1. + 0.61 * air_balloon['q'])
+
+            # t_cut_off = 1.5
+            # i = 1
+            # if t_cut_off is not None:
+            #     
+            #     while ((i < len(air_balloon)) and \
+            #           ((air_balloon.thetav[0] - air_balloon.thetav[i] ) > t_cut_off)):
+            #         #diff = (air_balloon.theta.iloc[valid_indices[i]] -air_balloon.theta.iloc[valid_indices[i+1]])- 0.5
+            #         air_balloon.thetav[0:i] = \
+            #                 air_balloon.thetav[i] + t_cut_off
+            #         
+            #         i +=1
 
 
 
-        i = 1
-        t_cut_off = 2.0
-        if t_cut_off is not None:
-            
-            while (air_balloon.thetav.loc[[valid_indices[0]]][0] - \
-                   air_balloon.thetav.loc[valid_indices[i:i+1]][0] ) > t_cut_off:
-                #diff = (air_balloon.theta.iloc[valid_indices[i]] -air_balloon.theta.iloc[valid_indices[i+1]])- 0.5
-                air_balloon.thetav.loc[valid_indices[0:i]] = \
-                        air_balloon.thetav.loc[valid_indices[i:i+1]][0] + t_cutoff
-                
-                i +=1
-
-        if len(valid_indices) > 0:
             #calculated mixed-layer height considering the critical Richardson number of the virtual temperature profile
             dpars['h'],dpars['h_u'],dpars['h_l'] = blh(air_balloon.z,air_balloon.thetav,air_balloon.WSPD)
             
@@ -641,28 +643,22 @@ class class4gl_input(object):
             dpars['h_l'] =np.nan
             dpars['h_e'] =np.nan
             dpars['h'] =np.nan
-
-
-        if np.isnan(dpars['h']):
             dpars['Ps'] = np.nan
+            air_balloon['t'] = np.nan
+            air_balloon['theta'] = np.nan
+            air_balloon['thetav'] = np.nan
 
         if ~np.isnan(dpars['h']):
             # determine mixed-layer properties (moisture, potential temperature...) from profile
             
             # ... and those of the mixed layer
-            is_valid_below_h = (air_balloon.loc[valid_indices].z < dpars['h'])
-            valid_indices_below_h =  air_balloon.loc[valid_indices].index[is_valid_below_h].values
-            if len(valid_indices) > 1:
-                if len(valid_indices_below_h) >= 3.:
-                    ml_mean = air_balloon.loc[valid_indices][is_valid_below_h].mean()
-                else:
-                    ml_mean = air_balloon.loc[valid_indices[0:2]].mean()
-            elif len(valid_indices) == 1:
-                ml_mean = (air_balloon.iloc[0:1]).mean()
+            is_valid_below_h = (air_balloon.z < dpars['h'])
+            valid_indices_below_h =  air_balloon.index[is_valid_below_h].values
+            if len(valid_indices_below_h) >= 3.:
+                ml_mean = air_balloon[is_valid_below_h].mean()
             else:
-                temp =  pd.DataFrame(air_balloon)
-                temp.iloc[0] = np.nan
-                ml_mean = temp
+                ml_mean = air_balloon[0:2].mean()
+                    
                        
             dpars['theta']= ml_mean.theta
             dpars['q']    = ml_mean.q
