@@ -738,10 +738,15 @@ class model:
           self.ra = ueff / max(1.e-3, self.ustar)**2.
 
         # first calculate essential thermodynamic variables
-        self.esat    = esat(self.theta)
-        self.qsat    = qsat(self.theta, self.Ps)
-        desatdT      = self.esat * (17.2694 / (self.theta - 35.86) - 17.2694 * (self.theta - 273.16) / (self.theta - 35.86)**2.)
-        self.dqsatdT = 0.622 * desatdT / self.Ps
+        T_sl = self.theta - self.g / self.cp * 0.1 * self.h
+        p_sl = self.Ps - self.rho * self.g * 0.1 * self.h
+        print(self.theta, T_sl)
+        print(self.Ps, p_sl)
+
+        self.esat    = esat(T_sl)
+        self.qsat    = qsat(T_sl, p_sl)
+        desatdT      = self.esat * (17.2694 / (T_sl - 35.86) - 17.2694 * (T_sl - 273.16) / (T_sl - 35.86)**2.)
+        self.dqsatdT = 0.622 * desatdT / p_sl
         self.e       = self.q * self.Ps / 0.622
 
         if(self.ls_type == 'js'): 
@@ -763,18 +768,18 @@ class model:
      
         # calculate skin temperature implictly
         self.Ts   = (self.Q  + self.rho * self.cp / self.ra * self.theta \
-            + self.cveg * (1. - self.cliq) * self.rho * self.Lv / (self.ra + self.rs    ) * (self.dqsatdT * self.theta - self.qsat + self.q) \
-            + (1. - self.cveg)             * self.rho * self.Lv / (self.ra + self.rssoil) * (self.dqsatdT * self.theta - self.qsat + self.q) \
-            + self.cveg * self.cliq        * self.rho * self.Lv /  self.ra                * (self.dqsatdT * self.theta - self.qsat + self.q) + self.Lambda * self.Tsoil) \
+            + self.cveg * (1. - self.cliq) * self.rho * self.Lv / (self.ra + self.rs    ) * (self.dqsatdT * T_sl - self.qsat + self.q) \
+            + (1. - self.cveg)             * self.rho * self.Lv / (self.ra + self.rssoil) * (self.dqsatdT * T_sl - self.qsat + self.q) \
+            + self.cveg * self.cliq        * self.rho * self.Lv /  self.ra                * (self.dqsatdT * T_sl - self.qsat + self.q) + self.Lambda * self.Tsoil) \
             / (self.rho * self.cp / self.ra + self.cveg * (1. - self.cliq) * self.rho * self.Lv / (self.ra + self.rs) * self.dqsatdT \
             + (1. - self.cveg) * self.rho * self.Lv / (self.ra + self.rssoil) * self.dqsatdT + self.cveg * self.cliq * self.rho * self.Lv / self.ra * self.dqsatdT + self.Lambda)
 
         esatsurf      = esat(self.Ts)
         self.qsatsurf = qsat(self.Ts, self.Ps)
 
-        self.LEveg  = (1. - self.cliq) * self.cveg * self.rho * self.Lv / (self.ra + self.rs) * (self.dqsatdT * (self.Ts - self.theta) + self.qsat - self.q)
-        self.LEliq  = self.cliq * self.cveg * self.rho * self.Lv / self.ra * (self.dqsatdT * (self.Ts - self.theta) + self.qsat - self.q)
-        self.LEsoil = (1. - self.cveg) * self.rho * self.Lv / (self.ra + self.rssoil) * (self.dqsatdT * (self.Ts - self.theta) + self.qsat - self.q)
+        self.LEveg  = (1. - self.cliq) * self.cveg * self.rho * self.Lv / (self.ra + self.rs) * (self.dqsatdT * (self.Ts - T_sl) + self.qsat - self.q)
+        self.LEliq  = self.cliq * self.cveg * self.rho * self.Lv / self.ra * (self.dqsatdT * (self.Ts - T_sl) + self.qsat - self.q)
+        self.LEsoil = (1. - self.cveg) * self.rho * self.Lv / (self.ra + self.rssoil) * (self.dqsatdT * (self.Ts - T_sl) + self.qsat - self.q)
   
         self.Wltend      = - self.LEliq / (self.rhow * self.Lv)
   
@@ -783,7 +788,9 @@ class model:
         self.G      = self.Lambda * (self.Ts - self.Tsoil)
         self.LEpot  = (self.dqsatdT * (self.Q - self.G) + self.rho * self.cp / self.ra * (self.qsat - self.q)) / (self.dqsatdT + self.cp / self.Lv)
         self.LEref  = (self.dqsatdT * (self.Q - self.G) + self.rho * self.cp / self.ra * (self.qsat - self.q)) / (self.dqsatdT + self.cp / self.Lv * (1. + self.rsmin / self.LAI / self.ra))
-        
+
+        print(self.LE + self.G + self.H - self.Q)
+
         CG          = self.CGsat * (self.wsat / self.w2)**(self.b / (2. * np.log(10.)))
   
         self.Tsoiltend   = CG * self.G - 2. * np.pi / 86400. * (self.Tsoil - self.T2)
