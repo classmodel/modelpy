@@ -740,8 +740,6 @@ class model:
         # first calculate essential thermodynamic variables
         T_sl = self.theta - self.g / self.cp * 0.1 * self.h
         p_sl = self.Ps - self.rho * self.g * 0.1 * self.h
-        print(self.theta, T_sl)
-        print(self.Ps, p_sl)
 
         self.esat    = esat(T_sl)
         self.qsat    = qsat(T_sl, p_sl)
@@ -788,8 +786,6 @@ class model:
         self.G      = self.Lambda * (self.Ts - self.Tsoil)
         self.LEpot  = (self.dqsatdT * (self.Q - self.G) + self.rho * self.cp / self.ra * (self.qsat - self.q)) / (self.dqsatdT + self.cp / self.Lv)
         self.LEref  = (self.dqsatdT * (self.Q - self.G) + self.rho * self.cp / self.ra * (self.qsat - self.q)) / (self.dqsatdT + self.cp / self.Lv * (1. + self.rsmin / self.LAI / self.ra))
-
-        print(self.LE + self.G + self.H - self.Q)
 
         CG          = self.CGsat * (self.wsat / self.w2)**(self.b / (2. * np.log(10.)))
   
