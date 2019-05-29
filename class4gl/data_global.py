@@ -151,6 +151,11 @@ class book(object):
                if 'level' in self.page.dims:
                    self.page = self.page.rename({'level':'lev'})
 
+               lon = self.page.lon.values
+               lon[lon > 180.] -= 360.
+               self.page.lon.values = lon[:]
+
+
                self.page = self.page.rename(self.renames)
                self.page = self.page.squeeze(drop=True)
 
@@ -213,7 +218,6 @@ class book(object):
         else:
             self.logger.debug("I'm now at page "+ str(self.ipage))
 
-
 class data_global(object):
     def __init__(self,sources= {
         'KOEPPEN:KGC'   : '/user/data/gent/gvo000/gvo00090/EXT/data/KOEPPEN/Koeppen-Geiger.nc',
@@ -259,6 +263,11 @@ class data_global(object):
         #"ERAINT:divU_y"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/divU_y_6hourly/divU_y*_6hourly.nc:__xarray_dataarray_variable__",
         "ERAINT:sp"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/sp_6hourly/sp_*_6hourly.nc",
         "ERAINT:wp"  : '/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/w_6hourly_xarray/w*_6hourly.nc:w',
+        "MSWEPGLEAM:AI"      : '/data/gent/vo/000/gvo00090/D2D/data/Aridity//Ep_1981_2017_MO_meanhottestmonth.nc',
+        "ERA5:t2m_daymax" : '/data/gent/vo/000/gvo00090/D2D/data/ERA5/by_var_nc/t2m_1hourly_for_t2m_daymax.nc:t2m',
+        "ERA5:blptb_daymax" : '/scratch/gent/vo/000/gvo00090/D2D/data/ERA5/by_var_nc/blptb_1hourly_for_blptb_daymax.nc:blptb',
+        # "ERA5:slhf" : '/user/data/gent/gvo000/gvo00090/EXT/data/ERA5/by_var_nc/slhf_1hourly/slhf_*_1hourly.nc',
+        # "ERA5:sshf" : '/user/data/gent/gvo000/gvo00090/EXT/data/ERA5/by_var_nc/sshf_1hourly/sshf_*_1hourly.nc',
         #"MSWEP:pr"    :"/user/data/gent/gvo000/gvo00090/EXT/data/MSWEP/MSWEP_v1.2_precip_1979-2015/3hr/raw_data/globe/*.nc:precipitation"
         },debug_level=None):
         self.library = {} #unique references to data sources being used. They can be files that are original on the disks or some unambiguous xarray virtual sources. These references are used in other variables. This way, a file or source cannot be loaded twice (a warning is made if one would try it).

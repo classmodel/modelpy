@@ -176,8 +176,8 @@ if bool(args.make_figures):
         # Q95 = obs.quantile(0.95)
         # Q95 = obs.quantile(0.90)
         # Add RMS contours, and label them
-        contours = dias[varkey].add_contours(levels=5, colors='0.5') # 5 levels
-        dias[varkey].ax.clabel(contours, inline=1, fontsize=10, fmt='%.1f')
+        contours = dias[varkey].add_contours(levels=5, colors='0.7') # 5 levels
+        dias[varkey].ax.clabel(contours, inline=1, fontsize=10,fmt='%.1f')
         #dia._ax.set_title(season.capitalize())
         i += 1
     
@@ -197,7 +197,7 @@ if bool(args.make_figures):
             # print(PR)
             print(varkey,STD,STD_OBS,STD/STD_OBS,PR)
             dias[varkey].add_sample(STD/STD_OBS, PR,
-                           marker='o', ms=5, ls='',
+                           marker='o', ms=7, ls='',
                            #mfc='k', mec='k', # B&W
                            mfc=colors[ikey], mec=colors[ikey], # Colors
                            label=key,zorder=101)
@@ -234,6 +234,7 @@ if bool(args.make_figures):
                                'Bias = '+format((BIAS*1000.),'0.2f')+r'$\,  \mathrm{g\,  kg^{-1}\,  h^{-1}}$'+' \n'+\
                                r'$R$ = '+format(PR,'0.2f')
                 ann = axes[varkey].annotate(annotate_text, xy=(0.95, .05 ), xycoords='axes fraction',fontsize=9,
+                # ann = axes[varkey].annotate(annotate_text, xy=(0.05, .97 ), xycoords='axes fraction',fontsize=9,
        horizontalalignment='right', verticalalignment='bottom' ,
         bbox={'edgecolor':'black',
                           'fc':'white',  
@@ -245,8 +246,8 @@ if bool(args.make_figures):
                                 'RMSE = '+format(RMSE,'0.1f')+r'$\,  \mathrm{m\, h^{-1}}$'+'\n'+\
                                 'Bias = '+format(BIAS,'0.1f')+r'$\,  \mathrm{m\, h^{-1}}$'+'\n'+\
                                 r'$R$ = '+format(PR,'0.2f')
-                ann = axes[varkey].annotate(annotate_text, xy=(0.05, .97 ), xycoords='axes fraction',fontsize=9,
-       horizontalalignment='left', verticalalignment='top' ,
+                ann = axes[varkey].annotate(annotate_text, xy=(0.95, .05 ), xycoords='axes fraction',fontsize=9,
+       horizontalalignment='right', verticalalignment='bottom' ,
         bbox={'edgecolor':'black',
                           'fc':'white',  
                               'boxstyle':'square',
@@ -258,8 +259,8 @@ if bool(args.make_figures):
                                 'Bias = '+format(BIAS,'0.3f')+r'$\, \mathrm{K\, h^{-1}}$'+'\n'+\
                                 r'$R$ = '+format(PR,'0.2f')
 
-                ann = axes[varkey].annotate(annotate_text, xy=(0.05, .97 ), xycoords='axes fraction',fontsize=9,
-       horizontalalignment='left', verticalalignment='top' ,
+                ann = axes[varkey].annotate(annotate_text, xy=(0.95, .05 ), xycoords='axes fraction',fontsize=9,
+       horizontalalignment='right', verticalalignment='bottom' ,
         bbox={'edgecolor':'black',
                           'fc':'white',  
                               'boxstyle':'square',
@@ -303,7 +304,7 @@ if bool(args.make_figures):
                 
                 dias[varkey].add_sample(station_end_mod.std()/station_obs.std(),
                                pearsonr(station_end_mod,station_obs)[0],#annotate=symbols[istation],
-                               marker=symbols[istation], ms=5, ls='',
+                               marker=symbols[istation], ms=7, ls='',
                                mfc='k', mec='k', # B&W
                                #mfc=colors[ikey], mec=colors[ikey], # Colors
                                label=key,zorder=100)
@@ -367,12 +368,12 @@ if bool(args.make_figures):
     leg = []
     isymbol = 0
     for icurrent_station,current_station in c4gldata[key].frames['worldmap']['stations'].table.iterrows():
-        leg1, = ax.plot([],'k'+symbols[isymbol] ,markersize=10)
+        leg1, = ax.plot([],'k'+symbols[isymbol] ,markersize=14)
         leg.append(leg1)
         isymbol += 1
     
     # symbol for all stations
-    leg1, = ax.plot([],'ko',markersize=10)
+    leg1, = ax.plot([],'ko',markersize=14)
     leg.append(leg1)
     
     

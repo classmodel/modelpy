@@ -23,11 +23,11 @@ parser.add_argument('--global_vars')
 parser.add_argument('--station_id') # run a specific station id
 parser.add_argument('--error_handling',default='dump_on_success')
 parser.add_argument('--diag_tropo',default=None)#['advt','advq','advu','advv'])
-parser.add_argument('--subset_input',default='morning') # this tells which yaml subset
+parser.add_argument('--subset_input',default='ini') # this tells which yaml subset
                                                       # to initialize with.
                                                       # Most common options are
                                                       # 'morning' and 'ini'.
-parser.add_argument('--subset_output',default='morning')
+parser.add_argument('--subset_output',default='ini')
 
 
 # Tuntime is usually specified from the afternoon profile. You can also just
@@ -58,6 +58,10 @@ if (args.updates is not None) and ('era_profiles' in args.updates.strip().split(
             "ERAINT:q"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/q_6hourly/q_*_6hourly.nc",
             "ERAINT:u"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/u_6hourly/u_*_6hourly.nc",
             "ERAINT:v"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/v_6hourly/v_*_6hourly.nc",
+            "ERAINT:v"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/v_6hourly/v_*_6hourly.nc",
+            "ERAINT:v"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/v_6hourly/v_*_6hourly.nc",
+            "ERA5:sshf" : '/user/data/gent/gvo000/gvo00090/EXT/data/ERA5/by_var_nc/slhf_1hourly/slhf_*_1hourly.nc',
+            "ERA5:slhf" : '/user/data/gent/gvo000/gvo00090/EXT/data/ERA5/by_var_nc/sshf_1hourly/sshf_*_1hourly.nc',
             }}
 
 # ...  and load initial data pages

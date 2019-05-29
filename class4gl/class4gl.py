@@ -554,7 +554,7 @@ class class4gl_input(object):
         string =  '\n'.join(string)
         
         columns = [ 'PRES', 'HGHT', 'TEMP', 'DWPT', 'RELH', 'MIXR', 'DRCT','SKNT' , 'THTA','THTE', 'THTV']             
-        air_balloon = pd.read_fwf(io.StringIO(str(string)),widths=[7]*11,names=columns,skiprows=5,dtype=np.float,skipfooter=0)#.iloc[5:-1]
+        air_balloon_in = pd.read_fwf(io.StringIO(str(string)),widths=[7]*11,names=columns,skiprows=5,dtype=np.float,skipfooter=0)#.iloc[5:-1]
         #ONE_COLUMN = pd.read_table(io.StringIO(str(string)),sep=r"\s*",skiprows=[0,1,3,4])
         
         #string =  soup.pre.next_sibling.next_sibling
@@ -573,17 +573,18 @@ class class4gl_input(object):
         dpars['STNID'] = dpars['Station number']
 
         # altitude above ground level
-        air_balloon['z'] = air_balloon.HGHT -dpars['Station elevation']
+        air_balloon = pd.DataFrame()
+        air_balloon['z'] = air_balloon_in.HGHT -dpars['Station elevation']
         # absolute humidity in g/kg
-        air_balloon['q']= (air_balloon.MIXR/1000.) \
+        air_balloon['q']= (air_balloon_in.MIXR/1000.) \
                               / \
-                             (air_balloon.MIXR/1000.+1.)
+                             (air_balloon_in.MIXR/1000.+1.)
         # convert wind speed from knots to m/s
-        air_balloon['WSPD'] = 0.51444 * air_balloon.SKNT
-        angle_x = (90.-air_balloon.DRCT)/180.*np.pi # assuming that wind in direction of the south is 0 degrees.
+        air_balloon['V'] = 0.51444 * air_balloon_in.SKNT
+        angle_x = (90.-air_balloon_in.DRCT)/180.*np.pi # assuming that wind in direction of the south is 0 degrees.
         
-        air_balloon['u'] = air_balloon.WSPD * np.sin(angle_x)
-        air_balloon['v'] = air_balloon.WSPD * np.cos(angle_x)
+        air_balloon['u'] = air_balloon.V * np.sin(angle_x)
+        air_balloon['v'] = air_balloon.V * np.cos(angle_x)
 
         
 
@@ -592,8 +593,9 @@ class class4gl_input(object):
         Rv         = 461.5                 # gas constant for moist air [J kg-1 K-1]
 
         air_balloon['R'] = (Rd*(1.-air_balloon.q) + Rv*air_balloon.q)
-        air_balloon['p'] = air_balloon.PRES*100.
+        air_balloon['p'] = air_balloon_in.PRES*100.
 
+        air_balloon['t'] = air_balloon_in['TEMP']+273.15
 
         # Therefore, determine the sounding that are valid for 'any' column 
         is_valid = ~np.isnan(air_balloon).any(axis=1) & (air_balloon.z >= 0)
@@ -608,9 +610,8 @@ class class4gl_input(object):
         if len(air_balloon) > 2:
 
             dpars['Ps'] = air_balloon.p.values[0]
-            air_balloon['t'] = air_balloon['TEMP']+273.15
             air_balloon['theta'] = (air_balloon.t) * \
-                       (dpars['Ps']/(air_balloon.PRES*100.))**(air_balloon['R']/cp)
+                       (dpars['Ps']/(air_balloon.p))**(air_balloon['R']/cp)
             air_balloon['thetav']   = air_balloon['theta']*(1. + 0.61 * air_balloon['q'])
 
             # t_cut_off = 1.5
@@ -628,7 +629,7 @@ class class4gl_input(object):
 
 
             #calculated mixed-layer height considering the critical Richardson number of the virtual temperature profile
-            dpars['h'],dpars['h_u'],dpars['h_l'] = blh(air_balloon.z,air_balloon.thetav,air_balloon.WSPD)
+            dpars['h'],dpars['h_u'],dpars['h_l'] = blh(air_balloon.z,air_balloon.thetav,air_balloon.V)
             
             dpars['h_b'] = np.max((dpars['h'],10.))
             dpars['h_u'] = np.max((dpars['h_u'],10.)) #upper limit of mixed layer height
@@ -654,10 +655,10 @@ class class4gl_input(object):
             # ... and those of the mixed layer
             is_valid_below_h = (air_balloon.z < dpars['h'])
             valid_indices_below_h =  air_balloon.index[is_valid_below_h].values
-            if len(valid_indices_below_h) >= 3.:
+            if len(valid_indices_below_h) >= 2.:
                 ml_mean = air_balloon[is_valid_below_h].mean()
             else:
-                ml_mean = air_balloon[0:2].mean()
+                ml_mean = air_balloon.iloc[0:1].mean()
                     
                        
             dpars['theta']= ml_mean.theta
@@ -679,9 +680,9 @@ class class4gl_input(object):
         #calculate mixed-layer jump ( this should be larger than 0.1)
         
         air_ap_head['z'] = pd.Series(np.array([2.,dpars['h'],dpars['h']]))
-        air_ap_head['HGHT'] = air_ap_head['z'] \
-                                + \
-                                np.round(dpars[ 'Station elevation'],1)
+        # air_ap_head['HGHT'] = air_ap_head['z'] \
+        #                         + \
+        #                         np.round(dpars[ 'Station elevation'],1)
         
         # make a row object for defining the jump
         jump = air_ap_head.iloc[0] * np.nan
@@ -716,7 +717,7 @@ class class4gl_input(object):
         
                air_ap_head[column][2] += jump[column]
         
-        air_ap_head.WSPD = np.sqrt(air_ap_head.u**2 +air_ap_head.v**2)
+        air_ap_head.V = np.sqrt(air_ap_head.u**2 +air_ap_head.v**2)
 
 
 
@@ -838,9 +839,7 @@ class class4gl_input(object):
 
         # we round the columns to a specified decimal, so that we get a clean
         # output format for yaml
-        decimals = {'p':0,'HGHT':1,'t':2,'DWPT':2,'RELH':2,'MIXR':2,\
-                   'DRCT':2 ,'SKNT':2,   'theta':4,   'THTE':2,  'THTV':2,\
-                   'z':2, 'q':5, 'WSPD':2, 'u':4,       'v':4}
+        decimals = {'p':0, 't':2, 'theta':4, 'z':2, 'q':5, 'V':2, 'u':4, 'v':4}
 # 
         for column,decimal in decimals.items():
             air_balloon[column] = air_balloon[column].round(decimal)
@@ -1078,9 +1077,9 @@ class class4gl_input(object):
                         if globaldata.datasets[key].page.variables['lon'].values[ilonmin] > globaldata.datasets[key].page.variables['lon'].values[ilon]:
                             ilonmin = ilon        
                         
-                        # for the koeppen climate classification we just take nearest
+                        # for the koeppen climate classification and midsummermonth, we just take nearest
                         print(key)
-                        if key == 'KGC':
+                        if key in ['KGC','midsummermonth','AI']:
                             ilatrange = range(ilat,ilat+1)
                             ilonrange = range(ilon,ilon+1)
                         else:
@@ -1099,7 +1098,8 @@ class class4gl_input(object):
                             
                             idatetime = np.where((DIST) == np.min(DIST))[0][0]
                             #print('idatetime',idatetime,globaldata.datasets[key].variables['time'].values[idatetime],classdatetime)
-                            if key not in ['Tsoil','T2']:
+
+                            if key not in ['Tsoil','T2','blptb_daymax','t2m_daymax','t2m','blpt','blpt_afternoon','blh','t2m_afternoon','blh_afternoon','blq','blq_afternoon','blptb','blptb_afternoon','blptw','blptw_afternoon','HI','HI_afternoon','rh100','rh100_afternoon']:
                                 if ((globaldata.datasets[key].page.variables['time'].values[idatetime] < classdatetime) ):
                                     idatetime += 1
                             
@@ -1118,9 +1118,9 @@ class class4gl_input(object):
                                 idatetime = idatetime - 1
                                 idatetimeend = idatetimeend - 1
 
-                            # in case of soil temperature, we take the exact
+                            # in case of soil temperature or maximum daytime temperature, we take the exact
                             # timing (which is the morning)
-                            if key in ['Tsoil','T2']:
+                            if key in ['Tsoil','T2','t2m_daymax','t2m','blpt','blpt_afternoon','blh','t2m_afternoon','blh_afternoon','blq','blq_afternoon','blptb','blptb_afternoon','blptw','blptw_afternoon','HI','HI_afternoon','rh100','rh100_afternoon']:
                                 idatetimeend = idatetime
                             
                             idts = range(idatetime,idatetimeend+1)
@@ -1469,13 +1469,6 @@ class class4gl_input(object):
         # and now we can get the surface values
         #class_settings = class4gl_input()
         #class_settings.set_air_input(input_atm)
-        
-        # we only allow non-polar stations
-        if not (self.pars.lat <= 60.):
-            source_globaldata_ok = False
-            self.logger.warning('cveg  is invalid: ('+str(self.pars.cveg)+')')
-        
-        # check lat and lon
         if (pd.isnull(self.pars.lat)) or (pd.isnull(self.pars.lon)):
             source_globaldata_ok = False
             self.logger.warning('lat  is invalid: ('+str(self.pars.lat)+')')
@@ -1596,7 +1589,6 @@ class class4gl_input(object):
             mlvalues['v']  = np.nan
             
 
-        self.update(source='fit_from_'+source,pars=mlvalues)
 
 
         # First 3 data points of the mixed-layer fit. We create a empty head
@@ -1644,10 +1636,11 @@ class class4gl_input(object):
                   jump.theta = np.max((0.1,jump.theta))
         
                air_ap_head[column][2] += jump[column]
+               mlvalues['d'+column] = jump[column]
         
-        air_ap_head.WSPD = np.sqrt(air_ap_head.u**2 +air_ap_head.v**2)
+        self.update(source='fit_from_'+source,pars=mlvalues)
 
-
+        air_ap_head.V = np.sqrt(air_ap_head.u**2 +air_ap_head.v**2)
 
         # make theta increase strong enough to avoid numerical
         # instability

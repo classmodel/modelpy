@@ -114,6 +114,7 @@ def execute(**kwargs):
       'BASE_ITER_ADV':{'sw_ac' : ['adv',],'sw_ap': True,'sw_lit': False},
       'BASE_ITER_W_ADV':{'sw_ac' : ['adv',"w"],'sw_ap': True,'sw_lit': False},
       'BASE_ITER_W':{'sw_ac' : ["w"],'sw_ap': True,'sw_lit': False},
+        'BASE_ITER_ADV_B05':{'sw_ac' : ['adv',],'sw_ap': True,'sw_lit': False,'beta':0.2},
     
         
       'ERA_NOAC_ITER':    {'sw_ac' : [],'sw_ap': True,'sw_lit': False},

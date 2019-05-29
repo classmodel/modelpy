@@ -192,7 +192,8 @@ def test1():
     dia.add_grid()
 
     # Add RMS contours, and label them
-    contours = dia.add_contours(colors='0.5')
+    print('BLABLA')
+    # contours = dia.add_contours(colors='lightgrey')
     PLT.clabel(contours, inline=1, fontsize=10, fmt='%.2f')
 
     # Add a figure legend
@@ -235,7 +236,7 @@ def test2():
                        label=name)
 
     # Add RMS contours, and label them
-    contours = dia.add_contours(levels=5, colors='0.5')  # 5 levels in grey
+    # contours = dia.add_contours(levels=5, colors='lightgrey')  # 5 levels in grey
     PLT.clabel(contours, inline=1, fontsize=10, fmt='%.0f')
 
     dia.add_grid()                                  # Add grid
@@ -245,7 +246,7 @@ def test2():
     fig.legend(dia.samplePoints,
                [ p.get_label() for p in dia.samplePoints ],
                numpoints=1, prop=dict(size='small'), loc='upper right')
-    fig.suptitle("Taylor diagram", size='x-large')  # Figure title
+    # fig.suptitle("Taylor diagram", size='x-large')  # Figure title
 
     return dia
 

@@ -496,7 +496,7 @@ def get_records(stations,path_yaml,getchunk='all',subset='morning',refetch_recor
                         generate_pkl = True
                     if not generate_pkl:
                         records_station_chunk = pd.read_pickle(path_yaml+'/'+pklfilename)
-                        records_station = pd.concat([records_station,records_station_chunk])
+                        records_station = pd.concat([records_station,records_station_chunk],sort=True)
                        # irecord = 0
                     else:
                         with open(path_yaml+'/'+yamlfilename) as yaml_file:
@@ -572,8 +572,8 @@ def get_records(stations,path_yaml,getchunk='all',subset='morning',refetch_recor
                                            # # needed for Ruby
                                            # dictouttemp[key] = dt.datetime.strptime(value,"%Y-%m-%d %H:%M:%S %z")
 
-                                           # Workaround. Unfortunately, Ruby puts it in local time of the computer. Turn it back to UTC (note that UTC means actually local time)!!!
-                                           dictouttemp[key] = dictouttemp[key].astimezone(pytz.UTC)
+                                           # # Workaround. Unfortunately, Ruby puts it in local time of the computer. Turn it back to UTC (note that UTC means actually local time)!!!
+                                           # dictouttemp[key] = dictouttemp[key].astimezone(pytz.UTC)
                                 recordindex = record['index']
                                 dictouttemp['chunk'] = chunk
                                 dictouttemp['index_start'] = index_start
@@ -604,7 +604,7 @@ def get_records(stations,path_yaml,getchunk='all',subset='morning',refetch_recor
                                   +str(STNID))
                     records_station.to_pickle(path_yaml+'/'+pklfilename_unified)
 
-            records = pd.concat([records,records_station])
+            records = pd.concat([records,records_station],sort=True)
     return records
 
 def stdrel(mod,obs,columns):

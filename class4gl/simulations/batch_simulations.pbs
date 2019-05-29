@@ -8,10 +8,10 @@
 #PBS -N c4gl_sim
 
 module purge
-source ~/.bashrc
 
-echo loading modules: $LOADDEPSCLASS4GL 
-$LOADDEPSCLASS4GL 
+# echo loading modules: $LOADDEPSCLASS4GL 
+# $LOADDEPSCLASS4GL 
+source ~/load_anaconda.sh
 
 EXEC_ALL="python $C4GLJOB_exec --global_chunk_number $PBS_ARRAYID"
 

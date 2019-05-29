@@ -108,8 +108,15 @@ def execute(**kwargs):
     #  'v', 'v2m', 'vw', 'wq', 'wtheta', 'wthetae', 'wthetav', 'wthetae', 'zlcl']
     
     
+    # for iEXP in range(4):
+    #     EXPKEY = 'LCZ'+str(iEXP)
+    #     EXP_DEFS[EXPKEY] = {'sw_ac' : [],'sw_ap': True,'sw_lit': False, 'urban':'LCZ'+str(iEXP)}
+
+
     EXP_DEFS  =\
     {
+      'LCZ':{'sw_ac' : [],'sw_ap': True,'sw_lit': False, 'urban':'lcw1'},
+
       'BASE':{'sw_ac' : ['adv',],'sw_ap': True,'sw_lit': False},
     
       'NOADV':{'sw_ac' : [],'sw_ap': True,'sw_lit': False},

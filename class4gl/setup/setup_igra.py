@@ -156,10 +156,12 @@ for iSTN,STN in STNlist:
     fnout = args.path_output+"/"+format(STN.name,'05d')+"_ini.yaml"
     fnout_afternoon = args.path_output+"/"+format(STN.name,'05d')+"_end.yaml"
     
+    fnout_diag = args.path_output+"/"+format(STN.name,'05d')+"_diag.pkl"
 
     # c4glfiles = dict([(EXP,odirexperiments[EXP]+'/'+format(STN['ID'],'05d')+'.yaml') \
     #                   for EXP in experiments.keys()])
         
+    dict_diag_station = {}
     with open(fnout,'w') as fileout, \
          open(fnout_afternoon,'w') as fileout_afternoon:
         wy_strm = wyoming(PATH=args.path_input, STNM=STN.name)
@@ -191,23 +193,25 @@ for iSTN,STN in STNlist:
             # before sunrise is ignored by the simulation.
             logic['daylight'] = \
                 ((c4gli.pars.ldatetime - 
-                  c4gli.pars.lSunrise).total_seconds()/3600. >= -4.)
+                  c4gli.pars.lSunrise).total_seconds()/3600. >= -3)
             
             logic['springsummer'] = (c4gli.pars.theta > 278.)
+            print(c4gli.pars.theta)
             
             # we take 3000 because previous analysis (ie., HUMPPA) has
             # focussed towards such altitude
             le3000 = (c4gli.air_balloon.z <= 3000.)
-            logic['10measurements'] = (np.sum(le3000) >= 7) 
+            logic['7measurements'] = (np.sum(le3000) >= 7) 
 
-            leh = (c4gli.air_balloon.z <= c4gli.pars.h)
+            leh = (c4gli.air_balloon.z < c4gli.pars.h)
 
             logic['mlerrlow'] = (\
                     (len(np.where(leh)[0]) > 0) and \
                     # in cases where humidity is not defined, the mixed-layer
                     # values get corr
-                    (not np.isnan(c4gli.pars.theta)) and \
-                    (rmse(c4gli.air_balloon.theta[leh] , c4gli.pars.theta,filternan_actual=True) < 1.8)\
+                    (not np.isnan(c4gli.pars.theta)) and (
+                    # in cases where humidity is not defined, the mixed-layer
+                    (rmse(c4gli.air_balloon.theta[leh] , c4gli.pars.theta,filternan_actual=True) < 1.5))\
                           )
     
 
@@ -216,7 +220,10 @@ for iSTN,STN in STNlist:
             print('logic:', logic)
             # the result
             morning_ok = np.mean(list(logic.values()))
+            logic['morning_ok'] = morning_ok
             print(morning_ok,c4gli.pars.ldatetime)
+
+
 
             # except:
             #     morning_ok =False
@@ -227,6 +234,8 @@ for iSTN,STN in STNlist:
             wy_strm.find_next()
             # If the morning is ok, then we try to find a decent afternoon
             # sounding
+            logic_afternoon_def =dict()
+
             if morning_ok == 1.:
                 print('MORNING OK!')
                 # we get the current date
@@ -252,6 +261,7 @@ for iSTN,STN in STNlist:
                     # minimum criteria specified by logic_afternoon
                     print(current_date,current_date_afternoon)
                     c4gli_afternoon_for_dump = None
+                    afternoon_first = True
                     while ((current_date_afternoon == current_date) and \
                            (wy_strm.current is not None)):
                         logic_afternoon =dict()
@@ -263,21 +273,35 @@ for iSTN,STN in STNlist:
                         # stable boundary layer (yielding very low mixed layer
                         # heights) is formed which can not be represented by
                         # class.
-                        logic_afternoon['daylight'] = \
+                        logic_afternoon['afternoon_daylight'] = \
                           ((c4gli_afternoon.pars.ldatetime - \
                             c4gli_afternoon.pars.lSunset \
-                           ).total_seconds()/3600. <= -2.)
-
+                           ).total_seconds()/3600. <= -1.)
 
                         le3000_afternoon = \
                             (c4gli_afternoon.air_balloon.z <= 3000.)
-                        logic_afternoon['5measurements'] = \
+                        logic_afternoon['afternoon_7measurements'] = \
                             (np.sum(le3000_afternoon) >= 7) 
+
+                        leh = (c4gli_afternoon.air_balloon.z < c4gli_afternoon.pars.h)
+                        logic_afternoon['afternoon_mlerrlow'] = (\
+                                (len(np.where(leh)[0]) > 0) and \
+                                # in cases where humidity is not defined, the mixed-layer
+                                # values get corr
+                                (not np.isnan(c4gli_afternoon.pars.theta)) and (
+                                # in cases where humidity is not defined, the mixed-layer
+                                (rmse(c4gli_afternoon.air_balloon.theta[leh] , c4gli_afternoon.pars.theta,filternan_actual=True) < 1.5))\
+                                      )
 
                         # we only store the last afternoon sounding that fits these
                         # minimum criteria
 
                         afternoon_ok = np.mean(list(logic_afternoon.values()))
+
+                        #we set the definitive first afternoon logic only the first time. We only set a new one later if we find a good one.
+                        if afternoon_first:
+                            logic_afternoon_def = {**logic_afternoon,**dict()}
+                            afternoon_first = False
 
                         print('logic_afternoon: ',logic_afternoon)
                         print(afternoon_ok,c4gli_afternoon.pars.ldatetime)
@@ -288,7 +312,10 @@ for iSTN,STN in STNlist:
                             # so we just create a new one from the same wyoming profile
                             c4gli_afternoon_for_dump = class4gl_input()
                             c4gli_afternoon_for_dump.get_profile_wyoming(wy_strm)
+                            logic_afternoon_def = {**logic_afternoon,**dict()}
+                            afternoon_set = True
 
+                        
                         wy_strm.find_next()
                         c4gli_afternoon.clear()
                         c4gli_afternoon.get_profile_wyoming(wy_strm)
@@ -301,43 +328,65 @@ for iSTN,STN in STNlist:
                         else:
                             # a dummy date: this will be ignored anyway
                             current_date_afternoon = dt.date(1900,1,1)
+                    if not afternoon_set:
+                        logic_afternoon_def = {**logic_afternoon,**dict()}
 
                         # Only in the case we have a good pair of soundings, we
                         # dump them to disk
+                    logic_afternoon_def['afternoon_ok'] = False
                     if c4gli_afternoon_for_dump is not None:
+                        logic_afternoon_def['afternoon_ok'] = True
                         c4gli.update(source='pairs',pars={'runtime' : \
                             int((c4gli_afternoon_for_dump.pars.datetime_daylight - 
                                  c4gli.pars.datetime_daylight).total_seconds())})
     
     
+                        logic_afternoon_def['runtime_ok'] = False
                         print('ALMOST...')
-                        if c4gli.pars.runtime > 3600*4.: # more than 4 hours simulation
-                                
+                        if c4gli.pars.runtime >= 3600*4.: # more than 4 hours simulation
+                             
+                            logic_afternoon_def['runtime_ok'] = True
+                            logic_afternoon_def['not_polar'] = False
+                            if abs(c4gli.pars.lat) < 70.:
+                                logic_afternoon_def['not_polar'] = True
+                                logic_afternoon_def['global_parameters_ok'] = False
         
-                            c4gli.get_global_input(globaldata)
-                            print('VERY CLOSE...')
-                            if c4gli.check_source_globaldata() and \
-                                (c4gli.check_source(source='wyoming',\
-                                                   check_only_sections='pars')):
-                                print('starting dumps')
-                                c4gli.dump(fileout)
-                                print('file morning dumped')
-                                c4gli_afternoon_for_dump.dump(fileout_afternoon)
-                                print('file afternoon dumped')
-                                
-                                
-                                # for keyEXP,dictEXP in experiments.items():
-                                #     
-                                #     c4gli.update(source=keyEXP,pars = dictEXP)
-                                #     c4gl = class4gl(c4gli)
-                                #     # c4gl.run()
-                                #     
-                                #     c4gl.dump(c4glfiles[key])
-                                
-                                print('HIT!!!')
-                                one_run = True
+                                c4gli.get_global_input(globaldata)
+                                print('VERY CLOSE...')
+                                if c4gli.check_source_globaldata() and \
+                                    (c4gli.check_source(source='wyoming',\
+                                                       check_only_sections='pars')):
+
+                                    logic_afternoon_def['global_parameters_ok'] = True
+                                    print('starting dumps')
+                                    c4gli.dump(fileout)
+                                    print('file morning dumped')
+                                    c4gli_afternoon_for_dump.dump(fileout_afternoon)
+                                    print('file afternoon dumped')
+                                    
+                                    
+                                    # for keyEXP,dictEXP in experiments.items():
+                                    #     
+                                    #     c4gli.update(source=keyEXP,pars = dictEXP)
+                                    #     c4gl = class4gl(c4gli)
+                                    #     # c4gl.run()
+                                    #     
+                                    #     c4gl.dump(c4glfiles[key])
+                                    
+                                    print('HIT!!!')
+                                    one_run = True
                 except:
                     print('get profile failed')
+            dict_diag_day = {}
+
+            dict_diag_day = {**dict_diag_day , **c4gli.pars.__dict__}
+            dict_diag_day = {**dict_diag_day , **logic}
+            dict_diag_day = {**dict_diag_day , **logic_afternoon_def}
+            for key,value in dict_diag_day.items():
+                if key not in dict_diag_station.keys():
+                    dict_diag_station[key] = {}
+                dict_diag_station[key][(c4gli.pars.STNID,c4gli.pars.ldatetime)] = dict_diag_day[key]
+    pd.DataFrame.from_dict(dict_diag_station).to_pickle(fnout_diag)
                 
     if one_run:
         #STN.name = STN.name

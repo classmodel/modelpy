@@ -208,6 +208,7 @@ class model:
         self.exitmodel()
     
     def init(self):
+        self.dtmax = +np.inf
         # assign variables from input data
         # initialize constants
         self.Lv         = 2.5e6                 # heat of vaporization [J kg-1]
@@ -460,7 +461,7 @@ class model:
                 value_new = self.air_ap[var][indexh[0][0]]
                 
                 if ((value_old is not None) & (value_old != value_new)):
-                    warnings.warn("Warning:  input was provided ("+str(value_old)+ "kg kg-1), but it is now overwritten by the first level (index 0) of air_ap.var which is different (" +str(value_new)+"kg kg-1).") 
+                    warnings.warn("Warning:  input was provided ("+str(value_old)+ "), but it is now overwritten by the first level (index 0) of air_ap.var which is different (" +str(value_new)+").") 
                 self.__dict__[var] = value_new
 
                 # make a profile of the stratification 
@@ -480,6 +481,11 @@ class model:
                 gammavar = np.array(gammavar)
                 self.air_ap = self.air_ap.assign(**{'gamma'+var : gammavar})
 
+                value_old = self.__dict__['d'+var]
+                value_new = self.air_ap[var][2] - self.air_ap[var][1]
+                if ((value_old is not None) & (value_old != value_new)):
+                    warnings.warn("Warning:  input was provided ("+str(value_old)+ "), but it is now overwritten by the first level (index 0) of air_ap.dvar which is different (" +str(value_new)+").") 
+                self.__dict__['d'+var] = value_new
 
                 # gammatheta, gammaq, gammau, gammav are updated here.
                 self.__dict__['gamma'+var] = \
@@ -782,8 +788,8 @@ class model:
             self.run_mixed_layer()
 
     def timestep(self):
-
         self.dtmax = +np.inf
+
         self.logger.debug('before stats') 
         self.statistics()
 
