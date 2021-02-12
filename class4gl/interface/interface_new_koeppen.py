@@ -246,6 +246,9 @@ for ikoeppen,koeppen in koeppenlookuptable.iterrows():
 koeppenlookuptable = koeppenlookuptable.sort_values('amount',ascending=False)
 include_koeppen = list(koeppenlookuptable.KGCID)
 
+for ikey,key in enumerate(args.experiments.strip(' ').split(' ')[:2]):
+    c4gldata[key].frames['stats']['records_all_stations_ini']['KGCname'] =  \
+        c4gldata[key].frames['stats']['records_all_stations_ini']['KGC'].map(koeppenlookuptable['KGCID'])
 
 if args.make_figures:
     fig = plt.figure(figsize=(11,8.0))   #width,height
@@ -303,10 +306,11 @@ if args.make_figures:
         #dia.ax.plot(x99,y99,color='k')
         i += 1
     
+
     i = 1
     for varkey in ['h','theta','q']:                                                    
         #for ikey,key in enumerate(args.experiments.strip(' ').split(' ')):
-        for ikey,key in enumerate(args.experiments.strip(' ').split(' ')[:1]):
+        for ikey,key in enumerate(args.experiments.strip(' ').split(' ')[:2]):
             # cc = c4gldata[key].frames['stats']['records_all_stations_ini']['cc']
             # clearsky = (cc < 0.05)
             # mod = c4gldata[key].frames['stats']['records_all_stations_end_mod_stats'].loc[clearsky]['d'+varkey+'dt']
@@ -327,6 +331,7 @@ if args.make_figures:
             RMSE = rmse(obs,mod)                                               
             BIAS = np.mean(mod) - np.mean(obs)
             STD = mod.std()
+            markers=['o','^']
             
             # fit = np.polyfit(x,y,deg=1)
             # axes[varkey].plot(x, fit[0] * x + fit[1],\
@@ -340,23 +345,23 @@ if args.make_figures:
             # print(STD)
             # print(PR)
             dias[varkey].add_sample(STD/STD_OBS, PR,\
-                           marker='o',ls='', mfc='white',mec='black',
+                           marker=markers[ikey],ls='', mfc='white',mec='black',
                            zorder=-100,
-                           ms=3.5*np.sqrt(np.sum(np.array(koeppenlookuptable.amount.values,dtype=np.float)))/\
+                           ms=2.5*np.sqrt(np.sum(np.array(koeppenlookuptable.amount.values,dtype=np.float)))/\
                                 np.mean(np.sqrt(np.array(koeppenlookuptable.amount.values,dtype=np.float)))
                            # annotate=koeppen.KGCID, color=koeppen.textcolor,weight='bold',fontsize=5.,\
                            # bbox={'edgecolor':'black','boxstyle':'circle','fc':koeppen.color,'alpha':0.7}
                            )
             dias[varkey].add_sample(STD/STD_OBS, PR,\
-                           marker='o',ls='', mfc='none',mec='black',
+                           marker=markers[ikey],ls='', mfc='none',mec='black',
                            zorder=700,
-                           ms=3.5*np.sqrt(np.sum(np.array(koeppenlookuptable.amount.values,dtype=np.float)))/\
+                           ms=2.5*np.sqrt(np.sum(np.array(koeppenlookuptable.amount.values,dtype=np.float)))/\
                                 np.mean(np.sqrt(np.array(koeppenlookuptable.amount.values,dtype=np.float)))
                            # annotate=koeppen.KGCID, color=koeppen.textcolor,weight='bold',fontsize=5.,\
                            # bbox={'edgecolor':'black','boxstyle':'circle','fc':koeppen.color,'alpha':0.7}
                            )
             dias[varkey].add_sample(STD/STD_OBS, PR,\
-                           marker='o',ls='', mfc='none',mec='black',
+                           marker=markers[ikey],ls='', mfc='none',mec='black',
                            zorder=700,
                            ms=1.
                            # annotate=koeppen.KGCID, color=koeppen.textcolor,weight='bold',fontsize=5.,\
@@ -379,7 +384,7 @@ if args.make_figures:
     i = 1
     for varkey in ['h','theta','q']:                                                    
 
-        for ikey,key in enumerate(args.experiments.strip(' ').split(' ')[:1]):
+        for ikey,key in enumerate(args.experiments.strip(' ').split(' ')[:2]):
             icolor = 0
             for ikoeppen,koeppen in koeppenlookuptable.iterrows():
                 if koeppen.amount >= 200:
@@ -403,26 +408,26 @@ if args.make_figures:
                     
                     dias[varkey].add_sample(koeppen_end_mod.std()/koeppen_obs.std(),
                                    pearsonr(koeppen_end_mod,koeppen_obs)[0],
-                                   marker='o',linewidth=0.5,
+                                   marker=markers[ikey],linewidth=0.5,alpha=0.7,
                                             mfc=koeppen.color,mec='black',#koeppen.color,
                                             zorder=300+icolor,
-                                   ms=3.5*np.sqrt(koeppen.amount)/np.mean(np.sqrt(np.array(koeppenlookuptable.amount.values,dtype=np.float)))
+                                   ms=2.5*np.sqrt(koeppen.amount)/np.mean(np.sqrt(np.array(koeppenlookuptable.amount.values,dtype=np.float)))
                                    # annotate=koeppen.KGCID, color=koeppen.textcolor,weight='bold',fontsize=5.,\
                                    # bbox={'edgecolor':'black','boxstyle':'circle','fc':koeppen.color,'alpha':0.7}
                                    )
-                    dias[varkey].add_sample(koeppen_end_mod.std()/koeppen_obs.std(),
-                                   pearsonr(koeppen_end_mod,koeppen_obs)[0],
-                                   marker='o',linewidth=0.5,
-                                            mfc=koeppen.color,mec='black',#koeppen.color,
-                                            zorder=301+icolor, ms=1
-                                   # annotate=koeppen.KGCID, color=koeppen.textcolor,weight='bold',fontsize=5.,\
-                                   # bbox={'edgecolor':'black','boxstyle':'circle','fc':koeppen.color,'alpha':0.7}
-                                   )
+                    # dias[varkey].add_sample(koeppen_end_mod.std()/koeppen_obs.std(),
+                    #                pearsonr(koeppen_end_mod,koeppen_obs)[0],
+                    #                marker=markers[ikey],linewidth=0.5,
+                    #                         mfc=koeppen.color,mec='black',#koeppen.color,
+                    #                         zorder=301+icolor, ms=1
+                    #                # annotate=koeppen.KGCID, color=koeppen.textcolor,weight='bold',fontsize=5.,\
+                    #                # bbox={'edgecolor':'black','boxstyle':'circle','fc':koeppen.color,'alpha':0.7}
+                    #                )
 
 
                     # dias[varkey].add_sample(koeppen_end_mod.std()/koeppen_obs.std(),
                     #                pearsonr(koeppen_end_mod,koeppen_obs)[0],
-                    #                         marker='o',linewidth=0.5, mfc='none',mec=str(koeppen.color),
+                    #                         marker=markers[ikey],linewidth=0.5, mfc='none',mec=str(koeppen.color),
                     #                         zorder=600+icolor,
                     #                ms=10.*np.sqrt(koeppen.amount)/np.mean(np.sqrt(np.array(koeppenlookuptable.amount.values,dtype=np.float)))
                     #                # annotate=koeppen.KGCID, color=koeppen.textcolor,weight='bold',fontsize=5.,\
@@ -530,7 +535,7 @@ if args.make_figures:
         mod = c4gldata[key].frames['stats']['records_all_stations_end_mod_stats']['d'+varkey+'dt']
         obs = c4gldata[key].frames['stats']['records_all_stations_end_obs_stats']['d'+varkey+'dt']
         print ('filtering classes that have sufficient samples: ', include_koeppen)
-        filter_classess = (c4gldata[key].frames['stats']['records_all_stations_ini'].KGCname.isin(include_koeppen))
+        filter_classes = (c4gldata[key].frames['stats']['records_all_stations_ini'].KGCname.isin(include_koeppen))
         mod = mod.loc[filter_classes]
         obs = obs.loc[filter_classes]
 
@@ -664,7 +669,7 @@ if args.make_figures:
     # ax = fig.add_axes([0.05,0.00,0.15,0.15]) #[*left*, *bottom*, *width*,    *height*]
     # leg = []
     # for ikey,key in enumerate(args.experiments.strip().split(' ')):
-    #     leg1, = ax.plot([],colors[ikey]+'o' ,markersize=10)
+    #     leg1, = ax.plot([],colors[ikey]+markers[ikey] ,markersize=10)
     #     leg.append(leg1)
     # ax.axis('off')
     # #leg1 =

@@ -264,24 +264,28 @@ class c4gl_interface_soundings(object):
                 print('exclude exceptional observations')
                 print('exclude unrealistic model output -> should be investigated!')
                 valid = (\
-                         (self.frames['stats']['records_all_stations_end_obs_stats'].dthetadt >  0.25) & 
-                         (self.frames['stats']['records_all_stations_end_obs_stats'].dthetadt >  0.) & 
-                         #(self.frames['stats']['records_all_stations_end_mod_stats'].dthetadt >  0.25000) & 
-                         #(self.frames['stats']['records_all_stations_end_mod_stats'].dthetadt <  1.8000) & 
-                          (self.frames['stats']['records_all_stations_end_obs_stats'].dthetadt <  2.0000) & 
-                         #(self.frames['stats']['records_all_stations_end_mod_stats'].dhdt >  50.0000) & 
-                         (self.frames['stats']['records_all_stations_end_obs_stats'].dhdt >  40.0000) & 
-                         (self.frames['stats']['records_all_stations_end_mod_stats'].dhdt <  400.) & 
-                          (self.frames['stats']['records_all_stations_end_obs_stats'].dhdt <  350.) & 
-                           (self.frames['stats']['records_all_stations_end_obs_stats'].dqdt <  .0003) & 
-                           (self.frames['stats']['records_all_stations_end_obs_stats'].dqdt >  -.0006) & 
-                  #         (self.frames['stats']['records_all_stations_end_obs_stats'].dqdt <  .0003) & 
+                        (self.frames['stats']['records_all_stations_end_mod'].theta >  273.) & 
+                        (self.frames['stats']['records_all_stations_end_obs'].theta >  273.) & 
+                       #(self.frames['stats']['records_all_stations_end_obs_stats'].dthetadt >  0.25) & 
+                        (self.frames['stats']['records_all_stations_end_obs_stats'].dthetadt >  0.) & 
+                       #(self.frames['stats']['records_all_stations_end_mod_stats'].dthetadt >  0.25000) & 
+                       #(self.frames['stats']['records_all_stations_end_mod_stats'].dthetadt <  1.8000) & 
+                       # (self.frames['stats']['records_all_stations_end_obs_stats'].dthetadt <  2.0000) & 
+                       #(self.frames['stats']['records_all_stations_end_mod_stats'].dhdt >  50.0000) & 
+                        (self.frames['stats']['records_all_stations_end_obs_stats'].dhdt >  0.0000) & 
+                        # (self.frames['stats']['records_all_stations_end_mod_stats'].dhdt <  400.) & 
+                        #  (self.frames['stats']['records_all_stations_end_obs_stats'].dhdt <  350.) & 
+                        #   (self.frames['stats']['records_all_stations_end_obs_stats'].dqdt <  .0003) & 
+                        #   (self.frames['stats']['records_all_stations_end_obs_stats'].dqdt >  -.0006) & 
+                        #   (self.frames['stats']['records_all_stations_end_obs_stats'].dqdt <  .0003) & 
 
-                           # filter 'extreme' model output -> should be investigated!
-                           (self.frames['stats']['records_all_stations_end_mod_stats'].dqdt <  .0006) & 
-                           (self.frames['stats']['records_all_stations_end_mod_stats'].dqdt >  -.0006) & 
-                           (self.frames['stats']['records_all_stations_end_mod_stats'].dthetadt >  .2) & 
-                           (self.frames['stats']['records_all_stations_end_mod_stats'].dthetadt <  2.3) & 
+                         # filter 'extreme' model output -> should be investigated!
+                       #    (self.frames['stats']['records_all_stations_end_mod_stats'].dqdt <  .0006) & 
+                       #    (self.frames['stats']['records_all_stations_end_mod_stats'].dqdt >  -.0006) & 
+                          (self.frames['stats']['records_all_stations_end_mod_stats'].dthetadt >  .0) & 
+                       #  (self.frames['stats']['records_all_stations_end_mod_stats'].dhdt >  40.) & 
+                          (self.frames['stats']['records_all_stations_end_mod_stats'].dthetadt >  .0) & 
+                          (self.frames['stats']['records_all_stations_end_mod_stats'].dthetadt <  2.3) & 
                          # (self.frames['stats']['records_all_stations_end_mod_stats'].dqdt <  .0003) & 
                          # (self.frames['stats']['records_all_stations_ini'].KGC != 'Cwb') & 
                          # (self.frames['stats']['records_all_stations_ini'].KGC != 'Dfc') & 

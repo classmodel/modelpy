@@ -153,7 +153,7 @@ class book(object):
 
                lon = self.page.lon.values
                lon[lon > 180.] -= 360.
-               self.page.lon.values = lon[:]
+               self.page.lon.values[:] = lon[:]
 
 
                self.page = self.page.rename(self.renames)
@@ -226,10 +226,10 @@ class data_global(object):
         # 'GLEAM:w2'      : '/user/data/gent/gvo000/gvo00090/GLEAM/data/v3.1a/????/SMroot_*_GLEAM_v3.1a.nc:SMroot',
         # 'GLEAM:BR'      : '/user/data/gent/gvo000/gvo00090/GLEAM/data/v3.1a/????/BR_*_GLEAM_v3.1a.nc:BR',
         # 'GLEAM:EF'      : '/user/data/gent/gvo000/gvo00090/GLEAM/data/v3.1a/????/EF_*_GLEAM_v3.1a.nc:EF',
-        'GLEAM:wg'      : '/user/data/gent/gvo000/gvo00090/GLEAM/data/GLEAM_v3.2/v3.2a_OUTPUT/????/SMsurf_*_GLEAM_v3.2a.nc:SMsurf',
-        'GLEAM:w2'      : '/user/data/gent/gvo000/gvo00090/GLEAM/data/GLEAM_v3.2/v3.2a_OUTPUT/????/SMroot_*_GLEAM_v3.2a.nc:SMroot',
+  #       'GLEAM:wg'      : '/user/data/gent/gvo000/gvo00090/GLEAM/data/GLEAM_v3.2/v3.2a_OUTPUT/????/SMsurf_*_GLEAM_v3.2a.nc:SMsurf',
+  #       'GLEAM:w2'      : '/user/data/gent/gvo000/gvo00090/GLEAM/data/GLEAM_v3.2/v3.2a_OUTPUT/????/SMroot_*_GLEAM_v3.2a.nc:SMroot',
         #'GLEAM:BR'      : '/user/data/gent/gvo000/gvo00090/GLEAM/data/GLEAM_v3.2/v3.2a/????/BR_*_GLEAM_v3.2a.nc:BR',
-        'GLEAM:EF'      : '/user/data/gent/gvo000/gvo00090/GLEAM/data/GLEAM_v3.2/v3.2a_OUTPUT/????/EF_*_GLEAM_v3.2a.nc:EF',
+  #       'GLEAM:EF'      : '/user/data/gent/gvo000/gvo00090/GLEAM/data/GLEAM_v3.2/v3.2a_OUTPUT/????/EF_*_GLEAM_v3.2a.nc:EF',
         "IGBPDIS:alpha" : "/user/data/gent/gvo000/gvo00090/EXT/data/IGBP-DIS/FRACTIONS_GLEAMv31a.nc",
         "GLAS:z0m"      : "/user/data/gent/gvo000/gvo00090/EXT/data/GLAS/global_canopy_height_0.25.nc:Band1",
         "GLAS:z0h"      : "/user/data/gent/gvo000/gvo00090/EXT/data/GLAS/global_canopy_height_0.25.nc:Band1",
@@ -251,21 +251,25 @@ class data_global(object):
         "GIMMS:LAIpixel": "/user/data/gent/gvo000/gvo00090/EXT/data/GIMMS/v2/LAI/gimms-3g.v2.lai.1981-2015_monmean_remapcon_0.25.nc:LAI",
         #'CERES.low': '/user/data/gent/gvo000/gvo00090/vsc42247/EXT/data/CERES/CERES_SYN1deg-1H_Terra-Aqua-MODIS_Ed4A_Subset_*.nc%cldarea_low_1h',
         #'CERES.cc%20000301%20100101': '/user/data/gent/gvo000/gvo00090/vsc42247/EXT/data/CERES/CERES_SYN1deg-1H_Terra-Aqua-MODIS_Ed4A_Subset_$YYYYMMDD_CERES_START-$YYYYMMDD_CERES_END.nc.cldarea_total_1h%cldarea_total_1h'
-        "ERAINT:advt_x"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/advt_x_6hourly/advt_x*_6hourly.nc:advt_x",
-        "ERAINT:advt_y"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/advt_y_6hourly/advt_y*_6hourly.nc:advt_y",
-        "ERAINT:advq_x"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/advq_x_6hourly/advq_x*_6hourly.nc",
-        "ERAINT:advq_y"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/advq_y_6hourly/advq_y*_6hourly.nc",
-        "ERAINT:advu_x"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/advu_x_6hourly/advu_x*_6hourly.nc",
-        "ERAINT:advu_y"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/advu_y_6hourly/advu_y*_6hourly.nc",
-        "ERAINT:advv_x"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/advv_x_6hourly/advv_x*_6hourly.nc",
-        "ERAINT:advv_y"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/advv_y_6hourly/advv_y*_6hourly.nc",
+#         "ERAINT:advt_x"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/advt_x_6hourly/advt_x*_6hourly.nc:advt_x",
+#         "ERAINT:advt_y"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/advt_y_6hourly/advt_y*_6hourly.nc:advt_y",
+#         "ERAINT:advq_x"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/advq_x_6hourly/advq_x*_6hourly.nc",
+#         "ERAINT:advq_y"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/advq_y_6hourly/advq_y*_6hourly.nc",
+#         "ERAINT:advu_x"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/advu_x_6hourly/advu_x*_6hourly.nc",
+#         "ERAINT:advu_y"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/advu_y_6hourly/advu_y*_6hourly.nc",
+#         "ERAINT:advv_x"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/advv_x_6hourly/advv_x*_6hourly.nc",
+#         "ERAINT:advv_y"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/advv_y_6hourly/advv_y*_6hourly.nc",
         #"ERAINT:divU_x"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/divU_x_6hourly/divU_x*_6hourly.nc:__xarray_dataarray_variable__",
         #"ERAINT:divU_y"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/divU_y_6hourly/divU_y*_6hourly.nc:__xarray_dataarray_variable__",
         "ERAINT:sp"     : "/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/sp_6hourly/sp_*_6hourly.nc",
         "ERAINT:wp"  : '/user/data/gent/gvo000/gvo00090/EXT/data/ERA-INTERIM/by_var_nc/w_6hourly_xarray/w*_6hourly.nc:w',
         "MSWEPGLEAM:AI"      : '/data/gent/vo/000/gvo00090/D2D/data/Aridity//Ep_1981_2017_MO_meanhottestmonth.nc',
-        "ERA5:t2m_daymax" : '/data/gent/vo/000/gvo00090/D2D/data/ERA5/by_var_nc/t2m_1hourly_for_t2m_daymax.nc:t2m',
+#        "ERA5:t2m_daymax" : '/data/gent/vo/000/gvo00090/D2D/data/ERA5/by_var_nc/t2m_1hourly_for_t2m_daymax.nc:t2m',
+        "ERA5:blpt_daymax" : '/scratch/gent/vo/000/gvo00090/D2D/data/ERA5/by_var_nc/blpt_1hourly_for_blpt_daymax.nc:blpt',
         "ERA5:blptb_daymax" : '/scratch/gent/vo/000/gvo00090/D2D/data/ERA5/by_var_nc/blptb_1hourly_for_blptb_daymax.nc:blptb',
+        "ERA5:blptb_daymean" : '/scratch/gent/vo/000/gvo00090/D2D/data/ERA5/by_var_nc/blptb_1hourly_daymean.nc:blptb',
+        "ERA5:blptb_daymean_ge90" : '/scratch/gent/vo/000/gvo00090/D2D/data/ERA5/by_var_nc/blptb_1hourly_daymean_for_blptb_daymean_mean3month_is_max_ge90.nc:blptb',
+
         # "ERA5:slhf" : '/user/data/gent/gvo000/gvo00090/EXT/data/ERA5/by_var_nc/slhf_1hourly/slhf_*_1hourly.nc',
         # "ERA5:sshf" : '/user/data/gent/gvo000/gvo00090/EXT/data/ERA5/by_var_nc/sshf_1hourly/sshf_*_1hourly.nc',
         #"MSWEP:pr"    :"/user/data/gent/gvo000/gvo00090/EXT/data/MSWEP/MSWEP_v1.2_precip_1979-2015/3hr/raw_data/globe/*.nc:precipitation"

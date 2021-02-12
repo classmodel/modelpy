@@ -22,7 +22,7 @@ arguments.append(dict(arg='--first_station_row',\
 arguments.append(dict(arg='--last_station_row',\
                     help='ending row number of stations table'))
 arguments.append(dict(arg='--global_vars',\
-                    help="global vars to update"))
+                    help="global vars to update ( ':'-seperated list) "))
 arguments.append(dict(arg='--station_id',\
                     help="process a specific station id"))
 arguments.append(dict(arg='--error_handling',\
@@ -268,7 +268,7 @@ def execute(**kwargs):
     
             
                     if args.global_vars is not None:
-                        c4gli_morning.get_global_input(globaldata,only_keys=args.global_vars.strip().split(','))
+                        c4gli_morning.get_global_input(globaldata,only_keys=args.global_vars.strip().split(':'))
     
                     onerun = True
     

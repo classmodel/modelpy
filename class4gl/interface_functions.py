@@ -110,6 +110,7 @@ def get_record_yaml(yaml_file,index_start,index_end,mode='model_output'):
 
         # # needed in case of Ruby
         # os.system('rm '+TEMPDIR+'/'+shortfn+'.buffer.json.'+str(index_start))
+        print('hello')
 
         return modelout
     elif mode == 'model_input':
@@ -142,6 +143,9 @@ def get_record_yaml(yaml_file,index_start,index_end,mode='model_output'):
         # # needed in case of ruby
         # os.system('rm '+TEMPDIR+'/'+shortfn+'.buffer.json.'+str(index_start))
         return c4gli
+    else:
+        print('Warning. Mode '+mode+' not recorgnized. Returning None')
+        return None
 
 
 
@@ -205,6 +209,7 @@ class stations(object):
         self.table = self.table.set_index('STNID')
 
     def get_stations(self,suffix):
+        print(suffix)
         stations_list_files = glob.glob(self.path+'/?????_*_'+suffix+'.yaml')
         if len(stations_list_files) == 0:
             stations_list_files = glob.glob(self.path+'/?????_'+suffix+'.yaml')

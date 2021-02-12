@@ -359,14 +359,14 @@ def execute(**kwargs):
                         c4gl = class4gl(c4gli_morning)
     
                         if args.error_handling == 'dump_always':
-                            # try:
-                            print('checking data sources')
-                            if not c4gli_morning.check_source_globaldata():
-                                print('Warning: some input sources appear invalid')
-                            c4gl.run()
-                            print('run succesful')
-                            # except:
-                            #     print('run not succesful')
+                            try:
+                                print('checking data sources')
+                                if not c4gli_morning.check_source_globaldata():
+                                    print('Warning: some input sources appear invalid')
+                                c4gl.run()
+                                print('run succesful')
+                            except:
+                                print('run not succesful')
                             onerun = True
     
                             print("dumping to "+str(file_ini)+ ' ('+fn_ini+')') 

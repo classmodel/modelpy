@@ -156,6 +156,10 @@ class model:
                        #  self.input.air_ac.p.iloc[irow] *\
                        #  self.input.air_ac.delpdgrav.iloc[irow]*grav
 
+            #     if 'ts' in model_input.__dict__.keys():
+            #         self.input.__dict__['ts'] = model_input.__dict__['ts']
+                if 'ts' in model_input.__dict__.keys():
+                    self.input.__dict__['ts'] = model_input.__dict__['ts']
 
 
                 # 2. Air circulation data 
@@ -249,6 +253,7 @@ class model:
         self.wmin       =  0.005;               # lower reference value soil water [-]
         self.R10        =  0.23;                # respiration at 10 C [mg CO2 m-2 s-1]
         self.E0         =  53.3e3;              # activation energy [53.3 kJ kmol-1]
+
 
         # Read switches
         self.sw_ml      = self.input.sw_ml      # mixed-layer model switch
@@ -982,8 +987,20 @@ class model:
 
         # Calculate entrainment fluxes
         self.wthetae     = -self.we * self.dtheta
+
+        #ent2
+        #self.wthetae         = self.input.ts.wthetae[self.t] #-self.we * self.dq
+
         self.wqe         = -self.we * self.dq
+        #ent and ent2  
+        #self.wqe         = self.input.ts.wqe[self.t] #-self.we * self.dq
         self.wCO2e       = -self.we * self.dCO2
+
+        # none(bot entrianment on) - ent2 (only dry air entrainment off): dry air entrainment effect
+        # ent2(only dry air entrainment off )  - ent (both theta and q entrainment off): dry air entrainment effect
+        # none - ent: full entrainment
+
+
         
         htend_pre       = self.we + self.ws + self.wf - self.M
         
@@ -1000,15 +1017,15 @@ class model:
                           thetatend_pre + w_th_ft
         
         dtheta_pre = float(self.dtheta + dthetatend_pre *self.dt)
-        l_entrainment = True
+        self.l_entrainment = True
 
         if (self.dtheta <= 0.1) and (dthetatend_pre < 0.):
-            l_entrainment = False
+            self.l_entrainment = False
             warnings.warn(str(self.t)+"/"+str(self.tsteps)+\
                           " Warning! temperature jump is at the lower limit and is not growing: entrainment is disabled for this (sub)timestep.") 
         elif dtheta_pre < 0.1:
             dtmax_new = float((0.1 - self.dtheta)/dthetatend_pre)
-            l_entrainment = True
+            self.l_entrainment = True
             warnings.warn(str(self.t)+"/"+str(self.tsteps)+\
                           " Warning! Potential temperature jump at mixed-layer height would become too low. So I'm limiting the timestep from "+ str(self.dtmax)+' to '+str(dtmax_new))
             self.dtmax = min(self.dtmax,dtmax_new)
@@ -1021,18 +1038,22 @@ class model:
         # when entrainment is disabled, we just use the simplified formulation
         # as in Wouters et al., 2013 (section 2.2.1)
 
-        self.dthetatend = l_entrainment*dthetatend_pre + \
-                        (1.-l_entrainment)*0.
-        self.thetatend = l_entrainment*thetatend_pre + \
-                        (1.-l_entrainment)*((self.wtheta  ) / self.h + self.advtheta)
-        self.htend = l_entrainment*htend_pre + \
-                     (1.-l_entrainment)*((self.ws - self.M)+ self.thetatend/self.gammatheta)
+        self.dthetatend = self.l_entrainment*dthetatend_pre + \
+                        (1.-self.l_entrainment)*0.
+        self.thetatend = self.l_entrainment*thetatend_pre + \
+                        (1.-self.l_entrainment)*((self.wtheta  ) / self.h + self.advtheta)
+        self.htend = self.l_entrainment*htend_pre + \
+                     (1.-self.l_entrainment)*((self.ws - self.M)+ self.thetatend/self.gammatheta)
         #print(l_entrainment,htend_pre,self.ws,self.M,self.thetatend,self.gammatheta)
         #stop
 
+        # qtend_pre = (self.wq     - l_entrainment*self.wqe     - self.wqM  ) / self.h + self.advq
+        # q_pre = float(self.q + dtend_pre *self.dt)
+        # if q_pre < 0:
+        #     self.qtend = 
 
-        self.qtend       = (self.wq     - l_entrainment*self.wqe     - self.wqM  ) / self.h + self.advq
-        self.CO2tend     = (self.wCO2   - l_entrainment*self.wCO2e   - self.wCO2M) / self.h + self.advCO2
+        self.qtend       = (self.wq     - self.l_entrainment*self.wqe     - self.wqM  ) / self.h + self.advq
+        self.CO2tend     = (self.wCO2   - self.l_entrainment*self.wCO2e   - self.wCO2M) / self.h + self.advCO2
 
 
         # self.qtend = l_entrainment*qtend_pre + \
@@ -1064,16 +1085,16 @@ class model:
         #     self.dthetatend = dthetatend_pre
         #     self.thetatend = thetatend_pre
         
-        self.dqtend      = self.gammaq     * (self.we*l_entrainment + self.wf - self.M) - self.qtend     + w_q_ft
-        self.dCO2tend    = self.gammaCO2   * (self.we*l_entrainment + self.wf - self.M) - self.CO2tend   + w_CO2_ft
+        self.dqtend      = self.gammaq     * (self.we*self.l_entrainment + self.wf - self.M) - self.qtend     + w_q_ft
+        self.dCO2tend    = self.gammaCO2   * (self.we*self.l_entrainment + self.wf - self.M) - self.CO2tend   + w_CO2_ft
      
         # assume u + du = ug, so ug - u = du
         if(self.sw_wind):
-            self.utend       = -self.fc * self.dv + (self.uw + l_entrainment*self.we * self.du)  / self.h + self.advu
-            self.vtend       =  self.fc * self.du + (self.vw + l_entrainment*self.we * self.dv)  / self.h + self.advv
+            self.utend       = -self.fc * self.dv + (self.uw + self.l_entrainment*self.we * self.du)  / self.h + self.advu
+            self.vtend       =  self.fc * self.du + (self.vw + self.l_entrainment*self.we * self.dv)  / self.h + self.advv
   
-            self.dutend      = self.gammau * (l_entrainment*self.we + self.wf - self.M) - self.utend
-            self.dvtend      = self.gammav * (l_entrainment*self.we + self.wf - self.M) - self.vtend
+            self.dutend      = self.gammau * (self.l_entrainment*self.we + self.wf - self.M) - self.utend
+            self.dvtend      = self.gammav * (self.l_entrainment*self.we + self.wf - self.M) - self.vtend
         
         # tendency of the transition layer thickness
         if(self.ac > 0 or self.lcl - self.h < 300):
@@ -1111,6 +1132,18 @@ class model:
         self.theta    = theta0  + self.dtcur * self.thetatend
         #print(dtheta0,self.dtcur,self.dthetatend)
         self.dtheta   = dtheta0 + self.dtcur * self.dthetatend
+
+
+        # qtend_pre = (self.wq     - l_entrainment*self.wqe     - self.wqM  ) / self.h + self.advq
+        # q_pre = float(self.q + dtend_pre *self.dt)
+        # if q_pre < 0:
+        #     self.qtend = 
+
+        q_pre        = q0      + self.dtcur * self.qtend
+        if q_pre < 0.001:
+            self.qtend = (0.001-q0)/self.dtcur
+            self.dqtend      = self.gammaq     * (self.we*self.l_entrainment + self.wf - self.M) - self.qtend     + w_q_ft
+
         self.q        = q0      + self.dtcur * self.qtend
         self.dq       = dq0     + self.dtcur * self.dqtend
         self.CO2      = CO20    + self.dtcur * self.CO2tend

@@ -179,6 +179,7 @@ for iSTN,STN in STNlist:
             
             c4gli.clear()
             c4gli.get_profile_wyoming(wy_strm)
+            #import pdb;pdb.set_trace()
             #print(STN['ID'],c4gli.pars.datetime)
             #c4gli.get_global_input(globaldata)
 
@@ -343,6 +344,7 @@ for iSTN,STN in STNlist:
     
                         logic_afternoon_def['runtime_ok'] = False
                         print('ALMOST...')
+
                         if c4gli.pars.runtime >= 3600*4.: # more than 4 hours simulation
                              
                             logic_afternoon_def['runtime_ok'] = True

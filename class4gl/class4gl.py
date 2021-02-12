@@ -563,7 +563,7 @@ class class4gl_input(object):
         
         # this crazy long line just loads the sounding parameter table into parameters object (using amongst others the pandas internal engine to detect the right value types (int, float, np.Datetime64 etc.)).
         dpars = {**dpars,
-                **pd.read_fwf(io.StringIO(str(string)),widths=[43,1,20],names=['descr','dummy','value']).iloc[1:-1].drop("dummy",1).set_index("descr").T.convert_objects(convert_numeric=True).iloc[0].to_dict()
+                **pd.read_fwf(io.StringIO(str(string)),widths=[43,1,20],names=['descr','dummy','value']).iloc[1:-1].drop("dummy",1).set_index("descr").T.apply(pd.to_numeric,errors='ignore').iloc[0].to_dict()
                }
         
         # we get weird output when it's a numpy Timestamp, so we convert it to
@@ -1972,22 +1972,27 @@ class class4gl(model):
 
         dictout = {}
         dictoutlast = {}
-        if timeseries_only == None:
-            outvars = self.__dict__['out'].__dict__.keys()
+        if not 'out' in self.__dict__.keys():
+            print('Warning: no timeseries section found in output.')
         else:
-            outvars = timeseries_only
-        for key in outvars:
-            dictout[key] = self.__dict__['out'].__dict__[key]
-            dictoutlast[key] = dictout[key][-1]
+            outvars = []
+            if timeseries_only == None:
+                    outvars = self.__dict__['out'].__dict__.keys()
+            else:
+                outvars = timeseries_only
 
-            if type(dictoutlast[key]).__module__ == 'numpy':
-                dictoutlast[key] = dictoutlast[key].item() 
-            # convert numpy types to native python data types. This
-            # provides cleaner data IO with yaml:
-            if type(dictout[key]).__module__ == 'numpy':
-                dictout[key] = [ a.item() for a in \
-                                 self.__dict__['out'].__dict__[key]]
-            #dictout[key] = list(dictout[key] )
+            for key in outvars:
+                dictout[key] = self.__dict__['out'].__dict__[key]
+                dictoutlast[key] = dictout[key][-1]
+
+                if type(dictoutlast[key]).__module__ == 'numpy':
+                    dictoutlast[key] = dictoutlast[key].item() 
+                # convert numpy types to native python data types. This
+                # provides cleaner data IO with yaml:
+                if type(dictout[key]).__module__ == 'numpy':
+                    dictout[key] = [ a.item() for a in \
+                                     self.__dict__['out'].__dict__[key]]
+                #dictout[key] = list(dictout[key] )
 
         yaml.dump({'pars' : {**dictoutlast,**dictpars}},file)
 

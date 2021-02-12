@@ -26,10 +26,12 @@ parser.add_argument('--error_handling')
 parser.add_argument('--multi_processing_mode',default='pythonpool')
 parser.add_argument('--cpu_count',type=int,default=2)
 parser.add_argument('--subset_forcing',default='ini') 
-                                        # this tells which yaml subset
-                                        # to initialize with.
-                                        # Most common options are
-                                        # 'morning' and 'ini'.
+# parser.add_argument('--path_timeseries_forcing',default=False) 
+# parser.add_argument('--timeseries_forcing',default=False) 
+#                                         # this tells which yaml subset
+#                                         # to initialize with.
+#                                         # Most common options are
+#                                         # 'morning' and 'ini'.
 
 # Tuntime is usually specified from the afternoon profile. You can also just
 # specify the simulation length in seconds
@@ -54,7 +56,6 @@ parser.add_argument('--path_forcing',
                    )
 parser.add_argument('--path_experiments',
                     help='output directory in which the experiments as subdirectories are stored')#,default='/user/data/gent/gvo000/gvo00090/D2D/data/C4GL/')
-
 
 
 #arguments only used for update_yaml.py

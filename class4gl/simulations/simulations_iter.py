@@ -276,6 +276,15 @@ def execute(**kwargs):
     
         os.system('mkdir -p '+path_exp)
         records_morning_station = records_morning.query('STNID == '+str(current_station.name))
+        # records_afternoon_station = records_afternoon.query('STNID == '+str(current_station.name))
+        # for varkey in ['h','theta']:
+        #     records_morning_station['d'+varkey+'dt'] = \
+        #             (records_afternoon_station[sourcekey][varkey] - records_morning_station[sourcekey][varkey])/\
+        #             (records_afternoon_station[sourcekey].ldatetime - records_morning_station[sourcekey].ldatetime).dt.seconds*3600.
+        # select_loc = records_morning_station.query( '(dthetadt > 0) & (dhdt > 0.)').index
+        # records_morning_station = records_morning_station.loc[select_loc]
+        # records_afternoon_station = records_afternoon_station.loc[select_loc]
+
         for istation,current_station in run_stations.iterrows():
             if (int(args.split_by) * int(run_station_chunk)) >= (len(records_morning_station)):
                 print("warning: outside of profile number range for station "+\
