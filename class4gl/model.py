@@ -97,7 +97,7 @@ class model:
 
         self.logger = logging.getLogger('model')
         if debug_level is not None:
-            self.logger.setLevel(debug_level)
+            self.logger.setLevel(logging._nameToLevel[debug_level])
 
         """ initialize the different components of the model """ 
 
@@ -204,6 +204,7 @@ class model:
         # time integrate model 
         #for self.t in range(self.tsteps):
         while self.t < self.tsteps:
+            print(self.t, '/', self.tsteps)
           
             # time integrate components
             self.timestep()
@@ -1139,6 +1140,15 @@ class model:
         # if q_pre < 0:
         #     self.qtend = 
 
+        # calculate compensation to fix the free troposphere in case of subsidence 
+        if(self.sw_fixft):
+            w_th_ft  = self.gammatheta * self.ws
+            w_q_ft   = self.gammaq     * self.ws
+            w_CO2_ft = self.gammaCO2   * self.ws 
+        else:
+            w_th_ft  = 0.
+            w_q_ft   = 0.
+            w_CO2_ft = 0. 
         q_pre        = q0      + self.dtcur * self.qtend
         if q_pre < 0.001:
             self.qtend = (0.001-q0)/self.dtcur

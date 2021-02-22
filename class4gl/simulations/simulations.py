@@ -8,6 +8,7 @@ import datetime as dt
 import sys
 import pytz
 import math
+import logging
 
 
 arguments = []
@@ -27,7 +28,7 @@ arguments.append(dict(arg='--error_handling',\
                     default='dump_on_success',\
                     help="type of error handling: either\n - 'dump_on_success' (default)\n - 'dump_always'"))
 arguments.append(dict(arg='--diag_tropo',\
-                    default=['advt','advq','advu','advv'],\
+                    default='',#\'advt,advq,advu,advv',\
                     help="field to diagnose the mean in the troposphere (<= 3000m)"))
 arguments.append(dict(arg='--subset_forcing',
                     default='ini', 
@@ -48,7 +49,15 @@ arguments.append(dict(arg='--c4gl_path_lib',help="the path of the CLASS4GL progr
 arguments.append(dict(arg='--global_chunk_number',help="this is the batch number of the expected series of experiments according to split_by"))
 arguments.append(dict(arg='--station_chunk_number',help="this is the batch number according to split_by in case of considering one station"))
 arguments.append(dict(arg='--experiments_names', help="Alternative output names that are given to the experiments. By default, these are the same as --experiments") )
-
+arguments.append(dict(arg='--debug_level', type=str,default=None,help="Debug level according to the standard python logging module. ") )
+# {'CRITICAL': 50,
+#   'FATAL': 50,
+#   'ERROR': 40,
+#   'WARN': 30,
+#   'WARNING': 30,
+#   'INFO': 20,
+#   'DEBUG': 10,
+#   'NOTSET': 0}
 
 
 if __name__ == '__main__':
@@ -326,11 +335,11 @@ def execute(**kwargs):
                                                         record_morning.index_start, 
                                                         record_morning.index_end,
                                                         mode='model_input')
-                        if args.diag_tropo is not None:
+                        if args.diag_tropo is not '':
                             print('add tropospheric parameters on advection and subsidence (for diagnosis)')
                             seltropo = (c4gli_morning.air_ac.p > c4gli_morning.air_ac.p.iloc[-1]+ 3000.*(- 1.2 * 9.81 ))
                             profile_tropo = c4gli_morning.air_ac[seltropo]
-                            for var in args.diag_tropo:#['t','q','u','v',]:
+                            for var in args.diag_tropo.split(','):#['t','q','u','v',]:
                                 if var[:3] == 'adv':
                                     mean_adv_tropo = np.mean(profile_tropo[var+'_x']+profile_tropo[var+'_y'] )
                                     c4gli_morning.update(source='era-interim',pars={var+'_tropo':mean_adv_tropo})
@@ -356,7 +365,7 @@ def execute(**kwargs):
                                             runtime})
                         c4gli_morning.update(source=expname, pars=exp)
     
-                        c4gl = class4gl(c4gli_morning)
+                        c4gl = class4gl(c4gli_morning,debug_level=args.debug_level)
     
                         if args.error_handling == 'dump_always':
                             try:

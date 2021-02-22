@@ -23,6 +23,8 @@ else:
 
 import argparse
 
+# purpose: create CLASS4GL input data from era-interim
+# example: python $CLASS4GL/setup/setup_era.py --split_by 50 --path_forcing /data/gent/vo/000/gvo00090/D2D/data/SOUNDINGS/ERA_JOAO/ --path_experiments /user/data/gent/gvo000/gvo00090/$USER/data/MY_FIRST_CLASS4GL_EXPERIMENTS/ERA_TEST_JOAO/ --c4gl_path_lib $CLASS4GL  --station_chunk_number 0 --station_id 83779 --force_pars "b=7.12,CGsat=3.670e-06,p=6,a=0.135,C2ref=0.8,C1sat=0.213" --first_YYYYMMDD "20140101"
 #if __name__ == '__main__':
 parser = argparse.ArgumentParser()
 #parser.add_argument('--timestamp')
@@ -54,6 +56,7 @@ parser.add_argument('--split_by',default=-1)# station soundings are split
 parser.add_argument('--c4gl_path_lib')#,default='/user/data/gent/gvo000/gvo00090/D2D/software/CLASS/class4gl/lib')
 parser.add_argument('--global_chunk_number') # this is the batch number according to split-by in case of considering all stations
 parser.add_argument('--station_chunk_number') # this is the batch number according to split-by in case of considering all stations
+parser.add_argument('--force_pars',default='') # run a specific station id
 args = parser.parse_args()
 
 sys.path.insert(0, args.c4gl_path_lib)
@@ -141,8 +144,8 @@ else:
 print("station numbers included in the whole batch "+\
       "(all chunks):",list(all_stations_select.index))
 
-dtfirst = dt.datetime.strptime(args.first_YYYYMMDD,"%Y%m%d",)
-dtlast = dt.datetime.strptime(args.last_YYYYMMDD,"%Y%m%d",)
+dtfirst = dt.datetime.strptime(args.first_YYYYMMDD,"%Y%m%d").astimezone(dt.timezone.utc)
+dtlast = dt.datetime.strptime(args.last_YYYYMMDD,"%Y%m%d").astimezone(dt.timezone.utc)
 # ===============================
 print("Creating daily timeseries from", dtfirst," to ", dtlast)
 # ===============================
@@ -165,14 +168,14 @@ else:
         if args.split_by != -1:
             raise ValueError("Chunks are defined by --split-by, but I don't know which chunk to run. Please provide --global_chunk_number or --station_chunk_number, or leave out --split-by.")
         run_station_chunk = 0
-        print("stations that are processed.",list(run_stations.index))
+        #print("stations that are processed.",list(run_stations.index))
 
 DTS_chunk = DTS[(int(run_station_chunk)*int(args.split_by)):\
                  (int(run_station_chunk)+1)*int(args.split_by)]
 
 # for the current implementation we only consider one station. Let's upgrade it
 # later for more stations.
-run_station_chunk = int(args.global_chunk_number)
+#run_station_chunk = int(args.global_chunk_number)
 
 # ===============================
 print('start looping over chunk')
@@ -215,6 +218,7 @@ for iDT,DT in enumerate(DTS_chunk):
                            datetime_daylight = datetime, \
                            doy = datetime.timetuple().tm_yday,\
                            runtime = runtime,\
+                           tstart = ldatetime.hour + ldatetime.minute/60. + ldatetime.second/3600.,\
                           ))
 
     c4gli.get_global_input(globaldata)
@@ -250,6 +254,8 @@ for iDT,DT in enumerate(DTS_chunk):
                          source=air_ap_input_source,
                          mode=air_ap_mode)
 
+    for parkey, parvalue in [par.split('=') for par in args.force_pars.split(',')]:
+        c4gli.update(source='user_specified', pars={parkey: float(parvalue)})
     if not c4gli.check_source_globaldata():
         print('Warning: some input sources appear invalid')
 

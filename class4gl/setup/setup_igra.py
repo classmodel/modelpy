@@ -49,6 +49,8 @@ parser.add_argument('--first_station_row')
 parser.add_argument('--last_station_row')
 parser.add_argument('--c4gl_path_lib')#,default='/user/data/gent/gvo000/gvo00090/D2D/software/CLASS/class4gl/lib')
 parser.add_argument('--station_id') # run a specific station id
+parser.add_argument('--check_inputdata',default='True') # run a specific station id
+parser.add_argument('--force_pars',default='') # run a specific station id
 # parser.add_argument('--error_handling',default='dump_on_success')
 # parser.add_argument('--subset_output',default='morning') # this tells which yaml subset
 
@@ -60,6 +62,13 @@ sys.path.insert(0, args.c4gl_path_lib)
 from interface_multi import stations,stations_iterator, records_iterator,get_record_yaml,get_records
 
 fn_stations = args.path_input+'/igra-stations.txt'
+
+def isfloat(value):
+  try:
+    float(value)
+    return True
+  except ValueError:
+    return False
 
 
 #calculate the root mean square error
@@ -162,6 +171,8 @@ for iSTN,STN in STNlist:
     #                   for EXP in experiments.keys()])
         
     dict_diag_station = {}
+    df_logic_morning = pd.DataFrame()
+    df_logic_afternoon = pd.DataFrame()
     with open(fnout,'w') as fileout, \
          open(fnout_afternoon,'w') as fileout_afternoon:
         wy_strm = wyoming(PATH=args.path_input, STNM=STN.name)
@@ -216,7 +227,7 @@ for iSTN,STN in STNlist:
                           )
     
 
-            logic['mlherrlow'] = (c4gli.pars.h_e <= 150.)
+            logic['mlherrlow'] = (c4gli.pars.h_e <= 350.)
             
             print('logic:', logic)
             # the result
@@ -236,7 +247,7 @@ for iSTN,STN in STNlist:
             # If the morning is ok, then we try to find a decent afternoon
             # sounding
             logic_afternoon_def =dict()
-
+            df_logic_morning = df_logic_morning.append(logic,ignore_index=True)
             if morning_ok == 1.:
                 print('MORNING OK!')
                 # we get the current date
@@ -305,6 +316,9 @@ for iSTN,STN in STNlist:
                             afternoon_first = False
 
                         print('logic_afternoon: ',logic_afternoon)
+                        df_logic_afternoon = df_logic_afternoon.append(logic_afternoon, ignore_index=True)
+                        if len(df_logic_afternoon)> 30:
+                            stop
                         print(afternoon_ok,c4gli_afternoon.pars.ldatetime)
                         if afternoon_ok == 1.:
                             # # doesn't work :(
@@ -354,10 +368,14 @@ for iSTN,STN in STNlist:
                                 logic_afternoon_def['global_parameters_ok'] = False
         
                                 c4gli.get_global_input(globaldata)
+                                #saopaulo:sandyclayloam -> --force_pars "LAI=3.5,b=7.12,CGsat=3.670,p=6,a=0.135,C2ref=0.8,C1sat=0.213"
+                                #curitiba:clay -> --force_pars "LAI=3.5,b=11.40,CGsat=3.6,p=12,a=0.083,C2ref=0.3,C1sat=0.342"
+                                for parkey,parvalue in [par.split('=') for par in args.force_pars.split(',')]:
+                                    c4gli.update(source='user_specified', pars={parkey:float(parvalue)})
                                 print('VERY CLOSE...')
-                                if c4gli.check_source_globaldata() and \
+                                if (args.check_inputdata == 'False') or (c4gli.check_source_globaldata()  and \
                                     (c4gli.check_source(source='wyoming',\
-                                                       check_only_sections='pars')):
+                                                       check_only_sections='pars'))):
 
                                     logic_afternoon_def['global_parameters_ok'] = True
                                     print('starting dumps')
