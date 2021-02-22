@@ -6,7 +6,7 @@ from setuptools import find_packages
 # repository: https://medium.com/@joel.barmettler/how-to-upload-your-python-package-to-pypi-65edc5fe9c56
 setup(
         name='class4gl',
-        version='1.0.1',
+        version='1.0.2',
         license='gpl-3.0',        # https://help.github.com/articles/licensing-a-repository
         description = 'a framework to investigate the dynamics of the atmospheric boundary layer weather balloons worldwide', # Give a short description
         author = 'Hendrik Wouters',                        # Type in your name

@@ -227,7 +227,7 @@ for iSTN,STN in STNlist:
                           )
     
 
-            logic['mlherrlow'] = (c4gli.pars.h_e <= 350.)
+            logic['mlherrlow'] = (c4gli.pars.h_e <= 150.) ###350
             
             print('logic:', logic)
             # the result
@@ -317,8 +317,8 @@ for iSTN,STN in STNlist:
 
                         print('logic_afternoon: ',logic_afternoon)
                         df_logic_afternoon = df_logic_afternoon.append(logic_afternoon, ignore_index=True)
-                        if len(df_logic_afternoon)> 30:
-                            stop
+                        # if len(df_logic_afternoon)> 30:
+                        #     stop
                         print(afternoon_ok,c4gli_afternoon.pars.ldatetime)
                         if afternoon_ok == 1.:
                             # # doesn't work :(
