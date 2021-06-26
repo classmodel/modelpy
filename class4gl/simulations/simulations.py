@@ -374,8 +374,9 @@ def execute(**kwargs):
                                     print('Warning: some input sources appear invalid')
                                 c4gl.run()
                                 print('run succesful')
-                            except:
-                                print('run not succesful')
+                            except Exception as inst:
+                                print('run not succesful. Error message is:')
+                                print(inst.args) 
                             onerun = True
     
                             print("dumping to "+str(file_ini)+ ' ('+fn_ini+')') 
@@ -405,7 +406,9 @@ def execute(**kwargs):
                                           #timeseries_only=timeseries_only,\
                                          )
                                 onerun = True
-                           except:
+                           except Exception as inst:
+                               print('run not succesful. Error message is:')
+                               print(inst.args) 
                                print('run not succesful')
                         isim += 1
     
