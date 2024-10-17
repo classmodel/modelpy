@@ -185,8 +185,8 @@ class model:
         self.gammau     = self.input.gammau     # free atmosphere u-wind speed lapse rate [s-1]
         self.advu       = self.input.advu       # advection of u-wind [m s-2]
         
-        self.v          = self.input.v          # initial mixed-layer u-wind speed [m s-1]
-        self.dv         = self.input.dv         # initial u-wind jump at h [m s-1]
+        self.v          = self.input.v          # initial mixed-layer v-wind speed [m s-1]
+        self.dv         = self.input.dv         # initial v-wind jump at h [m s-1]
         self.gammav     = self.input.gammav     # free atmosphere v-wind speed lapse rate [s-1]
         self.advv       = self.input.advv       # advection of v-wind [m s-2]
  
@@ -1159,11 +1159,11 @@ class model_input:
         self.advq       = None  # advection of moisture [kg kg-1 s-1]
         self.wq         = None  # surface kinematic moisture flux [kg kg-1 m s-1]
 
-        self.CO2        = None  # initial mixed-layer potential temperature [K]
-        self.dCO2       = None  # initial temperature jump at h [K]
-        self.gammaCO2   = None  # free atmosphere potential temperature lapse rate [K m-1]
-        self.advCO2     = None  # advection of heat [K s-1]
-        self.wCO2       = None  # surface kinematic heat flux [K m s-1]
+        self.CO2        = None  # mixed-layer CO2 [ppm]
+        self.dCO2       = None  # initial CO2 jump at h [ppm]
+        self.gammaCO2   = None  # free atmosphere CO2 lapse rate [ppm m-1] 
+        self.advCO2     = None  # advection of CO2 [ppm s-1]
+        self.wCO2       = None  # surface kinematic CO2 flux [ppm m s-1]
         
         self.sw_wind    = None  # prognostic wind switch
         self.u          = None  # initial mixed-layer u-wind speed [m s-1]
@@ -1171,8 +1171,8 @@ class model_input:
         self.gammau     = None  # free atmosphere u-wind speed lapse rate [s-1]
         self.advu       = None  # advection of u-wind [m s-2]
 
-        self.v          = None  # initial mixed-layer u-wind speed [m s-1]
-        self.dv         = None  # initial u-wind jump at h [m s-1]
+        self.v          = None  # initial mixed-layer v-wind speed [m s-1]
+        self.dv         = None  # initial v-wind jump at h [m s-1]
         self.gammav     = None  # free atmosphere v-wind speed lapse rate [s-1]
         self.advv       = None  # advection of v-wind [m s-2]
 
